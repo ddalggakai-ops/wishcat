@@ -35,10 +35,9 @@ jobs:
         run: npm ci
 
       # 이 저장소에 연결된 EAS 프로젝트가 아직 없으면 새로 만들어 연결합니다.
-      # (매번 새로 연결되어도 빌드 자체에는 문제 없어요 — Expo 계정 안에 프로젝트가
-      #  여러 개 생길 수 있는 정도의 사소한 이슈입니다.)
+      # robot(개인 액세스) 토큰은 계정을 특정해줘야 해서 --account를 명시합니다.
       - name: Link EAS project
-        run: eas init --non-interactive || true
+        run: eas init --non-interactive --account ddalggakai
 
       # distribution: internal 프로필이라 빌드가 끝나면 로그 마지막 줄 근처에
       # "Build details: https://expo.dev/accounts/.../builds/..." 링크가 떠요.
