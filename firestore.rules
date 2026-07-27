@@ -1,0 +1,91 @@
+rules_version = '2';
+
+// 위시캣 Firestore 보안 규칙
+// - Cloud Functions(유료 Blaze 요금제)를 쓰지 않고 클라이언트가 직접 문서를 쓰는 구조라,
+//   "친구의 아이템에 나를 추가하는" 것처럼 소유자가 아닌 사용자가 일부 필드만 건드릴 수 있도록
+//   필드 단위로 제한된 update 규칙을 사용합니다.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── users/{uid} ──────────────────────────────────────────────
+    match /users/{uid} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == uid;
+      allow update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'bio', 'listPublic']);
+      allow delete: if false;
+    }
+
+    // ── items/{itemId} ───────────────────────────────────────────
+    match /items/{itemId} {
+      allow read: if request.auth != null && (
+        resource.data.ownerId == request.auth.uid
+        || get(/databases/$(database)/documents/users/$(resource.data.ownerId)).data.listPublic != false
+        || exists(/databases/$(database)/documents/friendships/$(request.auth.uid + '_' + resource.data.ownerId))
+      );
+
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
+
+      allow delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
+
+      allow update: if request.auth != null && (
+        // 소유자는 자유롭게 수정 (edit / complete / reopen 등)
+        request.auth.uid == resource.data.ownerId
+
+        // "함께하기(join)" — participants에 본인을 추가, savesCount 증가
+        || (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participants', 'savesCount'])
+          && request.resource.data.participants.hasAll(resource.data.participants)
+          && request.resource.data.participants.size() <= resource.data.participants.size() + 1
+        )
+
+        // "함께하기 취소(leave)" — participants에서 본인을 제거, savesCount 감소
+        || (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participants', 'savesCount'])
+          && resource.data.participants.hasAll(request.resource.data.participants)
+        )
+
+        // "도와서 이뤄줌(help)" — done 처리 + helpedBy/participants에 본인 추가
+        || (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done', 'helpedBy', 'participants'])
+          && request.resource.data.done == true
+          && request.resource.data.helpedBy.hasAll(resource.data.helpedBy)
+        )
+
+        // 좋아요 토글 — likesCount ±1만 변경
+        || (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount'])
+          && (
+            request.resource.data.likesCount == resource.data.likesCount + 1
+            || request.resource.data.likesCount == resource.data.likesCount - 1
+          )
+        )
+      );
+
+      // items/{itemId}/likes/{uid} — 좋아요 여부를 문서 존재로 표현 (문서 id == 누른 사람의 uid)
+      match /likes/{uid} {
+        allow read: if request.auth != null;
+        allow create, delete: if request.auth != null && request.auth.uid == uid;
+        allow update: if false;
+      }
+    }
+
+    // ── friendships/{ownerUid_friendUid} ────────────────────────
+    match /friendships/{friendshipId} {
+      allow read: if request.auth != null && (
+        resource.data.owner == request.auth.uid || resource.data.friend == request.auth.uid
+      );
+      allow create: if request.auth != null
+        && (request.resource.data.owner == request.auth.uid || request.resource.data.friend == request.auth.uid)
+        && friendshipId == request.resource.data.owner + '_' + request.resource.data.friend;
+      allow update, delete: if false;
+    }
+
+    // ── invites/{code} ───────────────────────────────────────────
+    match /invites/{code} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.fromUserId == request.auth.uid;
+      allow update, delete: if false;
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "cli": {
+    "version": ">=13.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyC8sFy5JJFRR2rYV9NGYYO_9yA3Qpz-nAA",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "wishcat-945d4.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "wishcat-945d4",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "wishcat-945d4.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "1004771808048",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:1004771808048:web:c2b530d60bf90b3734aef5"
+      }
+    }
+  }
+}
