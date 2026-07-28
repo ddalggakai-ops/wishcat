@@ -1,7 +1,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { initializeAuth, getReactNativePersistence, getAuth, Auth } from 'firebase/auth';
 // getReactNativePersistence 타입은 src/types/firebase-auth-rn.d.ts 에서 보강합니다.
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, initializeFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
@@ -37,5 +37,14 @@ if (Platform.OS === 'web') {
 }
 export const auth = authInstance;
 
-export const db = getFirestore(app);
+// RN(iOS/Android)에서는 Firestore 기본 스트리밍(WebChannel) 방식이 RN의 fetch 구현과
+// 궁합이 안 맞아서 첫 읽기/쓰기가 응답 없이 멈추는 문제가 있어요 — long polling을 강제해서 우회합니다.
+// (웹에서는 필요 없어서 기본 방식 그대로 둡니다.)
+export const db =
+  Platform.OS === 'web'
+    ? getFirestore(app)
+    : initializeFirestore(app, {
+        experimentalForceLongPolling: true,
+      });
+
 export const storage = getStorage(app);
