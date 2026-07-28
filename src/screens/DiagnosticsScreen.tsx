@@ -5,7 +5,15 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore/lite';
 import SkyBackground from '../components/SkyBackground';
 import BubbleButton from '../components/Button';
 import { colors } from '../theme';
-import { auth, db, firebaseConfigured, firebaseInitError, firebaseInitLog, firebaseProjectId } from '../firebase/config';
+import {
+  auth,
+  db,
+  firebaseConfigured,
+  firebaseDatabaseId,
+  firebaseInitError,
+  firebaseInitLog,
+  firebaseProjectId,
+} from '../firebase/config';
 import { withTimeout } from '../services/withTimeout';
 
 type Status = 'idle' | 'running' | 'ok' | 'fail';
@@ -53,7 +61,9 @@ export default function DiagnosticsScreen({ onClose }: { onClose: () => void }) 
     set(
       'config',
       firebaseConfigured ? 'ok' : 'fail',
-      firebaseConfigured ? `projectId: ${firebaseProjectId}` : 'EXPO_PUBLIC_FIREBASE_* 값이 비어 있어요'
+      firebaseConfigured
+        ? `projectId: ${firebaseProjectId}\n데이터베이스: ${firebaseDatabaseId}`
+        : 'EXPO_PUBLIC_FIREBASE_* 값이 비어 있어요'
     );
 
     // 2) 초기화
@@ -78,15 +88,28 @@ export default function DiagnosticsScreen({ onClose }: { onClose: () => void }) 
     // 4) Firestore REST 엔드포인트에 닿는지
     set('net-fs', 'running');
     try {
+      const dbSeg = encodeURIComponent(firebaseDatabaseId);
       const res = await withTimeout(
         fetch(
-          `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/__diag__/__ping__?key=${apiKey}`
+          `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/${dbSeg}/documents/__diag__/__ping__?key=${apiKey}`
         ),
         'Firestore 서버 연결',
         12000
       );
-      // 401/403/404 모두 "서버까지 도달"을 의미합니다 (권한/문서없음)
-      set('net-fs', 'ok', `HTTP ${res.status} 응답 받음`);
+      const bodyText = await res.text().catch(() => '');
+      // 401/403/404 모두 "서버까지 도달"을 의미합니다 (권한/문서없음).
+      // 단, "데이터베이스가 없다"는 응답만은 통과시키면 안 됩니다 — 진짜 원인이 여기 있으니까요.
+      if (/does not exist for project/i.test(bodyText)) {
+        set(
+          'net-fs',
+          'fail',
+          `"${firebaseDatabaseId}" 데이터베이스가 이 프로젝트에 없어요.\n` +
+            'Firebase 콘솔 > Firestore에서 같은 이름의 데이터베이스를 만들어주세요.\n' +
+            `(HTTP ${res.status})`
+        );
+      } else {
+        set('net-fs', 'ok', `HTTP ${res.status} 응답 받음 — db: ${firebaseDatabaseId}`);
+      }
     } catch (e) {
       set('net-fs', 'fail', describe(e));
     }

@@ -13,7 +13,8 @@ Expo(React Native) + TypeScript로 만든 위시캣 앱입니다. 이메일 회�
 3. **Firestore Database**를 아직 안 만드셨다면 생성합니다 (지역은 아무 곳이나 괜찮아요, 나중에 못 바꾸니 한 번만 신중히).
 4. **Storage**를 사용 설정합니다 (사진 업로드용).
 5. **프로젝트 설정 → 일반 → 내 앱**에서 웹 앱을 하나 추가(`</>` 아이콘)하면 `firebaseConfig` 값이 나옵니다. React Native 앱이지만 Firebase JS SDK를 쓰기 때문에 "웹 앱"으로 등록하면 됩니다.
-6. **firestore.rules**, **storage.rules** (이 프로젝트 루트에 포함되어 있어요)를 Firebase 콘솔의 Firestore/Storage "규칙" 탭에 붙여넣고 배포합니다. 이 규칙들이 없으면 기본값(모두 거부 또는 테스트 모드로 모두 허용)이라 앱이 정상 동작하지 않거나 보안이 뚫려요.
+5-1. **Firestore 데이터베이스를 반드시 먼저 만들어주세요.** Authentication만 켜 놓으면 데이터베이스는 아직 없는 상태라, 앱이 `The database (default) does not exist for project ...` 오류를 냅니다. 기본 데이터베이스의 이름은 괄호까지 포함한 `(default)` 이고, 콘솔에서 이름을 직접 지어 만든 데이터베이스(예: `wishcat`)를 쓸 거라면 `.env`와 `eas.json`의 `EXPO_PUBLIC_FIREBASE_DATABASE_ID` 에 그 이름을 똑같이 적어야 합니다. 비워두면 `(default)`를 씁니다.
+6. **firestore.rules**, **storage.rules** (이 프로젝트 루트에 포함되어 있어요)를 Firebase 콘솔의 Firestore/Storage "규칙"(최근 콘솔에서는 "보안") 탭에 붙여넣고 배포합니다. 데이터베이스가 여러 개라면 화면 위쪽에서 **앱이 쓰는 데이터베이스를 선택한 뒤에** 게시해야 합니다 — 규칙은 데이터베이스마다 따로 저장돼요. 이 규칙들이 없으면 기본값(모두 거부 또는 테스트 모드로 모두 허용)이라 앱이 정상 동작하지 않거나 보안이 뚫려요.
    - Firebase CLI가 있다면: `firebase deploy --only firestore:rules,storage:rules,firestore:indexes`
 7. `firestore.indexes.json`에 정의된 복합 색인들도 함께 배포해주세요(위 명령에 포함되어 있어요). CLI를 안 쓰신다면, 앱을 실제로 써보다가 콘솔에 뜨는 "색인이 필요합니다" 에러 메시지의 링크를 눌러 하나씩 만들어주셔도 됩니다.
 

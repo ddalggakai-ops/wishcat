@@ -30,7 +30,10 @@ const JWT = [
 ].join('.');
 
 const TS = '2026-07-01T00:00:00.000000Z';
-const docPath = (p) => `projects/${PROJECT}/databases/(default)/documents/${p}`;
+// 앱은 이름 있는 데이터베이스("wishcat")를 쓰도록 설정돼 있습니다.
+// SDK가 정말 그 데이터베이스로 요청을 보내는지도 함께 확인합니다.
+const DATABASE_ID = 'wishcat';
+const docPath = (p) => `projects/${PROJECT}/databases/${DATABASE_ID}/documents/${p}`;
 
 const USER_DOC = {
   name: docPath(`users/${UID}`),
@@ -132,10 +135,25 @@ async function handleToken(route) {
   });
 }
 
-let FS_MODE = 'ok'; // 'ok' | 'denied'
+let FS_MODE = 'ok'; // 'ok' | 'denied' | 'nodb'
 
 async function handleFirestore(route) {
   const url = route.request().url();
+  if (FS_MODE === 'nodb') {
+    // 사용자가 실제로 겪은 상황: 해당 이름의 데이터베이스가 프로젝트에 없음
+    seen.push('FS 404 database-not-found');
+    return json(
+      route,
+      {
+        error: {
+          code: 404,
+          message: `The database (${DATABASE_ID}) does not exist for project ${PROJECT} Please visit https://console.cloud.google.com/datastore/setup?project=${PROJECT} to add a Cloud Datastore or Cloud Firestore database.`,
+          status: 'NOT_FOUND',
+        },
+      },
+      404
+    );
+  }
   if (FS_MODE === 'denied') {
     seen.push('FS 403 permission-denied');
     return json(
@@ -144,6 +162,9 @@ async function handleFirestore(route) {
       403
     );
   }
+  if (url.includes(`/databases/${DATABASE_ID}/`)) seen.push('FS →wishcat DB');
+  else seen.push(`FS →WRONG DB ${url.split('/databases/')[1]?.split('/')[0]}`);
+
   let body = {};
   try {
     body = JSON.parse(route.request().postData() || '{}');
@@ -243,6 +264,7 @@ const registerAs = async (page) => {
   const a = await scenario(browser, '05 로그인 성공 후 홈 화면', 'ok', loginAs);
   const b = await scenario(browser, '06 회원가입 성공 후', 'ok', registerAs);
   const c = await scenario(browser, '07 로그인은 되지만 Firestore 권한 거부(403)', 'denied', loginAs);
+  const d = await scenario(browser, '08 데이터베이스가 없는 경우(404)', 'nodb', loginAs);
   await browser.close();
 
   console.log('\n\n========== 판정 ==========');
@@ -253,6 +275,11 @@ const registerAs = async (page) => {
     ['[로그인] 내 프로필을 REST(batchGet)로 읽었다', a.seen.some((s) => s.includes(`batchGet users/${UID}`)), ''],
     ['[로그인] 아이템을 REST(runQuery)로 읽었다', a.seen.includes('FS runQuery items'), ''],
     ['[로그인] 불러온 아이템이 화면에 보인다', /오로라 보기/.test(a.text), a.text.slice(0, 200)],
+    [
+      '[로그인] 요청이 "wishcat" 데이터베이스로 나간다',
+      a.seen.includes('FS →wishcat DB') && !a.seen.some((s) => s.startsWith('FS →WRONG DB')),
+      a.seen.filter((s) => s.startsWith('FS →')).join(' | '),
+    ],
     ['[로그인] 콘솔 치명적 오류 없음', a.errors.length === 0, a.errors.join(' | ').slice(0, 200)],
 
     ['[가입] 프로그레스바에서 멈추지 않는다', !/준비하고 있어요/.test(b.text) && b.nodes > 30, `노드 ${b.nodes}`],
@@ -268,6 +295,14 @@ const registerAs = async (page) => {
       c.text.slice(0, 300),
     ],
     ['[403] 다시 시도 버튼이 있다', /다시 시도/.test(c.text), ''],
+
+    ['[DB없음] 빈 화면이 아니고 로딩에서 안 멈춘다', d.nodes > 30 && !/준비하고 있어요/.test(d.text), `노드 ${d.nodes}`],
+    [
+      '[DB없음] "데이터베이스가 아직 만들어지지 않았어요" 안내가 뜬다',
+      /데이터베이스가 아직 만들어지지 않았어요/.test(d.text),
+      d.text.slice(0, 300),
+    ],
+    ['[DB없음] 다시 시도 버튼이 있다', /다시 시도/.test(d.text), ''],
   ];
   for (const [n, p, d] of checks) console.log(`${p ? 'PASS' : 'FAIL'} — ${n}${d ? `  ⟨${d}⟩` : ''}`);
   const failed = checks.filter((x) => !x[1]).length;

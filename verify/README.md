@@ -25,6 +25,11 @@ node verify/run.js            # 부팅 / 진단화면 / 가입 실패 / ErrorBou
 node verify/run-signed-in.js  # Firebase REST 응답을 mock 해서 로그인 이후 화면까지
 ```
 
+`run-signed-in.js` 의 시나리오 08 은 "해당 이름의 Firestore 데이터베이스가 없을 때"(HTTP 404,
+`The database (...) does not exist for project ...`) 앱이 빈 화면이나 무한 로딩이 아니라
+원인을 알려주는 안내 화면을 띄우는지 확인합니다. 또 SDK 요청이 실제로
+`/databases/<EXPO_PUBLIC_FIREBASE_DATABASE_ID>/` 경로로 나가는지도 검사합니다.
+
 `run-signed-in.js` 는 Firebase Auth·Firestore 의 REST 엔드포인트를 가로채
 실제 서버와 같은 모양의 JSON을 돌려줍니다. 덕분에 네트워크가 막힌 환경에서도
 Firestore lite(REST) SDK가 보내는 요청/받는 응답 처리와 홈 화면 렌더까지 검증할 수 있습니다.

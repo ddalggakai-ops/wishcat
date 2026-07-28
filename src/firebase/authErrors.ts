@@ -27,6 +27,14 @@ const MESSAGES: Record<string, string> = {
  */
 export function authErrorMessage(e: unknown, fallback: string): string {
   if (e instanceof TimeoutError) return e.message;
+
+  // Firestore 데이터베이스 자체가 만들어져 있지 않은 경우.
+  // 코드는 not-found로만 와서 원인을 알기 어려우므로 메시지 원문으로 잡아냅니다.
+  const raw = e instanceof Error ? e.message : '';
+  if (/does not exist for project/i.test(raw)) {
+    return 'Firestore 데이터베이스가 아직 만들어지지 않았어요.\nFirebase 콘솔 > Firestore에서 데이터베이스를 먼저 만들어주세요.';
+  }
+
   if (e instanceof FirebaseError) {
     const known = MESSAGES[e.code];
     if (known) return known;

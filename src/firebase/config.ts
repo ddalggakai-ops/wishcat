@@ -19,6 +19,15 @@ const firebaseConfig = {
 export const firebaseConfigured = !!(firebaseConfig.apiKey && firebaseConfig.projectId);
 export const firebaseProjectId = firebaseConfig.projectId || '(없음)';
 
+// ── 사용할 Firestore 데이터베이스 ID ─────────────────────────────────────────
+// Firestore는 프로젝트 하나에 여러 데이터베이스를 둘 수 있고, 기본 데이터베이스의
+// 이름은 괄호까지 포함한 "(default)" 입니다. 콘솔에서 이름을 직접 지어 만든
+// 데이터베이스(예: "wishcat")를 쓰려면 SDK에도 그 이름을 알려줘야 합니다.
+// 값이 비어 있으면 기본 데이터베이스 "(default)"를 씁니다.
+const rawDatabaseId = (process.env.EXPO_PUBLIC_FIREBASE_DATABASE_ID || '').trim();
+export const firebaseDatabaseId = rawDatabaseId || '(default)';
+const usingNamedDatabase = !!rawDatabaseId && rawDatabaseId !== '(default)';
+
 // ────────────────────────────────────────────────────────────────────────────
 // 이 파일은 "절대 throw하지 않는다"가 규칙입니다.
 // 모듈 최상단에서 예외가 나면 React가 마운트되기도 전에 앱이 죽어서
@@ -88,8 +97,8 @@ if (appInstance) {
 let dbInstance: Firestore | null = null;
 if (appInstance) {
   try {
-    dbInstance = getFirestore(appInstance);
-    note('✓ getFirestore (lite / REST)');
+    dbInstance = usingNamedDatabase ? getFirestore(appInstance, rawDatabaseId) : getFirestore(appInstance);
+    note(`✓ getFirestore (lite / REST) — db: ${firebaseDatabaseId}`);
   } catch (e) {
     fail('getFirestore', e);
   }
