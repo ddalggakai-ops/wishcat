@@ -13,6 +13,9 @@ const MESSAGES: Record<string, string> = {
   'auth/network-request-failed': '네트워크 연결을 확인해주세요',
   'auth/operation-not-allowed': 'Firebase 콘솔에서 이메일/비밀번호 로그인이 꺼져 있어요',
   'auth/api-key-not-valid': 'Firebase API 키가 올바르지 않아요',
+  'auth/requires-recent-login': '보안을 위해 다시 로그인한 뒤 시도해주세요',
+  'auth/missing-email': '이메일을 입력해주세요',
+  'auth/user-mismatch': '현재 로그인한 계정과 정보가 달라요',
   // Firestore 쪽 코드도 같은 함수로 흘러들어옵니다
   'permission-denied': '접근 권한이 없어요. Firestore 보안 규칙을 확인해주세요',
   unauthenticated: '로그인이 필요해요',

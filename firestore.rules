@@ -12,14 +12,20 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow create: if request.auth != null && request.auth.uid == uid;
       allow update: if request.auth != null && request.auth.uid == uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'bio', 'listPublic']);
-      allow delete: if false;
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['name', 'bio', 'listPublic', 'photoUrl']);
+      // 계정 삭제(구글 플레이 정책상 앱 안에서 가능해야 함) — 본인만
+      allow delete: if request.auth != null && request.auth.uid == uid;
     }
 
     // ── items/{itemId} ───────────────────────────────────────────
     match /items/{itemId} {
+      // ownerPublic은 users.listPublic을 아이템에 비정규화한 값입니다.
+      // 둘러보기 쿼리(where ownerPublic == true)를 규칙 안에서 get() 없이 통과시키기 위한 빠른 경로이고,
+      // 값이 없거나 false인 문서는 종전대로 users 문서를 직접 읽어 판정합니다.
       allow read: if request.auth != null && (
         resource.data.ownerId == request.auth.uid
+        || resource.data.get('ownerPublic', false) == true
         || get(/databases/$(database)/documents/users/$(resource.data.ownerId)).data.listPublic != false
         || exists(/databases/$(database)/documents/friendships/$(request.auth.uid + '_' + resource.data.ownerId))
       );
@@ -29,7 +35,7 @@ service cloud.firestore {
       allow delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
 
       allow update: if request.auth != null && (
-        // 소유자는 자유롭게 수정 (edit / complete / reopen 등)
+        // 소유자는 자유롭게 수정 (edit / complete / reopen / 공개여부 백필 등)
         request.auth.uid == resource.data.ownerId
 
         // "함께하기(join)" — participants에 본인을 추가, savesCount 증가
@@ -78,14 +84,38 @@ service cloud.firestore {
       allow create: if request.auth != null
         && (request.resource.data.owner == request.auth.uid || request.resource.data.friend == request.auth.uid)
         && friendshipId == request.resource.data.owner + '_' + request.resource.data.friend;
-      allow update, delete: if false;
+      allow update: if false;
+      // 계정 삭제/친구 끊기 시 양방향 문서를 정리할 수 있어야 합니다.
+      allow delete: if request.auth != null && (
+        resource.data.owner == request.auth.uid || resource.data.friend == request.auth.uid
+      );
     }
 
     // ── invites/{code} ───────────────────────────────────────────
     match /invites/{code} {
       allow read: if request.auth != null;
       allow create: if request.auth != null && request.resource.data.fromUserId == request.auth.uid;
+      allow update: if false;
+      // 계정 삭제 시 본인이 만든 초대를 정리
+      allow delete: if request.auth != null && resource.data.fromUserId == request.auth.uid;
+    }
+
+    // ── reports/{autoId} ─────────────────────────────────────────
+    // 신고 접수함. 누구도 읽을 수 없고(운영자는 콘솔에서 확인), 로그인 사용자가 만들기만 가능.
+    match /reports/{reportId} {
+      allow read: if false;
+      allow create: if request.auth != null
+        && request.resource.data.reporterId == request.auth.uid
+        && request.resource.data.reason is string
+        && request.resource.data.reason.size() <= 500;
       allow update, delete: if false;
+    }
+
+    // ── blocks/{blockerUid}/blocked/{targetUid} ──────────────────
+    // 차단 목록은 본인만 읽고 씁니다.
+    match /blocks/{blockerUid}/blocked/{targetUid} {
+      allow read, create, delete: if request.auth != null && request.auth.uid == blockerUid;
+      allow update: if false;
     }
   }
 }

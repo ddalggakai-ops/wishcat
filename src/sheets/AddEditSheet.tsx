@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Sheet from '../components/Sheet';
 import { CategoryPicker, EmojiPicker, Field, FieldLabel, RegionToggle } from '../components/FormBits';
 import BubbleButton from '../components/Button';
-import { CATEGORIES, EMOJIS } from '../theme';
+import { CATEGORIES, EMOJIS, colors, radius } from '../theme';
 import type { Item, Region } from '../api/types';
 
 export interface AddEditPayload {
@@ -12,6 +12,28 @@ export interface AddEditPayload {
   note: string;
   category: string;
   location: { name: string; region: Region } | null;
+  targetDate: string | null;
+}
+
+/** 오늘로부터 n개월 뒤를 'YYYY-MM-DD' 로 */
+function monthsAhead(n: number): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() + n);
+  const p = (x: number) => String(x).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+function endOfYear(): string {
+  return `${new Date().getFullYear()}-12-31`;
+}
+
+export function isValidDate(s: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return false;
+  const [y, mo, da] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  if (mo < 1 || mo > 12 || da < 1 || da > 31) return false;
+  const d = new Date(y, mo - 1, da);
+  return d.getFullYear() === y && d.getMonth() === mo - 1 && d.getDate() === da;
 }
 
 export default function AddEditSheet({
@@ -28,6 +50,7 @@ export default function AddEditSheet({
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [region, setRegion] = useState<Region>('domestic');
   const [locName, setLocName] = useState('');
+  const [targetDate, setTargetDate] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -39,8 +62,9 @@ export default function AddEditSheet({
       setCategory(editingItem.category || CATEGORIES[0]);
       setRegion(editingItem.location?.region || 'domestic');
       setLocName(editingItem.location?.name || '');
+      setTargetDate(editingItem.targetDate || '');
     } else {
-      setTitle(''); setNote(''); setEmoji(EMOJIS[0]); setCategory(CATEGORIES[0]); setRegion('domestic'); setLocName('');
+      setTitle(''); setNote(''); setEmoji(EMOJIS[0]); setCategory(CATEGORIES[0]); setRegion('domestic'); setLocName(''); setTargetDate('');
     }
   }, [visible, editingItem]);
 
@@ -51,6 +75,7 @@ export default function AddEditSheet({
       await onSubmit({
         title: title.trim(), emoji, note: note.trim(), category,
         location: locName.trim() ? { name: locName.trim(), region } : null,
+        targetDate: isValidDate(targetDate.trim()) ? targetDate.trim() : null,
       });
       onClose();
     } finally {
@@ -73,6 +98,29 @@ export default function AddEditSheet({
       <View style={{ marginTop: 10 }}>
         <Field value={locName} onChangeText={setLocName} placeholder="장소 이름 (예: 제주 애월, 파리 에펠탑)" maxLength={60} />
       </View>
+
+      <FieldLabel>목표일 (선택)</FieldLabel>
+      <View style={styles.presetRow}>
+        <Preset label="1개월 뒤" onPress={() => setTargetDate(monthsAhead(1))} />
+        <Preset label="3개월 뒤" onPress={() => setTargetDate(monthsAhead(3))} />
+        <Preset label="올해 안" onPress={() => setTargetDate(endOfYear())} />
+        {targetDate ? <Preset label="지우기" onPress={() => setTargetDate('')} /> : null}
+      </View>
+      <View style={{ marginTop: 10 }}>
+        <Field
+          value={targetDate}
+          onChangeText={setTargetDate}
+          placeholder="YYYY-MM-DD (예: 2026-12-31)"
+          maxLength={10}
+          keyboardType="numbers-and-punctuation"
+        />
+      </View>
+      <Text style={styles.hint}>
+        {targetDate && !isValidDate(targetDate.trim())
+          ? '날짜 형식이 올바르지 않아요. YYYY-MM-DD 로 적어주세요.'
+          : '목표일을 정하면 하루 전 오전 9시에 이 기기가 알려줘요.'}
+      </Text>
+
       <BubbleButton
         title={editingItem ? '저장하기' : '추가하기'}
         onPress={submit}
@@ -84,3 +132,18 @@ export default function AddEditSheet({
     </Sheet>
   );
 }
+
+function Preset({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={styles.preset}>
+      <Text style={styles.presetText}>{label}</Text>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  presetRow: { flexDirection: 'row', gap: 7, flexWrap: 'wrap' },
+  preset: { borderWidth: 1, borderColor: colors.line2, backgroundColor: colors.surface, borderRadius: radius.pill, paddingVertical: 7, paddingHorizontal: 13 },
+  presetText: { fontSize: 12.5, fontWeight: '600', color: colors.ink2 },
+  hint: { fontSize: 11.5, color: colors.ink3, marginTop: 8, lineHeight: 17 },
+});

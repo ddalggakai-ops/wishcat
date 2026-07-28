@@ -9,8 +9,13 @@ import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import type { Item } from '../api/types';
 
-export default function ExploreScreen({ onOpenPerson }: { onOpenPerson: (id: string, name: string) => void }) {
-  const { mergeItems, toggleLike } = useApp();
+export default function ExploreScreen({
+  onOpenItem, onToast,
+}: {
+  onOpenItem: (item: Item) => void;
+  onToast: (msg: string) => void;
+}) {
+  const { mergeItems, toggleLike, joinItem, itemsById } = useApp();
   const { user } = useAuth();
   const [filter, setFilter] = useState<'all' | 'done'>('all');
   const [items, setItems] = useState<Item[]>([]);
@@ -32,7 +37,7 @@ export default function ExploreScreen({ onOpenPerson }: { onOpenPerson: (id: str
 
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#fff" />}>
-      <ScreenHeader title="둘러보기" subtitle="전체공개된 사람들의 버킷을 구경해요. 타일을 누르면 그 사람 페이지로 이동해요." />
+      <ScreenHeader title="둘러보기" subtitle="전체공개된 사람들의 버킷을 구경해요. 타일을 누르면 자세히 보고 내 목록에 담을 수 있어요." />
       <View style={styles.filterBar}>
         <Pressable onPress={() => setFilter('all')} style={[styles.filterBtn, filter === 'all' && styles.filterBtnOn]}>
           <Text style={[styles.filterText, filter === 'all' && styles.filterTextOn]}>전체 버킷</Text>
@@ -46,10 +51,14 @@ export default function ExploreScreen({ onOpenPerson }: { onOpenPerson: (id: str
         <EmptyState icon="🧭" title="해당하는 버킷이 없어요" subtitle="다른 필터를 눌러보세요" />
       ) : (
         <View style={styles.grid}>
-          {items.map((i) => {
+          {items.map((raw) => {
+            // 담기/좋아요 직후 값이 바로 반영되도록 전역 캐시를 우선 씁니다.
+            const i = itemsById[raw.id] || raw;
             const photo = resolveImageUrl(i.memory?.photo);
+            const joined = !!user && i.participants.some((p) => p.id === user.id);
+            const canSave = !!user && i.owner.id !== user.id && !i.done && !joined;
             return (
-              <Pressable key={i.id} onPress={() => onOpenPerson(i.owner.id, i.owner.name)} style={styles.tile}>
+              <Pressable key={i.id} onPress={() => onOpenItem(i)} style={styles.tile}>
                 <View style={styles.thumbWrap}>
                   {photo ? <Image source={{ uri: photo }} style={styles.thumb} /> : (
                     <View style={[styles.thumb, styles.thumbPh]}><Text style={{ fontSize: 40 }}>{i.emoji}</Text></View>
@@ -68,10 +77,22 @@ export default function ExploreScreen({ onOpenPerson }: { onOpenPerson: (id: str
                       <Text style={{ color: i.likedByMe ? colors.like : colors.ink3 }}>{i.likedByMe ? '♥' : '♡'}</Text>
                       <Text style={styles.countText}>{i.likesCount}</Text>
                     </Pressable>
-                    <View style={styles.likeBtn}>
-                      <Text style={{ color: colors.ink3 }}>🔖</Text>
-                      <Text style={styles.countText}>{i.savesCount}</Text>
-                    </View>
+                    <Pressable
+                      onPress={() => {
+                        if (joined) { onToast('이미 담은 꿈이에요'); return; }
+                        if (!canSave) { onOpenItem(i); return; }
+                        joinItem(i.id)
+                          .then(() => onToast('내 목록에 담았어요 ✦'))
+                          .catch(() => onToast('담지 못했어요. 잠시 뒤 다시 시도해주세요'));
+                      }}
+                      hitSlop={6}
+                      style={styles.likeBtn}
+                      accessibilityRole="button"
+                      accessibilityLabel={joined ? '이미 담음' : '내 목록에 담기'}
+                    >
+                      <Text style={{ color: joined ? colors.accent : colors.ink3 }}>🔖</Text>
+                      <Text style={[styles.countText, joined && { color: colors.accent }]}>{joined ? '담음' : i.savesCount}</Text>
+                    </Pressable>
                   </View>
                 </View>
               </Pressable>

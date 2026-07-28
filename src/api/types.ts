@@ -45,6 +45,8 @@ export interface Item {
   note: string;
   category: string | null;
   location: Location | null;
+  /** 목표일 (YYYY-MM-DD). 없으면 null */
+  targetDate: string | null;
   done: boolean;
   memory: Memory | null;
   participants: UserBrief[];

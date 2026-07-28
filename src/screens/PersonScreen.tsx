@@ -13,15 +13,16 @@ import type { Item } from '../api/types';
 type PersonResponse = PersonResult;
 
 export default function PersonScreen({
-  userId, isFriendTab, onBack, onOpenViewer, onHelp,
+  userId, isFriendTab, onBack, onOpenViewer, onHelp, onReport,
 }: {
   userId: string;
   isFriendTab: boolean;
   onBack: () => void;
   onOpenViewer: (item: Item) => void;
   onHelp: (item: Item) => void;
+  onReport: (item: Item) => void;
 }) {
-  const { mergeItems, joinItem } = useApp();
+  const { mergeItems, joinItem, leaveItem, itemsById } = useApp();
   const { user: viewer } = useAuth();
   const [data, setData] = useState<PersonResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,9 +75,22 @@ export default function PersonScreen({
           {todo.length > 0 && (
             <>
               <SectionHeader title="도전 중인 꿈" count={todo.length} />
-              {todo.map((i) => (
-                <ItemCard key={i.id} item={i} ctx={ctx} onJoin={(it) => joinItem(it.id)} onHelp={onHelp} />
-              ))}
+              {todo.map((raw) => {
+                // 함께하기/취소 직후 상태가 바로 보이도록 전역 캐시를 우선 씁니다.
+                const i = itemsById[raw.id] || raw;
+                return (
+                  <ItemCard
+                    key={i.id}
+                    item={i}
+                    ctx={ctx}
+                    viewerId={viewer?.id}
+                    onJoin={(it) => joinItem(it.id)}
+                    onLeave={(it) => leaveItem(it.id)}
+                    onHelp={onHelp}
+                    onReport={onReport}
+                  />
+                );
+              })}
             </>
           )}
           {done.length > 0 && (

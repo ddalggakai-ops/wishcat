@@ -1,6 +1,8 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import * as itemsService from '../services/itemsService';
+import type { NewItemPayload } from '../services/itemsService';
 import * as friendsService from '../services/friendsService';
+import { cancelReminder, syncReminder } from '../services/reminderService';
 import type { FriendEntry, Item } from '../api/types';
 import { useAuth } from './AuthContext';
 
@@ -14,9 +16,9 @@ interface AppState {
   mergeItems: (items: Item[]) => void;
   refreshMine: () => Promise<void>;
   refreshFriends: () => Promise<void>;
-  addItem: (payload: { title: string; emoji: string; note?: string; category?: string | null; location?: { name: string; region: 'domestic' | 'overseas' } | null }) => Promise<Item>;
-  bulkAddItems: (payloads: { title: string; emoji: string; note?: string; category?: string | null; location?: { name: string; region: 'domestic' | 'overseas' } | null }[]) => Promise<number>;
-  editItem: (id: string, patch: Partial<{ title: string; emoji: string; note: string; category: string | null; location: { name: string; region: 'domestic' | 'overseas' } | null }>) => Promise<Item>;
+  addItem: (payload: NewItemPayload) => Promise<Item>;
+  bulkAddItems: (payloads: NewItemPayload[]) => Promise<number>;
+  editItem: (id: string, patch: Partial<{ title: string; emoji: string; note: string; category: string | null; location: { name: string; region: 'domestic' | 'overseas' } | null; targetDate: string | null }>) => Promise<Item>;
   deleteItem: (id: string) => Promise<void>;
   completeItem: (id: string, payload: { photo?: string | null; text?: string }) => Promise<Item>;
   reopenItem: (id: string) => Promise<Item>;
@@ -86,6 +88,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const item = await itemsService.addItem(requireUid(), payload);
     mergeItems([item]);
     setMineIds((prev) => [item.id, ...prev]);
+    syncReminder(item.id, item.title, item.targetDate);
     return item;
   }, [mergeItems]);
 
@@ -98,11 +101,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const editItem: AppState['editItem'] = useCallback(async (id, patch) => {
     const item = await itemsService.editItem(id, requireUid(), patch);
     mergeItems([item]);
+    syncReminder(item.id, item.title, item.targetDate);
     return item;
   }, [mergeItems]);
 
   const deleteItem = useCallback(async (id: string) => {
     await itemsService.deleteItem(id);
+    cancelReminder(id);
     setItemsById((prev) => { const next = { ...prev }; delete next[id]; return next; });
     setMineIds((prev) => prev.filter((x) => x !== id));
   }, []);
@@ -110,12 +115,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const completeItem: AppState['completeItem'] = useCallback(async (id, payload) => {
     const item = await itemsService.completeItem(id, requireUid(), payload);
     mergeItems([item]);
+    cancelReminder(id); // 이룬 꿈은 더 이상 재촉하지 않아요
     return item;
   }, [mergeItems]);
 
   const reopenItem = useCallback(async (id: string) => {
     const item = await itemsService.reopenItem(id, requireUid());
     mergeItems([item]);
+    syncReminder(item.id, item.title, item.targetDate);
     return item;
   }, [mergeItems]);
 

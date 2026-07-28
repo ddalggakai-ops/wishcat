@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import * as Linking from 'expo-linking';
 import BubbleButton from '../components/Button';
+import { inviteWebUrl } from '../config/links';
 import { absoluteFill, colors, radius } from '../theme';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
@@ -27,7 +27,9 @@ export default function InviteModal({
     createInvite(item?.id).then(setCode).finally(() => setLoading(false));
   }, [visible, item, createInvite]);
 
-  const link = code ? Linking.createURL(`invite/${code}`) : '';
+  // 앱이 없는 친구도 누를 수 있도록 웹 링크를 보냅니다.
+  // (그 페이지가 앱이 깔려 있으면 앱으로, 아니면 설치 안내로 보내줍니다)
+  const link = code ? inviteWebUrl(code) : '';
   const message = user
     ? `${user.name}님이 위시캣에 초대했어요${item ? ` · "${item.title}" 함께해요` : ''} ✦\n${link}`
     : link;
@@ -47,6 +49,7 @@ export default function InviteModal({
           <Text style={styles.desc}>
             {item ? `"${item.title}" 꿈을 함께할 친구에게 링크를 보내보세요.` : '링크를 보내서 친구를 위시캣으로 초대해보세요.'}
           </Text>
+          <Text style={styles.sub}>앱이 없는 친구도 열 수 있어요 · 설치 후에도 초대가 이어집니다</Text>
           <View style={styles.linkRow}>
             <Text numberOfLines={1} style={styles.linkText}>{loading ? '링크 만드는 중…' : link}</Text>
             <Pressable style={styles.copyBtn} onPress={doCopy} disabled={loading}>
@@ -67,7 +70,8 @@ const styles = StyleSheet.create({
   card: { width: '100%', maxWidth: 340, backgroundColor: colors.surface, borderRadius: 22, padding: 22 },
   title: { fontSize: 18, fontWeight: '700', color: colors.ink, textAlign: 'center' },
   avatarWrap: { alignItems: 'center', marginVertical: 18 },
-  desc: { fontSize: 13.5, color: colors.ink2, textAlign: 'center', lineHeight: 20, marginBottom: 16 },
+  desc: { fontSize: 13.5, color: colors.ink2, textAlign: 'center', lineHeight: 20, marginBottom: 6 },
+  sub: { fontSize: 11.5, color: colors.ink3, textAlign: 'center', marginBottom: 14 },
   linkRow: { flexDirection: 'row', gap: 8, backgroundColor: colors.surface2, borderRadius: 12, padding: 4, alignItems: 'center' },
   linkText: { flex: 1, fontSize: 12.5, color: colors.ink2, paddingLeft: 10 },
   copyBtn: { backgroundColor: colors.accent, borderRadius: 9, paddingVertical: 10, paddingHorizontal: 14 },

@@ -1,7 +1,14 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import {
+  EmailAuthProvider, createUserWithEmailAndPassword, deleteUser, onAuthStateChanged,
+  reauthenticateWithCredential, sendPasswordResetEmail, signInWithEmailAndPassword, signOut,
+} from 'firebase/auth';
 import { auth, firebaseReady, firebaseInitError } from '../firebase/config';
 import { createUserProfile, fetchMe, updateMyProfile } from '../services/usersService';
+import { backfillOwnerPublic, clearViewerLikes } from '../services/itemsService';
+import { purgeMyData } from '../services/accountService';
+import { clearBlockCache } from '../services/moderationService';
+import { setMyVisibility } from '../services/visibility';
 import { authErrorMessage } from '../firebase/authErrors';
 import type { MeUser } from '../api/types';
 
@@ -17,6 +24,10 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   updateMe: (patch: Partial<Pick<MeUser, 'name' | 'bio' | 'listPublic' | 'photoUrl'>>) => Promise<void>;
+  /** 비밀번호 재설정 메일 보내기 */
+  resetPassword: (email: string) => Promise<void>;
+  /** 계정과 데이터 완전 삭제. 재인증을 위해 현재 비밀번호가 필요합니다. */
+  deleteAccount: (password: string) => Promise<void>;
   clearError: () => void;
   justRegistered: boolean;
   clearJustRegistered: () => void;
@@ -89,6 +100,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [retryTick]);
 
+  // 로그인 직후 한 번: 서비스 계층에 공개 여부를 알려주고,
+  // 예전에 만들어져 ownerPublic 필드가 없는 내 아이템들을 조용히 채워 넣습니다.
+  // (둘러보기가 이 필드로 조회하기 때문에, 안 채우면 예전 아이템이 영영 안 보여요)
+  const backfilledRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!user) { backfilledRef.current = null; return; }
+    setMyVisibility(user.listPublic);
+    if (backfilledRef.current === user.id) return;
+    backfilledRef.current = user.id;
+    backfillOwnerPublic(user.id, user.listPublic).catch(() => {});
+  }, [user]);
+
   const retryStartup = useCallback(() => {
     setReady(false);
     setStartupError(null);
@@ -137,6 +160,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await signOut(auth);
     } finally {
+      clearViewerLikes();
+      clearBlockCache();
       setUser(null);
       setStartupError(null);
       setReady(true);
@@ -146,8 +171,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateMe = useCallback(async (patch: Partial<Pick<MeUser, 'name' | 'bio' | 'listPublic' | 'photoUrl'>>) => {
     const current = userRef.current;
     if (!current) return;
+    const visibilityChanged = patch.listPublic !== undefined && patch.listPublic !== current.listPublic;
+
+    // 비공개로 바꿀 때는 아이템 먼저 잠그고 프로필을 바꿉니다(공개로 남는 순간이 없도록).
+    // 공개로 바꿀 때는 반대 순서 — 어느 쪽이든 "새는 방향"으로는 틈이 생기지 않게.
+    if (visibilityChanged && patch.listPublic === false) {
+      setMyVisibility(false);
+      await backfillOwnerPublic(current.id, false);
+    }
     await updateMyProfile(current.id, patch);
     setUser((prev) => (prev ? { ...prev, ...patch } : prev));
+    if (visibilityChanged && patch.listPublic === true) {
+      setMyVisibility(true);
+      await backfillOwnerPublic(current.id, true);
+    }
+  }, []);
+
+  const resetPassword = useCallback(async (email: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (e) {
+      setError(authErrorMessage(e, '재설정 메일을 보내지 못했어요'));
+      throw e;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const deleteAccount = useCallback(async (password: string) => {
+    const fbUser = auth.currentUser;
+    const current = userRef.current;
+    if (!fbUser || !current) throw new Error('로그인 상태가 아니에요');
+    setLoading(true);
+    setError(null);
+    try {
+      // Firebase는 계정 삭제 같은 민감한 작업 전에 최근 로그인을 요구합니다.
+      await reauthenticateWithCredential(fbUser, EmailAuthProvider.credential(fbUser.email || current.email, password));
+      await purgeMyData(current.id);
+      await deleteUser(fbUser);
+      clearViewerLikes();
+      clearBlockCache();
+      setUser(null);
+      setStartupError(null);
+      setReady(true);
+    } catch (e) {
+      setError(authErrorMessage(e, '계정을 삭제하지 못했어요'));
+      throw e;
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const clearError = useCallback(() => setError(null), []);
@@ -166,6 +240,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         updateMe,
+        resetPassword,
+        deleteAccount,
         clearError,
         justRegistered,
         clearJustRegistered,

@@ -9,19 +9,40 @@ import { resolveImageUrl } from '../api/client';
 
 export type ItemCtx = 'mine' | 'friend' | 'explore';
 
+/** 목표일까지 며칠 남았는지 — 'D-12' / 'D-DAY' / '3일 지남' */
+export function dDayLabel(targetDate: string | null | undefined, today = new Date()): string | null {
+  if (!targetDate) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(targetDate);
+  if (!m) return null;
+  const target = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const now = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  const days = Math.round((target - now) / 86400000);
+  if (days === 0) return 'D-DAY';
+  if (days > 0) return `D-${days}`;
+  return `${-days}일 지남`;
+}
+
 export default function ItemCard({
-  item, ctx, compact, onToggleDone, onMemory, onShare, onJoin, onHelp, onMenu,
+  item, ctx, compact, viewerId, onToggleDone, onMemory, onShare, onJoin, onLeave, onHelp, onMenu, onReport,
 }: {
   item: Item;
   ctx: ItemCtx;
   compact?: boolean;
+  /** 보고 있는 사람의 uid — '함께하는 중'인지 판단하는 데 씁니다 */
+  viewerId?: string;
   onToggleDone?: (item: Item) => void;
   onMemory?: (item: Item) => void;
   onShare?: (item: Item) => void;
   onJoin?: (item: Item) => void;
+  onLeave?: (item: Item) => void;
   onHelp?: (item: Item) => void;
   onMenu?: (item: Item) => void;
+  onReport?: (item: Item) => void;
 }) {
+  // 예전에는 '함께하기' 버튼이 좋아요(likedByMe) 상태를 보고 색만 바뀌었습니다.
+  // 이미 함께하고 있어도 버튼이 그대로 남아 있어서 몇 번이고 다시 누르게 됐어요.
+  const joined = !!viewerId && item.participants.some((p) => p.id === viewerId);
+  const dday = !item.done ? dDayLabel(item.targetDate) : null;
   const tags: React.ReactNode[] = [];
   if (ctx === 'mine') {
     if (item.origin === 'helped' && item.helpedFor) tags.push(<Tag key="h" tone="helped" label={`🎁 ${item.helpedFor.name}님을 도움`} />);
@@ -76,10 +97,15 @@ export default function ItemCard({
           {tags.length ? <View style={styles.tagRow}>{tags}</View> : null}
           {item.note ? <Text style={styles.note}>{item.note}</Text> : null}
 
-          {(item.category || item.location) ? (
+          {(item.category || item.location || dday) ? (
             <View style={styles.metaRow}>
               {item.category ? <CategoryChip category={item.category} /> : null}
               {item.location ? <LocationChip location={item.location} /> : null}
+              {dday ? (
+                <View style={[styles.dday, dday.endsWith('지남') && styles.ddayPast]}>
+                  <Text style={[styles.ddayText, dday.endsWith('지남') && styles.ddayTextPast]}>🗓 {dday}</Text>
+                </View>
+              ) : null}
             </View>
           ) : null}
 
@@ -127,10 +153,22 @@ export default function ItemCard({
             )}
             {ctx !== 'mine' && !item.done && (
               <>
-                <BubbleButton small variant={item.likedByMe ? 'ghost' : 'primary'} title="함께하기" onPress={() => onJoin?.(item)} />
+                {joined ? (
+                  <>
+                    <View style={styles.joinedPill}><Text style={styles.joinedPillText}>✓ 함께하는 중</Text></View>
+                    <BubbleButton small variant="ghost" title="함께하기 취소" onPress={() => onLeave?.(item)} />
+                  </>
+                ) : (
+                  <BubbleButton small variant="primary" title="함께하기" onPress={() => onJoin?.(item)} />
+                )}
                 {ctx === 'friend' && <BubbleButton small variant="gift" title="도와줬어요" onPress={() => onHelp?.(item)} />}
               </>
             )}
+            {ctx !== 'mine' && onReport ? (
+              <Pressable onPress={() => onReport(item)} hitSlop={8} style={styles.reportBtn} accessibilityRole="button" accessibilityLabel="신고하기">
+                <Text style={styles.reportText}>신고</Text>
+              </Pressable>
+            ) : null}
           </View>
         </View>
       </View>
@@ -167,4 +205,12 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 7, marginTop: 12, flexWrap: 'wrap' },
   mutedPill: { backgroundColor: colors.surface2, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 13 },
   mutedPillText: { fontSize: 13, color: colors.ink3, fontWeight: '600' },
+  joinedPill: { backgroundColor: 'rgba(74,144,217,.12)', borderRadius: 12, paddingVertical: 8, paddingHorizontal: 13 },
+  joinedPillText: { fontSize: 13, color: colors.accent, fontWeight: '700' },
+  dday: { backgroundColor: 'rgba(74,144,217,.12)', borderRadius: 9, paddingVertical: 4, paddingHorizontal: 9 },
+  ddayPast: { backgroundColor: 'rgba(220,110,110,.14)' },
+  ddayText: { fontSize: 11.5, fontWeight: '700', color: colors.accent },
+  ddayTextPast: { color: '#c05656' },
+  reportBtn: { paddingVertical: 8, paddingHorizontal: 8, marginLeft: 'auto' },
+  reportText: { fontSize: 11.5, color: colors.ink3 },
 });

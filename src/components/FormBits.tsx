@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 import { CATEGORIES, catColor, colors, radius } from '../theme';
 
 export function FieldLabel({ children }: { children: string }) {
@@ -8,14 +8,25 @@ export function FieldLabel({ children }: { children: string }) {
 
 export function Field({
   value, onChangeText, placeholder, maxLength, multiline,
+  secure, keyboardType, autoCapitalize, autoComplete, textContentType, autoCorrect, onSubmitEditing, returnKeyType,
 }: {
   value: string;
   onChangeText: (v: string) => void;
   placeholder?: string;
   maxLength?: number;
   multiline?: boolean;
+  /** 비밀번호 입력. 마스킹 + 👁 눈 버튼으로 잠깐 보기 */
+  secure?: boolean;
+  keyboardType?: TextInputProps['keyboardType'];
+  autoCapitalize?: TextInputProps['autoCapitalize'];
+  autoComplete?: TextInputProps['autoComplete'];
+  textContentType?: TextInputProps['textContentType'];
+  autoCorrect?: boolean;
+  onSubmitEditing?: () => void;
+  returnKeyType?: TextInputProps['returnKeyType'];
 }) {
-  return (
+  const [reveal, setReveal] = React.useState(false);
+  const input = (
     <TextInput
       value={value}
       onChangeText={onChangeText}
@@ -23,8 +34,30 @@ export function Field({
       placeholderTextColor={colors.ink3}
       maxLength={maxLength}
       multiline={multiline}
-      style={[styles.input, multiline && styles.textarea]}
+      secureTextEntry={!!secure && !reveal}
+      keyboardType={keyboardType}
+      autoCapitalize={autoCapitalize}
+      autoComplete={autoComplete}
+      textContentType={textContentType}
+      autoCorrect={autoCorrect}
+      onSubmitEditing={onSubmitEditing}
+      returnKeyType={returnKeyType}
+      style={secure ? styles.inputBare : [styles.input, multiline && styles.textarea]}
     />
+  );
+  if (!secure) return input;
+  return (
+    <View style={styles.secureRow}>
+      {input}
+      <Pressable
+        onPress={() => setReveal((r) => !r)}
+        hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel={reveal ? '비밀번호 가리기' : '비밀번호 보기'}
+      >
+        <Text style={styles.revealBtn}>{reveal ? '🙈' : '👁'}</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -83,6 +116,13 @@ const styles = StyleSheet.create({
     fontSize: 15, color: colors.ink, backgroundColor: colors.surface,
   },
   textarea: { minHeight: 80, textAlignVertical: 'top' },
+  inputBare: { flex: 1, fontSize: 15, color: colors.ink, padding: 0 },
+  secureRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderWidth: 1, borderColor: colors.line2, borderRadius: radius.sm,
+    paddingVertical: 13, paddingHorizontal: 14, backgroundColor: colors.surface,
+  },
+  revealBtn: { fontSize: 16 },
   wrapRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   catPickBtn: { borderRadius: radius.pill, paddingVertical: 8, paddingHorizontal: 13 },
   emojiBtn: { width: 44, height: 44, borderRadius: 11, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },

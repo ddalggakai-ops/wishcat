@@ -10,13 +10,14 @@ import { useApp, useMyItems } from '../context/AppContext';
 import type { Item } from '../api/types';
 
 export default function MineScreen({
-  onEditProfile, onMemory, onShare, onMenu, onBulkImport,
+  onEditProfile, onMemory, onShare, onMenu, onBulkImport, onStarter,
 }: {
   onEditProfile: () => void;
   onMemory: (item: Item) => void;
   onShare: (item: Item) => void;
   onMenu: (item: Item) => void;
   onBulkImport: () => void;
+  onStarter: () => void;
 }) {
   const { user, updateMe } = useAuth();
   const { refreshMine, loadingMine, completeItem, reopenItem } = useApp();
@@ -95,8 +96,10 @@ export default function MineScreen({
 
       {items.length === 0 ? (
         <>
-          <EmptyState icon="🚩" title="아직 꿈이 없어요" subtitle="아래 + 버튼으로 첫 번째 꿈을 적어보세요" />
-          <BubbleButton small variant="line" title="📊 엑셀로 여러 개 한 번에 추가" onPress={onBulkImport} style={{ alignSelf: 'center' }} />
+          <EmptyState icon="🚩" title="아직 꿈이 없어요" subtitle="뭘 적을지 막막하다면 아래에서 골라 담아보세요" />
+          <BubbleButton title="✦ 시작 템플릿에서 골라 담기" onPress={onStarter} full style={{ marginTop: 2 }} />
+          <BubbleButton small variant="line" title="📊 엑셀로 여러 개 한 번에 추가" onPress={onBulkImport} style={{ alignSelf: 'center', marginTop: 10 }} />
+          <Text style={styles.emptyHint}>직접 쓰고 싶다면 아래 + 버튼을 눌러주세요</Text>
         </>
       ) : (
         <>
@@ -203,5 +206,6 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 14, color: colors.ink, padding: 0 },
   searchClear: { fontSize: 13, color: colors.ink3, paddingHorizontal: 2 },
   chipRow: { flexDirection: 'row', gap: 7, marginTop: 10 },
+  emptyHint: { fontSize: 12, color: 'rgba(255,255,255,.9)', textAlign: 'center', marginTop: 12, fontWeight: '600' },
   chip: { borderRadius: radius.pill, paddingVertical: 7, paddingHorizontal: 13 },
 });

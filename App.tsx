@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Linking from 'expo-linking';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { AppProvider } from './src/context/AppContext';
 import AppErrorBoundary from './src/components/AppErrorBoundary';
@@ -13,39 +12,14 @@ import DiagnosticsScreen from './src/screens/DiagnosticsScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import HomeShell from './src/HomeShell';
 import AcceptInviteModal from './src/sheets/AcceptInviteModal';
+import { usePendingInvite } from './src/hooks/usePendingInvite';
 import { colors } from './src/theme';
 
-// wishcat://invite/<code> 형태의 딥링크에서 초대 코드를 추출
-function extractInviteCode(url: string | null): string | null {
-  if (!url) return null;
-  try {
-    const { path } = Linking.parse(url);
-    const match = path?.match(/invite\/([a-zA-Z0-9_-]+)/);
-    return match ? match[1] : null;
-  } catch {
-    return null;
-  }
-}
-
-function AuthenticatedApp() {
-  const [pendingCode, setPendingCode] = useState<string | null>(null);
-
-  useEffect(() => {
-    Linking.getInitialURL().then((url) => {
-      const code = extractInviteCode(url);
-      if (code) setPendingCode(code);
-    });
-    const sub = Linking.addEventListener('url', ({ url }) => {
-      const code = extractInviteCode(url);
-      if (code) setPendingCode(code);
-    });
-    return () => sub.remove();
-  }, []);
-
+function AuthenticatedApp({ pendingCode, onDone }: { pendingCode: string | null; onDone: () => void }) {
   return (
     <AppProvider>
       <HomeShell />
-      <AcceptInviteModal code={pendingCode} onClose={() => setPendingCode(null)} onAccepted={() => setPendingCode(null)} />
+      <AcceptInviteModal code={pendingCode} onClose={onDone} onAccepted={onDone} />
     </AppProvider>
   );
 }
@@ -78,6 +52,9 @@ function DiagLink({ onPress }: { onPress: () => void }) {
 function Root() {
   const { ready, user, startupError, retryStartup, justRegistered, clearJustRegistered } = useAuth();
   const [showDiag, setShowDiag] = useState(false);
+  // 초대 코드는 로그인 여부와 무관하게 여기서 붙잡습니다.
+  // (로그인 화면에서 링크를 받아도 가입 후에 그대로 이어지도록)
+  const { code: pendingCode, clear: clearInvite } = usePendingInvite();
 
   if (showDiag) return <DiagnosticsScreen onClose={() => setShowDiag(false)} />;
 
@@ -108,13 +85,13 @@ function Root() {
   if (!user) {
     return (
       <View style={{ flex: 1 }}>
-        <AuthScreen />
+        <AuthScreen pendingInvite={!!pendingCode} />
         <DiagLink onPress={() => setShowDiag(true)} />
       </View>
     );
   }
   if (justRegistered) return <OnboardingScreen onFinish={clearJustRegistered} />;
-  return <AuthenticatedApp />;
+  return <AuthenticatedApp pendingCode={pendingCode} onDone={clearInvite} />;
 }
 
 export default function App() {

@@ -18,6 +18,9 @@ import ItemMenuSheet from './sheets/ItemMenuSheet';
 import ViewerModal from './sheets/ViewerModal';
 import InviteModal from './sheets/InviteModal';
 import BulkImportSheet from './sheets/BulkImportSheet';
+import StarterSheet from './sheets/StarterSheet';
+import ItemDetailSheet from './sheets/ItemDetailSheet';
+import ReportSheet from './sheets/ReportSheet';
 import { useApp } from './context/AppContext';
 import type { Item } from './api/types';
 
@@ -41,6 +44,9 @@ export default function HomeShell() {
   const [viewerItem, setViewerItem] = useState<Item | null>(null);
   const [inviteItem, setInviteItem] = useState<Item | null | 'general'>(null);
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
+  const [starterOpen, setStarterOpen] = useState(false);
+  const [detailItem, setDetailItem] = useState<Item | null>(null);
+  const [reportItem, setReportItem] = useState<Item | null>(null);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -102,6 +108,7 @@ export default function HomeShell() {
         onBack={closePerson}
         onOpenViewer={setViewerItem}
         onHelp={setHelpItemTarget}
+        onReport={setReportItem}
       />
     );
   } else if (tab === 'mine') {
@@ -112,12 +119,13 @@ export default function HomeShell() {
         onShare={setViewerItem}
         onMenu={setMenuItem}
         onBulkImport={() => setBulkImportOpen(true)}
+        onStarter={() => setStarterOpen(true)}
       />
     );
   } else if (tab === 'friends') {
     content = <FriendsScreen onOpenPerson={(id, name) => openPerson(id, name, true)} onInvite={() => setInviteItem('general')} />;
   } else if (tab === 'explore') {
-    content = <ExploreScreen onOpenPerson={(id, name) => openPerson(id, name, false)} />;
+    content = <ExploreScreen onOpenItem={setDetailItem} onToast={showToast} />;
   } else {
     content = <MemoriesScreen onOpenViewer={setViewerItem} />;
   }
@@ -149,6 +157,25 @@ export default function HomeShell() {
         visible={bulkImportOpen}
         onClose={() => setBulkImportOpen(false)}
         onImported={(count) => showToast(`꿈 ${count}개를 추가했어요`)}
+      />
+      <StarterSheet
+        visible={starterOpen}
+        onClose={() => setStarterOpen(false)}
+        onAdded={(count) => showToast(`꿈 ${count}개를 담았어요 ✦`)}
+      />
+      <ItemDetailSheet
+        visible={!!detailItem}
+        onClose={() => setDetailItem(null)}
+        item={detailItem}
+        onOpenPerson={(id, name) => openPerson(id, name, false)}
+        onReport={setReportItem}
+        onToast={showToast}
+      />
+      <ReportSheet
+        visible={!!reportItem}
+        onClose={() => setReportItem(null)}
+        item={reportItem}
+        onDone={showToast}
       />
       <InviteModal
         visible={!!inviteItem}
