@@ -13,6 +13,7 @@ export default function FriendsScreen({ onOpenPerson, onInvite }: { onOpenPerson
 
   return (
     <ScrollView
+      style={{ flex: 1 }}
       contentContainerStyle={{ paddingBottom: 20 }}
       refreshControl={<RefreshControl refreshing={loadingFriends} onRefresh={refreshFriends} tintColor="#fff" />}
     >
@@ -28,7 +29,7 @@ export default function FriendsScreen({ onOpenPerson, onInvite }: { onOpenPerson
       ) : (
         friends.map((f) => (
           <Pressable key={f.id} onPress={() => onOpenPerson(f.id, f.name)} style={styles.card}>
-            <Avatar name={f.name} size={50} />
+            <Avatar name={f.name} photoUrl={f.photoUrl} size={50} />
             <View style={{ flex: 1 }}>
               <Text style={styles.name}>{f.name}</Text>
               <Text style={styles.sub}>이룬 꿈 {f.doneCount} · 도전 중 {f.itemsCount - f.doneCount}{f.withMeCount ? ` · 함께 ${f.withMeCount}` : ''}</Text>

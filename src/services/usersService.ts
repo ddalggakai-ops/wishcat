@@ -8,15 +8,18 @@ export const DEFAULT_BIO = '✦ 오늘도 꿈을 하나씩 채우는 중';
 
 const cache = new Map<string, PublicUser>();
 
-export function primeUserCache(uid: string, data: { name: string; bio?: string; listPublic?: boolean }) {
-  const u: PublicUser = { id: uid, name: data.name, avatarColor: colorFor(data.name), bio: data.bio || '', listPublic: data.listPublic !== false };
+export function primeUserCache(uid: string, data: { name: string; bio?: string; listPublic?: boolean; photoUrl?: string | null }) {
+  const u: PublicUser = {
+    id: uid, name: data.name, avatarColor: colorFor(data.name),
+    bio: data.bio || '', listPublic: data.listPublic !== false, photoUrl: data.photoUrl || null,
+  };
   cache.set(uid, u);
   return u;
 }
 
 export async function getUserBrief(uid: string): Promise<UserBrief> {
   const full = await getUserPublicCached(uid);
-  return { id: full.id, name: full.name, avatarColor: full.avatarColor };
+  return { id: full.id, name: full.name, avatarColor: full.avatarColor, photoUrl: full.photoUrl };
 }
 
 export async function getUserPublicCached(uid: string): Promise<PublicUser> {
@@ -30,6 +33,7 @@ export async function getUserPublicCached(uid: string): Promise<PublicUser> {
     avatarColor: colorFor(data?.name || uid),
     bio: data?.bio || '',
     listPublic: data?.listPublic !== false,
+    photoUrl: data?.photoUrl || null,
   };
   cache.set(uid, u);
   return u;
@@ -38,10 +42,10 @@ export async function getUserPublicCached(uid: string): Promise<PublicUser> {
 export async function createUserProfile(uid: string, name: string) {
   const bio = DEFAULT_BIO;
   await withTimeout(
-    setDoc(doc(db, 'users', uid), { name, bio, listPublic: true, createdAt: serverTimestamp() }),
+    setDoc(doc(db, 'users', uid), { name, bio, listPublic: true, photoUrl: null, createdAt: serverTimestamp() }),
     '프로필 저장'
   );
-  primeUserCache(uid, { name, bio, listPublic: true });
+  primeUserCache(uid, { name, bio, listPublic: true, photoUrl: null });
 }
 
 export async function fetchMe(uid: string, email: string, fallbackName?: string): Promise<MeUser> {
@@ -52,15 +56,15 @@ export async function fetchMe(uid: string, email: string, fallbackName?: string)
   if (!snap.exists()) {
     const name = (fallbackName || email.split('@')[0] || '나').slice(0, 12);
     await createUserProfile(uid, name);
-    return { id: uid, name, avatarColor: colorFor(name), bio: DEFAULT_BIO, listPublic: true, email };
+    return { id: uid, name, avatarColor: colorFor(name), bio: DEFAULT_BIO, listPublic: true, photoUrl: null, email };
   }
 
   const data = snap.data() as any;
-  const u = primeUserCache(uid, { name: data?.name || '나', bio: data?.bio, listPublic: data?.listPublic });
+  const u = primeUserCache(uid, { name: data?.name || '나', bio: data?.bio, listPublic: data?.listPublic, photoUrl: data?.photoUrl });
   return { ...u, email };
 }
 
-export async function updateMyProfile(uid: string, patch: Partial<{ name: string; bio: string; listPublic: boolean }>) {
+export async function updateMyProfile(uid: string, patch: Partial<{ name: string; bio: string; listPublic: boolean; photoUrl: string | null }>) {
   await updateDoc(doc(db, 'users', uid), patch as any);
   cache.delete(uid); // 다음 조회 때 새로 불러오도록
 }

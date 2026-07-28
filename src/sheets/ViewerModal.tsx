@@ -34,7 +34,7 @@ export default function ViewerModal({ visible, item, onClose }: { visible: boole
           </View>
           <View style={styles.body}>
             <View style={styles.headRow}>
-              <Avatar name={item.owner.name} size={26} />
+              <Avatar name={item.owner.name} photoUrl={item.owner.photoUrl} size={26} />
               <Text style={styles.headText}>{isMe ? '나' : item.owner.name} · {item.memory?.date}</Text>
             </View>
             <Text style={styles.title}>{item.emoji} {item.title}</Text>

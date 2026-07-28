@@ -94,7 +94,7 @@ export default function ItemCard({
             <View style={styles.who}>
               <View style={{ flexDirection: 'row' }}>
                 {item.participants.slice(0, 4).map((p, idx) => (
-                  <Avatar key={p.id} name={p.name} size={22} style={{ marginLeft: idx === 0 ? 0 : -7, borderWidth: 2, borderColor: '#fff' }} />
+                  <Avatar key={p.id} name={p.name} photoUrl={p.photoUrl} size={22} style={{ marginLeft: idx === 0 ? 0 : -7, borderWidth: 2, borderColor: '#fff' }} />
                 ))}
               </View>
               <Text style={styles.whoLabel}>{item.participants.map((p) => p.name).slice(0, 3).join(', ')}{item.participants.length > 3 ? ` 외 ${item.participants.length - 3}명` : ''} 함께</Text>

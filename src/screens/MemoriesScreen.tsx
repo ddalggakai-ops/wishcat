@@ -11,7 +11,7 @@ export default function MemoriesScreen({ onOpenViewer }: { onOpenViewer: (item: 
   const mems = mine.filter((i) => i.done && i.memory);
 
   return (
-    <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }}>
       <ScreenHeader title="추억" subtitle="내가 이룬 순간들" />
       {mems.length === 0 ? (
         <EmptyState icon="✨" title="아직 추억이 없어요" subtitle="꿈을 이루고 사진과 기록을 남겨보세요" />

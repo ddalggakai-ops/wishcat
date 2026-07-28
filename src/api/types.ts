@@ -4,6 +4,7 @@ export interface UserBrief {
   id: string;
   name: string;
   avatarColor: string;
+  photoUrl: string | null;
 }
 
 export interface MeUser extends UserBrief {

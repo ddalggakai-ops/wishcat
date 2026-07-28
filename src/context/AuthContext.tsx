@@ -16,7 +16,7 @@ interface AuthState {
   register: (email: string, password: string, name: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  updateMe: (patch: Partial<Pick<MeUser, 'name' | 'bio' | 'listPublic'>>) => Promise<void>;
+  updateMe: (patch: Partial<Pick<MeUser, 'name' | 'bio' | 'listPublic' | 'photoUrl'>>) => Promise<void>;
   clearError: () => void;
   justRegistered: boolean;
   clearJustRegistered: () => void;
@@ -143,7 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const updateMe = useCallback(async (patch: Partial<Pick<MeUser, 'name' | 'bio' | 'listPublic'>>) => {
+  const updateMe = useCallback(async (patch: Partial<Pick<MeUser, 'name' | 'bio' | 'listPublic' | 'photoUrl'>>) => {
     const current = userRef.current;
     if (!current) return;
     await updateMyProfile(current.id, patch);

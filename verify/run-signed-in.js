@@ -71,6 +71,46 @@ const ITEM_DOC = {
   updateTime: TS,
 };
 
+// 검색/필터/스크롤 검증용 — 카테고리가 겹치는 항목을 섞어서 12개를 만듭니다.
+const MANY_ITEMS_SPEC = [
+  { id: 'i1', title: '오로라 보기', emoji: '🌌', category: '여행', done: false },
+  { id: 'i2', title: '한강 러닝 완주', emoji: '🏃', category: '액티비티', done: false },
+  { id: 'i3', title: '책 50권 읽기', emoji: '📚', category: '성장', done: false },
+  { id: 'i4', title: '요가 마스터하기', emoji: '🧘', category: '취미', done: false },
+  { id: 'i5', title: '파스타 만들기', emoji: '🍝', category: '음식', done: false },
+  { id: 'i6', title: '부모님과 여행가기', emoji: '👨‍👩‍👧', category: '관계', done: false },
+  { id: 'i7', title: '북한산 등반', emoji: '⛰️', category: '자연', done: false },
+  { id: 'i8', title: '번지점프 도전', emoji: '🪂', category: '도전', done: false },
+  { id: 'i9', title: '제주도 한 달 살기', emoji: '🏝️', category: '여행', done: true },
+  { id: 'i10', title: '마라톤 완주', emoji: '🏅', category: '액티비티', done: true },
+  { id: 'i11', title: '유럽 배낭여행', emoji: '🎒', category: '여행', done: false },
+  { id: 'i12', title: '스카이다이빙', emoji: '🪂', category: '도전', done: false },
+];
+function makeItemDoc(spec) {
+  return {
+    name: docPath(`items/${spec.id}`),
+    fields: {
+      ownerId: { stringValue: UID },
+      title: { stringValue: spec.title },
+      emoji: { stringValue: spec.emoji },
+      note: { stringValue: '' },
+      category: { stringValue: spec.category },
+      location: { nullValue: null },
+      done: { booleanValue: spec.done },
+      memory: { nullValue: null },
+      participants: { arrayValue: {} },
+      origin: { stringValue: 'own' },
+      helpedBy: { arrayValue: {} },
+      likesCount: { integerValue: '0' },
+      savesCount: { integerValue: '0' },
+      createdAt: { timestampValue: TS },
+    },
+    createTime: TS,
+    updateTime: TS,
+  };
+}
+const MANY_ITEM_DOCS = MANY_ITEMS_SPEC.map(makeItemDoc);
+
 const seen = [];
 
 function json(route, body, status = 200) {
@@ -191,7 +231,10 @@ async function handleFirestore(route) {
   if (url.includes(':runQuery')) {
     const col = body?.structuredQuery?.from?.[0]?.collectionId;
     seen.push(`FS runQuery ${col}`);
-    if (col === 'items') return json(route, [{ document: ITEM_DOC, readTime: TS }]);
+    if (col === 'items') {
+      const docs = FS_MODE === 'many' ? MANY_ITEM_DOCS : [ITEM_DOC];
+      return json(route, docs.map((document) => ({ document, readTime: TS })));
+    }
     return json(route, [{ readTime: TS }]);
   }
 
@@ -252,6 +295,49 @@ const openBulkImportAs = async (page) => {
   await page.getByText('📊 엑셀로 추가', { exact: false }).first().click();
 };
 
+const probe = {};
+
+const searchFilterScrollAs = async (page) => {
+  await loginAs(page);
+  await page.waitForTimeout(600);
+
+  // 스크롤: 목록 컨테이너가 뷰포트에 갇혀 있고(overflow-y), 내용이 넘쳐서 실제로 스크롤 가능한지 확인.
+  // 참고: ScrollView에 style={{flex:1}}을 빼도 react-native-web에서는 기본 CSS 때문에 이 값이 똑같이 나옵니다
+  // (RNW가 알아서 flex 처리를 해줌). 그래서 이 체크는 "웹에서도 스크롤이 되는지"의 회귀 방지용일 뿐,
+  // 실제 안드로이드 네이티브에서 ScrollView가 style 없이 넘치는 버그(Yoga는 RNW처럼 기본값을 안 줌)를
+  // 재현/검증하지는 못합니다. style={{flex:1}}은 네이티브 RN의 표준 권장 수정이라 코드에는 유지합니다.
+  probe.scroll = await page.evaluate(() => {
+    const all = Array.from(document.querySelectorAll('div'));
+    let best = null;
+    for (const el of all) {
+      const cs = getComputedStyle(el);
+      if ((cs.overflowY === 'auto' || cs.overflowY === 'scroll') && el.scrollHeight > el.clientHeight + 20) {
+        if (!best || el.scrollHeight > best.scrollHeight) best = { scrollHeight: el.scrollHeight, clientHeight: el.clientHeight };
+      }
+    }
+    return best;
+  });
+
+  // 검색: 제목이 하나뿐인 검색어로 좁혀지는지 확인
+  const search = page.locator('input[placeholder="제목 · 메모 · 장소로 검색"]');
+  await search.fill('스카이다이빙');
+  await page.waitForTimeout(500);
+  probe.searchText = (await page.evaluate(() => document.body.innerText)).replace(/\s+/g, ' ');
+  await search.fill('');
+  await page.waitForTimeout(300);
+
+  // 카테고리 필터: "여행" 칩을 누르면 여행 카테고리만 남는지 확인 (칩은 목록보다 먼저 렌더되므로 first()가 칩)
+  await page.getByText('여행', { exact: true }).first().click();
+  await page.waitForTimeout(500);
+  probe.filterText = (await page.evaluate(() => document.body.innerText)).replace(/\s+/g, ' ');
+};
+
+const openProfilePhotoPickerAs = async (page) => {
+  await loginAs(page);
+  await page.waitForTimeout(500);
+  await page.getByText('프로필 편집', { exact: false }).first().click();
+};
+
 const registerAs = async (page) => {
   await page.getByText('계정이 없어요 · 회원가입', { exact: false }).first().click();
   await page.waitForTimeout(500);
@@ -270,6 +356,8 @@ const registerAs = async (page) => {
   const c = await scenario(browser, '07 로그인은 되지만 Firestore 권한 거부(403)', 'denied', loginAs);
   const d = await scenario(browser, '08 데이터베이스가 없는 경우(404)', 'nodb', loginAs);
   const e = await scenario(browser, '09 엑셀로 여러 개 추가 시트 열기', 'ok', openBulkImportAs);
+  const f = await scenario(browser, '10 검색/필터/스크롤 (아이템 12개)', 'many', searchFilterScrollAs);
+  const g = await scenario(browser, '11 프로필 편집 - 사진 선택 UI', 'ok', openProfilePhotoPickerAs);
   await browser.close();
 
   console.log('\n\n========== 판정 ==========');
@@ -314,6 +402,32 @@ const registerAs = async (page) => {
     ['[엑셀] 형식 안내(헤더 예시)가 보인다', /제목.*이모지.*메모.*카테고리.*장소/s.test(e.text.replace(/\s+/g, '')), e.text.slice(0, 200)],
     ['[엑셀] 파일 선택 버튼이 있다', /엑셀\/CSV 파일 선택/.test(e.text), ''],
     ['[엑셀] 콘솔 치명적 오류 없음', e.errors.length === 0, e.errors.join(' | ').slice(0, 200)],
+
+    [
+      '[스크롤] (웹 기준) 목록이 뷰포트 안에 갇혀 있고 내용이 넘쳐서 스크롤 가능하다',
+      !!probe.scroll && probe.scroll.scrollHeight > probe.scroll.clientHeight,
+      probe.scroll ? `scrollHeight=${probe.scroll.scrollHeight} clientHeight=${probe.scroll.clientHeight}` : '스크롤 가능한 컨테이너를 못 찾음',
+    ],
+    [
+      '[검색] "스카이다이빙" 검색 시 그 항목만 남는다',
+      /스카이다이빙/.test(probe.searchText) && !/오로라 보기/.test(probe.searchText) && !/한강 러닝/.test(probe.searchText),
+      probe.searchText.slice(0, 300),
+    ],
+    [
+      '[검색] 검색 결과 없을 때는 검색 결과 없음 문구가 아니라(값이 있으므로) 정상 목록',
+      !/검색 결과가 없어요/.test(probe.searchText),
+      '',
+    ],
+    [
+      '[필터] "여행" 카테고리 칩을 누르면 여행 항목만 남는다',
+      /오로라 보기/.test(probe.filterText) && /제주도 한 달 살기/.test(probe.filterText) && !/한강 러닝/.test(probe.filterText) && !/스카이다이빙/.test(probe.filterText),
+      probe.filterText.slice(0, 400),
+    ],
+    ['[검색/필터] 콘솔 치명적 오류 없음', f.errors.length === 0, f.errors.join(' | ').slice(0, 200)],
+
+    ['[프로필사진] 시트가 열리고 빈 화면이 아니다', g.nodes > 30, `노드 ${g.nodes}`],
+    ['[프로필사진] "사진 추가하기" 버튼이 보인다', /사진 추가하기/.test(g.text), g.text.slice(0, 200)],
+    ['[프로필사진] 콘솔 치명적 오류 없음', g.errors.length === 0, g.errors.join(' | ').slice(0, 200)],
   ];
   for (const [n, p, d] of checks) console.log(`${p ? 'PASS' : 'FAIL'} — ${n}${d ? `  ⟨${d}⟩` : ''}`);
   const failed = checks.filter((x) => !x[1]).length;

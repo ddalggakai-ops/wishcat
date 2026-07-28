@@ -42,7 +42,7 @@ export default function PersonScreen({
 
   if (!data) {
     return (
-      <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }}>
         <BackBtn label={isFriendTab ? '친구' : '둘러보기'} onPress={onBack} />
       </ScrollView>
     );
@@ -54,10 +54,10 @@ export default function PersonScreen({
   const ctx = isFriendTab || data.isFriend ? 'friend' : 'explore';
 
   return (
-    <ScrollView contentContainerStyle={{ paddingBottom: 20 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#fff" />}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#fff" />}>
       <BackBtn label={isFriendTab ? '친구' : '둘러보기'} onPress={onBack} />
       <View style={styles.head}>
-        <Avatar name={data.user.name} size={58} />
+        <Avatar name={data.user.name} photoUrl={data.user.photoUrl} size={58} />
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
             <Text style={styles.name}>{data.user.name}</Text>

@@ -6,7 +6,7 @@ import { absoluteFill, colors } from '../theme';
 import { getInvitePreview, acceptInvite as acceptInviteRequest } from '../services/friendsService';
 import { useAuth } from '../context/AuthContext';
 
-interface Preview { fromUser: { id: string; name: string; avatarColor: string }; item: { title: string; emoji: string } | null }
+interface Preview { fromUser: { id: string; name: string; avatarColor: string; photoUrl: string | null }; item: { title: string; emoji: string } | null }
 
 export default function AcceptInviteModal({
   code, onClose, onAccepted,
@@ -51,7 +51,7 @@ export default function AcceptInviteModal({
           ) : preview ? (
             <>
               <View style={styles.row}>
-                <Avatar name={preview.fromUser.name} size={48} />
+                <Avatar name={preview.fromUser.name} photoUrl={preview.fromUser.photoUrl} size={48} />
                 <Text style={styles.desc}>
                   <Text style={{ fontWeight: '700' }}>{preview.fromUser.name}</Text>님이 초대했어요
                   {preview.item ? `\n"${preview.item.emoji} ${preview.item.title}" 함께해요` : ''}

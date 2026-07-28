@@ -31,7 +31,7 @@ export default function ExploreScreen({ onOpenPerson }: { onOpenPerson: (id: str
   useEffect(() => { load(); }, [load]);
 
   return (
-    <ScrollView contentContainerStyle={{ paddingBottom: 20 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#fff" />}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#fff" />}>
       <ScreenHeader title="둘러보기" subtitle="전체공개된 사람들의 버킷을 구경해요. 타일을 누르면 그 사람 페이지로 이동해요." />
       <View style={styles.filterBar}>
         <Pressable onPress={() => setFilter('all')} style={[styles.filterBtn, filter === 'all' && styles.filterBtnOn]}>
@@ -60,7 +60,7 @@ export default function ExploreScreen({ onOpenPerson }: { onOpenPerson: (id: str
                 <View style={styles.tileMeta}>
                   <Text numberOfLines={2} style={styles.tileTitle}>{i.title}</Text>
                   <View style={styles.ownerRow}>
-                    <Avatar name={i.owner.name} size={18} />
+                    <Avatar name={i.owner.name} photoUrl={i.owner.photoUrl} size={18} />
                     <Text style={styles.ownerName}>{i.owner.name}님</Text>
                   </View>
                   <View style={styles.counts}>

@@ -1,9 +1,19 @@
 import React from 'react';
-import { StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { Image, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { colorFor } from '../theme';
+import { resolveImageUrl } from '../api/client';
 
-export default function Avatar({ name, size = 40, dashed, style }: { name: string; size?: number; dashed?: boolean; style?: ViewStyle }) {
+export default function Avatar({
+  name, photoUrl, size = 40, dashed, style,
+}: {
+  name: string;
+  photoUrl?: string | null;
+  size?: number;
+  dashed?: boolean;
+  style?: ViewStyle;
+}) {
   const initial = (name || '?').trim().charAt(0).toUpperCase();
+  const resolvedPhoto = resolveImageUrl(photoUrl);
   return (
     <View
       style={[
@@ -14,11 +24,16 @@ export default function Avatar({ name, size = 40, dashed, style }: { name: strin
           borderWidth: dashed ? 3 : 0,
           borderColor: '#B49CF2',
           borderStyle: dashed ? 'dashed' : 'solid',
+          overflow: 'hidden',
         },
         style,
       ]}
     >
-      <Text style={{ fontSize: size * 0.4, fontWeight: '800', color: '#2A3A57' }}>{initial}</Text>
+      {resolvedPhoto ? (
+        <Image source={{ uri: resolvedPhoto }} style={{ width: size, height: size, borderRadius: size / 2 }} />
+      ) : (
+        <Text style={{ fontSize: size * 0.4, fontWeight: '800', color: '#2A3A57' }}>{initial}</Text>
+      )}
     </View>
   );
 }

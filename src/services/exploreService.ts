@@ -18,7 +18,7 @@ export async function getExploreItems(viewerUid: string, filter: 'all' | 'done' 
     if (d.id === viewerUid) return;
     const data = d.data() as any;
     if (data?.listPublic === false) return;
-    primeUserCache(d.id, { name: data?.name || '알 수 없음', bio: data?.bio, listPublic: data?.listPublic });
+    primeUserCache(d.id, { name: data?.name || '알 수 없음', bio: data?.bio, listPublic: data?.listPublic, photoUrl: data?.photoUrl });
     publicUserIds.push(d.id);
   });
   if (publicUserIds.length === 0) return [];
