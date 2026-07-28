@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>위시캣 · 감성/자연 리디자인 시안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#FBF3EA; --paper:#FFFDF9; --paper2:#FFF7EF;
+    --ink:#3E332E; --ink2:#8A776D; --ink3:#B5A79C; --line:#EFE3D4;
+    --terracotta:#C97B63; --terracotta-ink:#A85F49; --terracotta-wash:#F6DED3;
+    --sage:#7E9A73; --sage-wash:#E3EAD9;
+    --lavender:#8B7FB8; --lavender-wash:#E9E3F4;
+    --blush:#C87C8B; --blush-wash:#F6DEE2;
+    --dustyblue:#6E8CA6; --dustyblue-wash:#DEE7EF;
+    --gold:#C99A4A; --gold-wash:#F3E7CE;
+    --shadow-md: 0 16px 34px -16px rgba(80,55,35,.30);
+    --shadow-lg: 0 26px 50px -20px rgba(60,40,25,.38);
+    --radius-xl: 30px; --radius-lg:22px; --radius-md:16px; --radius-sm:12px;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; min-height:100vh; background:#FFFFFF;
+    font-family:'Nunito','Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    color:var(--ink);
+    padding:36px 16px 80px;
+  }
+  .intro{ max-width:900px; margin:0 auto 26px; text-align:center; }
+  .intro h1{ font-family:'Gowun Batang', serif; font-size:26px; margin:0 0 8px; color:var(--ink); }
+  .intro p{ margin:0; color:var(--ink2); font-size:14px; line-height:1.7; }
+  .tag-note{
+    display:inline-block; margin-top:12px; font-size:12px; color:var(--terracotta-ink);
+    background:var(--terracotta-wash); padding:6px 14px; border-radius:99px; font-weight:700;
+  }
+
+  .tabs{
+    max-width:900px; margin:24px auto 30px; display:flex; justify-content:center; gap:8px; flex-wrap:wrap;
+  }
+  .tab{
+    border:1px solid var(--line); background:var(--paper); color:var(--ink2); font-weight:700; font-size:13px;
+    padding:10px 18px; border-radius:99px; cursor:pointer; transition:.15s;
+  }
+  .tab.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+
+  .stage{ display:flex; justify-content:center; }
+  .phone{
+    width:390px; height:844px; background:#12100F; border-radius:52px; padding:14px;
+    box-shadow: var(--shadow-lg); position:relative;
+  }
+  .phone-screen{
+    width:100%; height:100%; background:#FFFFFF; border-radius:38px; overflow:hidden; position:relative;
+    display:flex; flex-direction:column;
+  }
+  .statusbar{
+    height:46px; flex:0 0 auto; display:flex; align-items:center; justify-content:space-between;
+    padding:0 26px; font-size:13px; font-weight:800; color:var(--ink); position:relative; z-index:5;
+  }
+  .statusbar .pill-notch{
+    position:absolute; top:8px; left:50%; transform:translateX(-50%); width:120px; height:26px;
+    background:#12100F; border-radius:20px;
+  }
+  .screen-body{ flex:1; overflow-y:auto; padding:0 18px 100px; -ms-overflow-style:none; scrollbar-width:none; }
+  .screen-body::-webkit-scrollbar{ display:none; }
+
+  .view{ display:none; }
+  .view.active{ display:flex; flex-direction:column; flex:1; min-height:0; }
+
+  /* ---------- scene illustration ---------- */
+  .scene{ position:relative; overflow:hidden; }
+  .scene svg{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+
+  /* ---------- shared bits ---------- */
+  .section-label{ font-size:11px; font-weight:800; letter-spacing:.06em; color:var(--ink3); text-transform:uppercase; margin:22px 2px 10px; }
+  .pill-btn{
+    border:none; border-radius:99px; font-weight:800; cursor:pointer; font-family:inherit;
+  }
+  .pill-btn.primary{ background:var(--terracotta); color:#fff; box-shadow:0 10px 22px -8px rgba(169,95,73,.55); }
+  .pill-btn.ghost{ background:var(--paper); color:var(--ink2); border:1px solid var(--line); }
+  .chip{
+    display:inline-flex; align-items:center; gap:4px; border-radius:99px; padding:4px 11px; font-size:11px; font-weight:800;
+  }
+
+  /* ================= LOGIN ================= */
+  .login-hero{ height:340px; border-radius:0 0 34px 34px; margin:0 -18px; }
+  .login-card{
+    background:var(--paper); border-radius:28px; margin-top:-46px; position:relative; z-index:2;
+    padding:26px 22px 22px; box-shadow:var(--shadow-md);
+  }
+  .wordmark{ font-family:'Gowun Batang', serif; font-size:26px; margin:0; color:var(--ink); }
+  .wordmark span{ color:var(--terracotta); }
+  .tagline{ font-size:13px; color:var(--ink2); margin:6px 0 22px; line-height:1.6; }
+  .field{
+    width:100%; border:1px solid var(--line); background:var(--paper2); border-radius:14px;
+    padding:14px 15px; font-size:14px; margin-bottom:11px; color:var(--ink); font-family:inherit;
+  }
+  .field::placeholder{ color:var(--ink3); }
+  .login-btn{ width:100%; padding:15px; font-size:14.5px; margin-top:8px; }
+  .login-links{ display:flex; justify-content:center; gap:14px; margin-top:16px; font-size:12px; color:var(--ink3); }
+  .login-links b{ color:var(--terracotta-ink); font-weight:800; }
+  .onboard-dots{ display:flex; gap:5px; justify-content:center; margin-top:22px; }
+  .onboard-dots i{ width:6px; height:6px; border-radius:99px; background:var(--line); display:block; }
+  .onboard-dots i.on{ background:var(--terracotta); width:16px; }
+
+  /* ================= MINE ================= */
+  .profile-card{
+    border-radius:var(--radius-xl); margin-top:14px; padding:22px 20px; color:#fff; height:210px;
+    display:flex; flex-direction:column; justify-content:space-between; box-shadow:var(--shadow-md);
+  }
+  .profile-toprow{ display:flex; justify-content:flex-end; position:relative; z-index:2; margin-bottom:6px; }
+  .profile-top{ display:flex; align-items:center; gap:14px; position:relative; z-index:2; }
+  .avatar{
+    width:58px; height:58px; border-radius:50%; background:rgba(255,255,255,.92); color:var(--lavender);
+    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:20px;
+    border:3px solid rgba(255,255,255,.6); flex:0 0 auto;
+  }
+  .profile-name{ font-size:17px; font-weight:800; }
+  .profile-bio{ font-size:12px; opacity:.9; margin-top:2px; }
+  .profile-stats{ display:flex; gap:14px; margin-left:auto; text-align:center; flex:0 0 auto; }
+  .profile-stats b{ display:block; font-size:17px; }
+  .profile-stats span{ font-size:10.5px; opacity:.85; white-space:nowrap; }
+  .profile-name-block{ min-width:0; flex:1 1 auto; }
+  .profile-name{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .profile-bottom{ position:relative; z-index:2; }
+  .progress-track{ height:6px; border-radius:99px; background:rgba(255,255,255,.32); overflow:hidden; }
+  .progress-fill{ height:100%; background:#fff; border-radius:99px; }
+  .progress-text{ font-size:11.5px; margin-top:8px; opacity:.92; }
+  .public-pill{
+    background:rgba(255,255,255,.24); color:#fff; font-size:10.5px; font-weight:800;
+    padding:5px 11px; border-radius:99px; border:1px solid rgba(255,255,255,.5);
+  }
+
+  .search-bar{
+    margin-top:18px; display:flex; align-items:center; gap:8px; background:var(--paper);
+    border:1px solid var(--line); border-radius:14px; padding:12px 14px;
+  }
+  .search-bar span{ font-size:13px; color:var(--ink3); }
+  .search-bar input{ border:none; background:none; outline:none; font-size:13.5px; flex:1; color:var(--ink); font-family:inherit; }
+
+  .chip-row{ display:flex; gap:7px; overflow-x:auto; margin-top:14px; padding-bottom:2px; }
+  .chip-row::-webkit-scrollbar{ display:none; }
+  .fchip{ flex:0 0 auto; padding:8px 15px; border-radius:99px; font-size:12.5px; font-weight:800; white-space:nowrap; border:1px solid transparent; }
+  .fchip.on{ background:var(--ink); color:#fff; }
+
+  .item-card{
+    display:flex; gap:13px; background:var(--paper); border:1px solid var(--line); border-radius:var(--radius-lg);
+    padding:13px; margin-bottom:11px; box-shadow:var(--shadow-md);
+  }
+  .item-thumb{ width:66px; height:66px; border-radius:16px; flex:0 0 auto; }
+  .item-body{ flex:1; min-width:0; }
+  .item-title{ font-size:14.5px; font-weight:800; margin:0 0 6px; display:flex; align-items:center; gap:6px; }
+  .item-meta{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:9px; }
+  .dday{ background:var(--gold-wash); color:#8A6412; }
+  .item-actions{ display:flex; gap:7px; }
+  .item-actions .pill-btn{ font-size:11px; padding:7px 12px; }
+
+  .fab{
+    position:absolute; right:20px; bottom:96px; width:46px; height:46px; border-radius:50%;
+    background:linear-gradient(160deg,var(--terracotta),#B4614A); color:#fff; font-size:18px; font-weight:800;
+    display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow-lg); border:none; z-index:8;
+  }
+
+  /* ================= EXPLORE ================= */
+  .explore-head{ padding-top:18px; }
+  .explore-head h2{ font-family:'Gowun Batang',serif; font-size:21px; margin:0 0 4px; }
+  .explore-head p{ font-size:12.5px; color:var(--ink2); margin:0 0 14px; line-height:1.6; }
+  .seg{ display:flex; gap:8px; margin-bottom:16px; }
+  .seg button{ flex:1; padding:10px; border-radius:12px; border:1px solid var(--line); background:var(--paper); font-weight:800; font-size:12.5px; color:var(--ink2); }
+  .seg button.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .explore-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .explore-card{
+    background:var(--paper); border-radius:var(--radius-lg); overflow:hidden; box-shadow:var(--shadow-md); border:1px solid var(--line);
+  }
+  .explore-scene{ height:108px; position:relative; }
+  .owner-chip{
+    position:absolute; left:8px; top:8px; background:rgba(255,255,255,.85); border-radius:99px; padding:4px 9px 4px 4px;
+    display:flex; align-items:center; gap:5px; font-size:10px; font-weight:800; color:var(--ink);
+  }
+  .owner-chip i{ width:16px; height:16px; border-radius:50%; background:var(--lavender); display:block; }
+  .like-chip{
+    position:absolute; right:8px; top:8px; background:rgba(255,255,255,.85); border-radius:99px; padding:4px 8px;
+    font-size:10px; font-weight:800; color:#B4485E;
+  }
+  .explore-body{ padding:11px 11px 13px; }
+  .explore-title{ font-size:13px; font-weight:800; margin:0 0 6px; }
+  .explore-foot{ display:flex; justify-content:space-between; align-items:center; margin-top:9px; }
+  .save-dot{ font-size:11px; color:var(--ink3); font-weight:700; }
+
+  /* ================= DETAIL SHEET ================= */
+  .detail-backdrop{ position:relative; height:100%; }
+  .detail-dim{ position:absolute; inset:0; background:rgba(35,25,20,.38); }
+  .detail-sheet{
+    position:absolute; left:0; right:0; bottom:0; background:var(--paper); border-radius:28px 28px 0 0;
+    box-shadow:0 -20px 40px rgba(30,20,15,.25); max-height:88%; overflow-y:auto; padding-bottom:26px;
+  }
+  .grab{ width:38px; height:4px; border-radius:99px; background:var(--line); margin:10px auto; }
+  .detail-scene{ height:150px; margin:0 18px; border-radius:20px; position:relative; }
+  .detail-body{ padding:16px 20px 0; }
+  .detail-owner{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--ink2); font-weight:700; margin-bottom:10px; }
+  .detail-owner i{ width:22px; height:22px; border-radius:50%; background:var(--dustyblue); display:block; }
+  .detail-title{ font-size:19px; font-weight:800; margin:0 0 10px; }
+  .detail-note{ font-size:13px; color:var(--ink2); line-height:1.7; margin:14px 0; }
+  .participants{ display:flex; margin:6px 0 4px; }
+  .participants i{ width:26px; height:26px; border-radius:50%; border:2px solid var(--paper); margin-left:-8px; display:block; }
+  .participants i:first-child{ margin-left:0; }
+  .detail-stats{ display:flex; align-items:center; gap:16px; margin:14px 0 4px; font-size:13px; color:var(--ink2); font-weight:700; }
+  .detail-cta{ width:100%; padding:16px; font-size:14.5px; margin-top:16px; }
+
+  @media (max-width:430px){
+    body{ padding:20px 0 60px; }
+    .phone{ width:100%; max-width:390px; height:100svh; max-height:844px; border-radius:0; }
+    .phone-screen{ border-radius:0; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="intro">
+    <h1>위시캣 · 노을 · 산 리디자인 시안</h1>
+    <p>기본 배경은 흰색으로 정리하고, 로그인 배경 · 목록 상단 카드 · 썸네일처럼 특정 영역에만 포인트 컬러 일러스트를 남겼어요.<br/>
+    산 능선을 여러 겹으로 쌓고 소나무 · 강물 · 해 후광 · 은은한 음영을 더해서 그림에 더 가깝게 다듬었어요.</p>
+    <span class="tag-note">⚠️ 정적 디자인 시안입니다 · 실제 동작은 없어요</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-view="login">로그인</button>
+    <button class="tab" data-view="mine">내 목록</button>
+    <button class="tab" data-view="explore">둘러보기</button>
+    <button class="tab" data-view="detail">아이템 상세</button>
+  </div>
+
+  <div class="stage">
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="statusbar"><span>9:41</span><span class="pill-notch"></span><span>🔋📶</span></div>
+
+        <!-- ================= LOGIN ================= -->
+        <div class="view active" id="view-login">
+          <div class="screen-body" style="padding:0;">
+            <div class="scene login-hero" data-scene="sunrise"></div>
+            <div style="padding:0 18px;">
+              <div class="login-card">
+                <p class="wordmark">위시<span>캣</span></p>
+                <p class="tagline">노을이 지는 언덕처럼, 친구와 함께<br/>마음속 리스트를 하나씩 채워가요</p>
+                <input class="field" placeholder="이메일" />
+                <input class="field" placeholder="비밀번호" />
+                <button class="pill-btn primary login-btn">로그인</button>
+                <div class="login-links"><span>계정이 없어요 · <b>회원가입</b></span></div>
+                <div class="login-links"><span>비밀번호를 잊으셨나요?</span></div>
+                <div class="onboard-dots"><i class="on"></i><i></i><i></i></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= MINE ================= -->
+        <div class="view" id="view-mine">
+          <div class="screen-body">
+            <div class="profile-card scene" data-scene="dusk">
+              <div class="profile-toprow"><span class="public-pill">🌙 전체공개</span></div>
+              <div class="profile-top">
+                <div class="avatar">검</div>
+                <div class="profile-name-block">
+                  <div class="profile-name">검증이</div>
+                  <div class="profile-bio">오늘도 노을 한 뼘, 산 하나씩</div>
+                </div>
+                <div class="profile-stats">
+                  <div><b>12</b><span>꿈</span></div>
+                  <div><b>5</b><span>완료</span></div>
+                </div>
+              </div>
+              <div class="profile-bottom">
+                <div class="progress-track"><div class="progress-fill" style="width:42%"></div></div>
+                <div class="progress-text">42% 달성 · 이룬 꿈 5 · 도전 중 7</div>
+              </div>
+            </div>
+
+            <div class="search-bar"><span>🔍</span><input placeholder="제목 · 메모 · 장소로 검색" /></div>
+
+            <div class="chip-row">
+              <div class="fchip on">전체</div>
+              <div class="fchip" style="background:var(--terracotta-wash);color:var(--terracotta-ink)">여행</div>
+              <div class="fchip" style="background:var(--sage-wash);color:#3F5C36">자연</div>
+              <div class="fchip" style="background:var(--blush-wash);color:#8A3A48">관계</div>
+              <div class="fchip" style="background:var(--lavender-wash);color:#54468A">도전</div>
+            </div>
+
+            <div class="section-label">✦ 도전 중 · 3</div>
+
+            <div class="item-card">
+              <div class="item-thumb scene" data-scene="sunrise" style="border-radius:16px;"></div>
+              <div class="item-body">
+                <p class="item-title">🌄 오로라 보러 가기</p>
+                <div class="item-meta">
+                  <span class="chip" style="background:var(--terracotta-wash);color:var(--terracotta-ink)">여행</span>
+                  <span class="chip dday">🗓 D-157</span>
+                </div>
+                <div class="item-actions">
+                  <button class="pill-btn ghost">완료하기</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="item-card">
+              <div class="item-thumb scene" data-scene="forest" style="border-radius:16px;"></div>
+              <div class="item-body">
+                <p class="item-title">🥾 제주 올레길 걷기</p>
+                <div class="item-meta">
+                  <span class="chip" style="background:var(--sage-wash);color:#3F5C36">자연</span>
+                  <span class="chip" style="background:var(--dustyblue-wash);color:#3E5A72">📍 제주</span>
+                </div>
+                <div class="item-actions">
+                  <button class="pill-btn ghost">완료하기</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="item-card">
+              <div class="item-thumb scene" data-scene="blush" style="border-radius:16px;"></div>
+              <div class="item-body">
+                <p class="item-title">🌸 벚꽃 절정일 때 진해 가보기</p>
+                <div class="item-meta">
+                  <span class="chip" style="background:var(--blush-wash);color:#8A3A48">관계</span>
+                  <span class="chip dday">🗓 D-32</span>
+                </div>
+                <div class="item-actions">
+                  <button class="pill-btn ghost">완료하기</button>
+                  <button class="pill-btn primary" style="background:var(--lavender)">함께하기</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-label">☾ 이룬 꿈 · 1</div>
+            <div class="item-card" style="opacity:.7;">
+              <div class="item-thumb scene" data-scene="night" style="border-radius:16px;"></div>
+              <div class="item-body">
+                <p class="item-title">⛺ 별 보러 산 위에서 하루 자기</p>
+                <div class="item-meta">
+                  <span class="chip" style="background:var(--lavender-wash);color:#54468A">도전</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button class="fab">↓</button>
+        </div>
+
+        <!-- ================= EXPLORE ================= -->
+        <div class="view" id="view-explore">
+          <div class="screen-body">
+            <div class="explore-head">
+              <h2>둘러보기</h2>
+              <p>전체공개된 사람들의 버킷을 노을빛으로 구경해요.</p>
+            </div>
+            <div class="seg"><button class="on">전체 버킷</button><button>이룬 꿈</button></div>
+            <div class="explore-grid">
+
+              <div class="explore-card">
+                <div class="explore-scene scene" data-scene="sunrise">
+                  <span class="owner-chip"><i></i>길동님</span>
+                  <span class="like-chip">♡ 7</span>
+                </div>
+                <div class="explore-body">
+                  <p class="explore-title">산티아고 순례길 걷기</p>
+                  <span class="chip" style="background:var(--terracotta-wash);color:var(--terracotta-ink)">여행</span>
+                  <div class="explore-foot"><span class="save-dot">🔖 2명 담음</span></div>
+                </div>
+              </div>
+
+              <div class="explore-card">
+                <div class="explore-scene scene" data-scene="forest">
+                  <span class="owner-chip"><i></i>수아님</span>
+                  <span class="like-chip">♡ 14</span>
+                </div>
+                <div class="explore-body">
+                  <p class="explore-title">지리산 종주하기</p>
+                  <span class="chip" style="background:var(--sage-wash);color:#3F5C36">자연</span>
+                  <div class="explore-foot"><span class="save-dot">🔖 5명 담음</span></div>
+                </div>
+              </div>
+
+              <div class="explore-card">
+                <div class="explore-scene scene" data-scene="blush">
+                  <span class="owner-chip"><i></i>하은님</span>
+                  <span class="like-chip">♡ 9</span>
+                </div>
+                <div class="explore-body">
+                  <p class="explore-title">엄마랑 온천 여행</p>
+                  <span class="chip" style="background:var(--blush-wash);color:#8A3A48">관계</span>
+                  <div class="explore-foot"><span class="save-dot">🔖 3명 담음</span></div>
+                </div>
+              </div>
+
+              <div class="explore-card">
+                <div class="explore-scene scene" data-scene="dusk">
+                  <span class="owner-chip"><i></i>민준님</span>
+                  <span class="like-chip">♡ 21</span>
+                </div>
+                <div class="explore-body">
+                  <p class="explore-title">밤바다 캠핑 가기</p>
+                  <span class="chip" style="background:var(--lavender-wash);color:#54468A">도전</span>
+                  <div class="explore-foot"><span class="save-dot">🔖 8명 담음</span></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= DETAIL ================= -->
+        <div class="view" id="view-detail">
+          <div class="detail-backdrop">
+            <div class="detail-dim"></div>
+            <div class="detail-sheet">
+              <div class="grab"></div>
+              <div class="detail-scene scene" data-scene="dusk"></div>
+              <div class="detail-body">
+                <div class="detail-owner"><i></i>길동님의 꿈 · 프로필 보기 ›</div>
+                <p class="detail-title">🏔️ 산티아고 순례길 걷기</p>
+                <div class="item-meta">
+                  <span class="chip" style="background:var(--terracotta-wash);color:var(--terracotta-ink)">여행</span>
+                  <span class="chip dday">🗓 D-277</span>
+                </div>
+                <p class="detail-note">같이 하면 더 재밌어요. 한 달 정도 시간을 내서 천천히 걸어보고 싶어요 — 같이 갈 사람 구해요 ✋</p>
+                <div class="participants"><i style="background:var(--dustyblue)"></i><i style="background:var(--blush)"></i><i style="background:var(--gold)"></i></div>
+                <div class="detail-stats"><span>♡ 7</span><span>🔖 2명이 담았어요</span></div>
+                <button class="pill-btn primary detail-cta">내 목록에 담기</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+<script>
+  // 팔레트: 하늘(4단 그라데이션) · 해/달 후광 · 산 3겹(각각 위/아래 톤을 가진 그라데이션) · 강물 반사광
+  const PALETTES = {
+    sunrise: {
+      sky:['#FDEBD8','#F9CDA8','#F1A47E','#DD7C63'],
+      sun:{ glow:'#FFE9BE', ring:'#FFD9A0', core:'#FFDFA6', edge:'#FFC876' },
+      far:{ top:'#F0A98C', base:'#E08768' },
+      mid:{ top:'#DD8468', base:'#C9664C', tree:'#9C4E3A' },
+      near:{ top:'#C1573F', base:'#93392A' },
+      river:{ top:'#FFD9A6', bottom:'#E4835F' },
+      mode:'sun',
+    },
+    dusk: {
+      sky:['#E6D9F5','#C7B3E8','#A190D6','#7C71B8'],
+      sun:{ glow:'#EDE1FF', ring:'#DCC8FF', core:'#E9DBFF', edge:'#C9AEF2' },
+      far:{ top:'#9D8FCB', base:'#8579B8' },
+      mid:{ top:'#7E71AC', base:'#655A94', tree:'#473D72' },
+      near:{ top:'#5B4F8C', base:'#3E3568' },
+      river:{ top:'#E7D9FF', bottom:'#6C5FA0' },
+      mode:'moon',
+    },
+    forest: {
+      sky:['#EAF3E2','#D3E8C6','#B3D6A3','#8FBE83'],
+      sun:{ glow:'#FFF6CE', ring:'#F3E8A0', core:'#FCEFAE', edge:'#E9DA82' },
+      far:{ top:'#9FC48E', base:'#84AD71' },
+      mid:{ top:'#79A667', base:'#5E8C50', tree:'#3D6B39' },
+      near:{ top:'#548049', base:'#375A2F' },
+      river:{ top:'#F5EFAE', bottom:'#6E9C5C' },
+      mode:'sun',
+    },
+    blush: {
+      sky:['#FCEAEC','#F6D2D8','#EFB3BE','#DC93A0'],
+      sun:{ glow:'#FFEAF0', ring:'#FBD3DE', core:'#FEE1E6', edge:'#F3B7C4' },
+      far:{ top:'#E4A4AE', base:'#D4899A' },
+      mid:{ top:'#CE8494', base:'#B96578', tree:'#8C4A5C' },
+      near:{ top:'#AC5E70', base:'#7D3F4D' },
+      river:{ top:'#FDDCE2', bottom:'#C06E80' },
+      mode:'sun',
+    },
+    night: {
+      sky:['#463B72','#382F60','#241E44','#161231'],
+      sun:{ glow:'#EDE7FF', ring:'#D9CFFF', core:'#F1ECFF', edge:'#CBBBF5' },
+      far:{ top:'#453B75', base:'#332B5C' },
+      mid:{ top:'#372F5D', base:'#261F45', tree:'#181433' },
+      near:{ top:'#241E44', base:'#130F26' },
+      river:{ top:'#D9CFFF', bottom:'#332B5C' },
+      mode:'moon',
+    },
+  };
+
+  // 소나무 실루엣 하나
+  function pine(x, y, scale, color){
+    return `<g transform="translate(${x} ${y}) scale(${scale})" fill="${color}" opacity=".85">
+      <polygon points="0,-17 -6,-3 6,-3"/>
+      <polygon points="0,-11 -7.5,5 7.5,5"/>
+      <rect x="-1.6" y="5" width="3.2" height="5.5"/>
+    </g>`;
+  }
+
+  function sceneSVG(key, seed){
+    const p = PALETTES[key];
+    let s = seed;
+    const rnd = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+    const uid = key + seed;
+    const sunX = 258, sunY = 56;
+
+    let stars = '';
+    if (p.mode === 'moon'){
+      const marks = ['✦','⋆','✧','·'];
+      stars = Array.from({ length: 18 }, () => {
+        const x = (rnd()*400).toFixed(1), y = (rnd()*100).toFixed(1);
+        const m = marks[Math.floor(rnd()*marks.length)];
+        const fsz = (rnd()*7+5).toFixed(1);
+        return `<text x="${x}" y="${y}" font-size="${fsz}" fill="#fff" opacity="${(rnd()*.5+.35).toFixed(2)}">${m}</text>`;
+      }).join('');
+    }
+    // 세로로 좁고 긴 화면(로그인 히어로 등)에서는 SVG가 "slice"로 잘려 양쪽 끝이 크게
+    // 잘려나가기 때문에, 나무 · 새처럼 낱개로 놓는 요소는 가운데 안전 영역(약 x 120~280)에만 둡니다.
+    const birds = p.mode === 'sun'
+      ? `<path d="M150 40 q6 -8 12 0 q6 -8 12 0" stroke="${p.near.base}" stroke-width="2.2" fill="none" stroke-linecap="round" opacity=".5"/>
+         <path d="M225 26 q5 -7 10 0 q5 -7 10 0" stroke="${p.near.base}" stroke-width="2.2" fill="none" stroke-linecap="round" opacity=".4"/>`
+      : '';
+
+    let trees = '';
+    [[128,120],[162,113],[205,119],[240,112],[270,121]].forEach(([x,y]) => {
+      trees += pine(x, y, 0.75 + rnd()*0.45, p.mid.tree);
+    });
+
+    const riverCx = sunX - 30;
+
+    return `
+    <svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="sky-${uid}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${p.sky[0]}"/><stop offset="35%" stop-color="${p.sky[1]}"/>
+          <stop offset="68%" stop-color="${p.sky[2]}"/><stop offset="100%" stop-color="${p.sky[3]}"/>
+        </linearGradient>
+        <radialGradient id="glow-${uid}" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="${p.sun.glow}" stop-opacity=".55"/>
+          <stop offset="100%" stop-color="${p.sun.glow}" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="core-${uid}" cx="42%" cy="38%" r="65%">
+          <stop offset="0%" stop-color="${p.sun.core}"/><stop offset="100%" stop-color="${p.sun.edge}"/>
+        </radialGradient>
+        <linearGradient id="far-${uid}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${p.far.top}"/><stop offset="100%" stop-color="${p.far.base}"/>
+        </linearGradient>
+        <linearGradient id="mid-${uid}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${p.mid.top}"/><stop offset="100%" stop-color="${p.mid.base}"/>
+        </linearGradient>
+        <linearGradient id="near-${uid}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${p.near.top}"/><stop offset="100%" stop-color="${p.near.base}"/>
+        </linearGradient>
+        <linearGradient id="river-${uid}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${p.river.top}"/><stop offset="100%" stop-color="${p.river.bottom}" stop-opacity=".25"/>
+        </linearGradient>
+        <radialGradient id="vig-${uid}" cx="50%" cy="32%" r="78%">
+          <stop offset="55%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity=".2"/>
+        </radialGradient>
+      </defs>
+
+      <rect width="400" height="200" fill="url(#sky-${uid})"/>
+      ${stars}
+      <circle cx="${sunX}" cy="${sunY}" r="62" fill="url(#glow-${uid})"/>
+      <circle cx="${sunX}" cy="${sunY}" r="27" fill="none" stroke="${p.sun.ring}" stroke-width="1.4" opacity=".55"/>
+      <circle cx="${sunX}" cy="${sunY}" r="22" fill="url(#core-${uid})"/>
+      ${birds}
+
+      <path d="M0 116 Q70 88 140 110 T280 102 T400 114 V200 H0 Z" fill="url(#far-${uid})"/>
+      <path d="M0 142 Q90 106 180 134 T400 126 V200 H0 Z" fill="url(#mid-${uid})"/>
+      ${trees}
+      <path d="M${riverCx-18} 130 C${riverCx-3} 150 ${riverCx-30} 165 ${riverCx-16} 200 L${riverCx+26} 200 C${riverCx+12} 165 ${riverCx+39} 150 ${riverCx+24} 130 Z" fill="url(#river-${uid})"/>
+      <path d="M0 172 Q110 138 220 166 T400 156 V200 H0 Z" fill="url(#near-${uid})"/>
+      <rect width="400" height="200" fill="url(#vig-${uid})"/>
+    </svg>`;
+  }
+
+  document.querySelectorAll('[data-scene]').forEach((el, i) => {
+    // 카드 안에 아바타/칩 같은 오버레이 내용이 이미 있는 경우가 많아서, innerHTML을 통째로
+    // 덮어쓰지 않고 배경 SVG를 맨 앞에 끼워 넣습니다 (오버레이는 그대로 자식으로 남아있어요).
+    el.insertAdjacentHTML('afterbegin', sceneSVG(el.dataset.scene, i + 1));
+  });
+
+  document.querySelectorAll('.tab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
+      document.getElementById('view-' + btn.dataset.view).classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>

@@ -189,8 +189,8 @@ export default function DiagnosticsScreen({ onClose }: { onClose: () => void }) 
 
 const styles = StyleSheet.create({
   wrap: { paddingHorizontal: 20 },
-  title: { fontSize: 22, fontWeight: '800', color: '#fff', textAlign: 'center' },
-  sub: { fontSize: 13, color: 'rgba(255,255,255,.85)', textAlign: 'center', marginTop: 6, marginBottom: 18 },
+  title: { fontSize: 22, fontWeight: '800', color: colors.ink, textAlign: 'center' },
+  sub: { fontSize: 13, color: colors.ink2, textAlign: 'center', marginTop: 6, marginBottom: 18 },
   card: { backgroundColor: colors.surface, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: colors.line, gap: 14 },
   row: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   icon: { fontSize: 15, width: 22, textAlign: 'center' },

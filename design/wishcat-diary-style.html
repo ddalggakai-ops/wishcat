@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>위시캣 · 다이어리 스타일 리디자인 시안 v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F8F7FC; --card:#FFFFFF; --card2:#FBFAFF;
+    --text:#2E2A3D; --text2:#8B87A0; --text3:#C7C3DC; --neutral:#EAE6F5;
+    /* 이하 하위호환용 별칭 */
+    --ink:var(--text); --ink2:var(--text2); --ink3:var(--text3); --line:var(--neutral);
+
+    --primary-1:#7178E5; --primary-2:#96A6EE; --primary-ink:#5B62D6; --primary-wash:#ECEDFC;
+    --secondary-1:#FC9D8E; --secondary-2:#FDB9A6; --secondary-ink:#E06A52; --secondary-wash:#FFEDE8;
+    --accent-1:#FF7BA6; --accent-2:#FFA1BF; --accent-ink:#E0447D; --accent-wash:#FFE7F0;
+    --highlight:#FDC54F; --highlight-2:#FDD68A; --highlight-ink:#9C6A0A; --highlight-wash:#FFF4DC;
+
+    --primary-shadow: rgba(108,114,224,.35);
+    --secondary-shadow: rgba(252,148,132,.35);
+    --accent-shadow: rgba(255,111,158,.35);
+    --highlight-shadow: rgba(253,197,79,.35);
+
+    --shadow-sm: 0 8px 18px -10px rgba(46,42,61,.14);
+    --shadow-md: 0 18px 34px -16px rgba(46,42,61,.20);
+    --shadow-lg: 0 28px 54px -20px rgba(46,42,61,.26);
+    --radius-xl:28px; --radius-lg:22px; --radius-md:16px; --radius-sm:12px;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; min-height:100vh; background:#FFFFFF;
+    font-family:'Nunito','Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    color:var(--text);
+    padding:36px 16px 80px;
+  }
+  .intro{ max-width:900px; margin:0 auto 26px; text-align:center; }
+  .intro h1{ font-family:'Baloo 2',sans-serif; font-size:26px; margin:0 0 8px; color:var(--text); }
+  .intro p{ margin:0; color:var(--text2); font-size:14px; line-height:1.7; }
+  .tag-note{
+    display:inline-block; margin-top:12px; font-size:12px; color:var(--primary-ink);
+    background:var(--primary-wash); padding:6px 14px; border-radius:99px; font-weight:700;
+  }
+
+  .tabs{ max-width:900px; margin:24px auto 30px; display:flex; justify-content:center; gap:8px; flex-wrap:wrap; }
+  .tab{
+    border:1px solid var(--neutral); background:var(--card); color:var(--text2); font-weight:700; font-size:13px;
+    padding:10px 18px; border-radius:99px; cursor:pointer; transition:.15s;
+  }
+  .tab.active{ background:var(--text); color:#fff; border-color:var(--text); }
+
+  .stage{ display:flex; justify-content:center; }
+  .phone{
+    width:390px; height:844px; background:#12111A; border-radius:52px; padding:14px;
+    box-shadow: var(--shadow-lg); position:relative;
+  }
+  .phone-screen{
+    width:100%; height:100%; background:var(--bg); border-radius:38px; overflow:hidden; position:relative;
+    display:flex; flex-direction:column;
+  }
+  .statusbar{
+    height:46px; flex:0 0 auto; display:flex; align-items:center; justify-content:space-between;
+    padding:0 26px; font-size:13px; font-weight:800; color:var(--text); position:relative; z-index:6;
+  }
+  .statusbar .pill-notch{
+    position:absolute; top:8px; left:50%; transform:translateX(-50%); width:120px; height:26px;
+    background:#12111A; border-radius:20px;
+  }
+  .screen-body{ flex:1; overflow-y:auto; padding:2px 18px 118px; -ms-overflow-style:none; scrollbar-width:none; position:relative; }
+  .screen-body::-webkit-scrollbar{ display:none; }
+
+  .view{ display:none; }
+  .view.active{ display:flex; flex-direction:column; flex:1; min-height:0; }
+
+  /* floating decorative blobs */
+  .blob{ position:absolute; border-radius:50%; filter:blur(0px); opacity:.5; pointer-events:none; z-index:0; }
+
+  /* ---------- 그라디언트 카드 공통 규칙: 135deg, 톤다운 그라디언트, 컬러 그림자, 좌상단 글레어 ---------- */
+  .gcard{ position:relative; overflow:hidden; }
+  .gcard::before{
+    content:""; position:absolute; top:-20%; left:-20%; width:70%; height:60%;
+    background:radial-gradient(circle, rgba(255,255,255,.24), transparent 70%);
+    filter:blur(20px); pointer-events:none;
+  }
+  .gcard.primary{ background:linear-gradient(135deg,var(--primary-1),var(--primary-2)); box-shadow:0 24px 40px -12px var(--primary-shadow); }
+  .gcard.secondary{ background:linear-gradient(135deg,var(--secondary-1),var(--secondary-2)); box-shadow:0 20px 34px -12px var(--secondary-shadow); }
+  .gcard.accent{ background:linear-gradient(135deg,var(--accent-1),var(--accent-2)); box-shadow:0 20px 34px -12px var(--accent-shadow); }
+
+  /* ---------- shared ---------- */
+  .section-head{ display:flex; align-items:center; justify-content:space-between; margin:22px 2px 12px; }
+  .section-head h3{ font-family:'Baloo 2',sans-serif; font-size:16px; margin:0; color:var(--text); }
+  .section-head a{ font-size:12.5px; font-weight:800; color:var(--primary-ink); text-decoration:none; display:flex; align-items:center; gap:3px; }
+
+  .pill-btn{ border:none; border-radius:99px; font-weight:800; cursor:pointer; font-family:inherit; }
+  .pill-btn.primary{ background:linear-gradient(135deg,var(--primary-1),var(--primary-2)); color:#fff; box-shadow:0 14px 24px -10px var(--primary-shadow); }
+  .pill-btn.ghost{ background:var(--card); color:var(--text2); border:1px solid var(--neutral); }
+
+  /* ================= LOGIN ================= */
+  .login-wrap{ position:relative; padding-top:26px; flex:1; display:flex; flex-direction:column; }
+  .login-badge{
+    width:74px; height:74px; border-radius:26px; margin:6px auto 18px; position:relative; z-index:1;
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+    box-shadow:0 16px 30px -12px var(--secondary-shadow);
+  }
+  .login-badge svg{ width:100%; height:100%; display:block; }
+  .wordmark{ font-family:'Baloo 2',sans-serif; font-size:25px; margin:0; text-align:center; color:var(--text); position:relative; z-index:1; }
+  .wordmark span{ color:var(--primary-ink); }
+  .tagline{ font-size:13px; color:var(--text2); margin:6px 0 26px; line-height:1.6; text-align:center; position:relative; z-index:1; }
+  .login-card{
+    background:var(--card); border-radius:var(--radius-xl); padding:22px 20px; box-shadow:var(--shadow-md);
+    position:relative; z-index:1; margin-top:auto;
+  }
+  .field{
+    width:100%; border:1px solid var(--neutral); background:var(--card2); border-radius:14px;
+    padding:14px 15px; font-size:14px; margin-bottom:11px; color:var(--text); font-family:inherit;
+  }
+  .field::placeholder{ color:var(--text3); }
+  .login-btn{ width:100%; padding:15px; font-size:14.5px; margin-top:6px; }
+  .login-links{ display:flex; justify-content:center; gap:14px; margin-top:16px; font-size:12px; color:var(--text3); }
+  .login-links b{ color:var(--primary-ink); font-weight:800; }
+  .onboard-dots{ display:flex; gap:5px; justify-content:center; margin:20px 0 4px; position:relative; z-index:1; }
+  .onboard-dots i{ width:6px; height:6px; border-radius:99px; background:var(--neutral); display:block; }
+  .onboard-dots i.on{ background:var(--primary-ink); width:16px; }
+
+  /* ================= MINE ================= */
+  .greet{ padding-top:16px; }
+  .greet h2{ font-family:'Baloo 2',sans-serif; font-size:21px; margin:0 0 3px; }
+  .greet p{ font-size:12.5px; color:var(--text2); margin:0; }
+
+  .summary-head{ display:flex; align-items:center; justify-content:space-between; margin:20px 2px 10px; }
+  .summary-head h3{ font-size:14.5px; font-weight:800; margin:0; }
+  .summary-head a{ font-size:12px; font-weight:800; color:var(--primary-ink); text-decoration:none; }
+  /* 홈 화면의 메인 진행률 카드 = Primary 그라디언트(글레어+컬러 그림자) */
+  .summary-card{
+    border-radius:var(--radius-xl); padding:22px 20px 18px; color:#fff;
+  }
+  .summary-top{ display:flex; align-items:center; justify-content:space-between; position:relative; z-index:1; }
+  .summary-stats{ display:flex; flex-direction:column; gap:14px; }
+  .stat-row{ display:flex; align-items:center; gap:9px; }
+  .stat-dot{ width:3px; height:28px; border-radius:99px; background:rgba(255,255,255,.55); }
+  .stat-icon{ font-size:17px; }
+  .stat-num{ font-size:16px; font-weight:800; color:#fff; }
+  .stat-num small{ font-size:11px; font-weight:700; color:rgba(255,255,255,.75); margin-left:2px; }
+  .stat-label{ font-size:11px; color:rgba(255,255,255,.8); font-weight:700; }
+
+  .ring-wrap{ position:relative; width:112px; height:112px; flex:0 0 auto; }
+  .ring-wrap svg{ width:100%; height:100%; transform:rotate(-90deg); }
+  .ring-center{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .ring-center b{ font-size:22px; color:#fff; font-family:'Baloo 2',sans-serif; }
+  .ring-center span{ font-size:10.5px; color:rgba(255,255,255,.8); font-weight:700; }
+
+  .macro-row{ display:flex; justify-content:space-between; margin-top:18px; padding-top:16px; border-top:1px solid rgba(255,255,255,.25); position:relative; z-index:1; }
+  .macro{ text-align:left; }
+  .macro b{ font-size:12.5px; font-weight:800; display:block; margin-bottom:6px; color:#fff; }
+  .macro .bar{ width:74px; height:5px; border-radius:99px; background:rgba(255,255,255,.28); overflow:hidden; margin-bottom:6px; }
+  .macro .bar i{ display:block; height:100%; border-radius:99px; background:#fff; }
+  .macro span{ font-size:10.5px; color:rgba(255,255,255,.75); font-weight:700; }
+
+  /* 카테고리 카드(랜덤 위시 픽) : Secondary/Accent 번갈아, 카드폭 15% 이상 여백 */
+  .wish-scroll{ display:flex; gap:22px; overflow-x:auto; padding:4px 4px 10px; }
+  .wish-scroll::-webkit-scrollbar{ display:none; }
+  .wish-card{
+    flex:0 0 auto; width:140px; height:186px; border-radius:26px; position:relative;
+    padding:16px 14px 14px; display:flex; flex-direction:column; justify-content:flex-end; color:#fff;
+    overflow:hidden;
+  }
+  .wish-card .wc-emoji{
+    position:absolute; top:14px; left:14px; width:44px; height:44px; border-radius:16px;
+    background:rgba(255,255,255,.3); backdrop-filter:blur(2px); display:flex; align-items:center; justify-content:center;
+    font-size:22px; z-index:1;
+  }
+  .wish-card h4{ font-size:14.5px; margin:0 0 4px; font-family:'Baloo 2',sans-serif; position:relative; z-index:1; }
+  .wish-card p{ font-size:10.5px; margin:0 0 10px; opacity:.85; line-height:1.4; font-weight:700; position:relative; z-index:1; }
+  .wish-card .wc-num{ font-size:21px; font-weight:800; font-family:'Baloo 2',sans-serif; position:relative; z-index:1; }
+  .wish-card .wc-num small{ font-size:11px; font-weight:700; opacity:.85; margin-left:2px; }
+
+  /* ---- 전체 위시 리스트 (풀 리스트) : Background + Neutral 톤으로 차분하게 ---- */
+  .list-row{
+    display:flex; align-items:center; gap:12px; background:var(--neutral); border-radius:18px;
+    padding:11px 13px; margin-bottom:9px;
+  }
+  .list-thumb{
+    width:44px; height:44px; border-radius:14px; flex:0 0 auto; display:flex; align-items:center; justify-content:center;
+    font-size:20px; background:var(--card);
+  }
+  .list-body{ flex:1; min-width:0; }
+  .list-body b{ font-size:13.5px; display:block; margin-bottom:4px; color:var(--text); }
+  .list-meta{ display:flex; gap:5px; flex-wrap:wrap; }
+  .list-meta span{ font-size:10px; font-weight:800; padding:2.5px 8px; border-radius:99px; }
+  .list-meta .m-cat{ background:var(--card); color:var(--text2); }
+  .list-meta .m-info{ background:var(--highlight-wash); color:var(--highlight-ink); }
+  .list-more{
+    text-align:center; font-size:12px; font-weight:800; color:var(--text2); padding:9px; background:var(--card);
+    border-radius:14px; border:1px dashed var(--neutral); margin-top:2px;
+  }
+
+  /* ---- 이룬 꿈 카드 (핀터레스트 포토카드) : 완료 배지는 Accent, 카테고리 배지는 Highlight ---- */
+  .done-scroll{ display:flex; gap:30px; overflow-x:auto; padding:4px 4px 12px; }
+  .done-scroll::-webkit-scrollbar{ display:none; }
+  .done-card{
+    flex:0 0 auto; width:200px; height:270px; border-radius:30px; position:relative; overflow:hidden;
+    box-shadow:var(--shadow-lg);
+  }
+  .done-card.ph-sage{ background:
+    radial-gradient(120% 90% at 75% 8%, rgba(255,255,255,.55), transparent 55%),
+    linear-gradient(135deg,#DDEFC8 0%,#9FCB86 42%,#4C8F62 78%,#2C5F49 100%); }
+  .done-card.ph-peach{ background:
+    radial-gradient(120% 90% at 30% 6%, rgba(255,255,255,.5), transparent 55%),
+    linear-gradient(135deg,#FFE7C9 0%,#FFB48B 45%,#F0806F 75%,#B4587A 100%); }
+  .done-card.ph-sky{ background:
+    radial-gradient(120% 90% at 70% 8%, rgba(255,255,255,.5), transparent 55%),
+    linear-gradient(135deg,#E4F2FF 0%,#AED4F2 40%,#6FA0D6 72%,#3E5FA8 100%); }
+  .done-card .dc-subject{
+    position:absolute; top:38px; left:0; right:0; text-align:center; font-size:52px;
+    filter:drop-shadow(0 10px 14px rgba(20,20,30,.25));
+  }
+  .done-card .dc-badge{
+    position:absolute; top:12px; left:12px; background:linear-gradient(135deg,var(--accent-1),var(--accent-2));
+    border-radius:99px; padding:5px 10px 5px 8px; font-size:10.5px; font-weight:800; color:#fff;
+    box-shadow:0 8px 16px -6px var(--accent-shadow); display:flex; align-items:center; gap:3px;
+  }
+  .done-card .dc-phototag{
+    position:absolute; top:12px; right:12px; background:rgba(20,18,30,.38); backdrop-filter:blur(3px);
+    border-radius:99px; padding:5px 10px; font-size:10px; font-weight:800; color:#fff;
+  }
+  .done-card .dc-panel{
+    position:absolute; left:11px; right:11px; bottom:12px; background:rgba(255,255,255,.94);
+    padding:14px 15px 13px; box-shadow:0 14px 26px -12px rgba(30,20,40,.4);
+  }
+  .done-card:nth-child(1) .dc-panel{ border-radius:34px 16px 30px 14px; transform:rotate(-1.2deg); }
+  .done-card:nth-child(2) .dc-panel{ border-radius:16px 32px 14px 28px; transform:rotate(1.1deg); }
+  .done-card:nth-child(3) .dc-panel{ border-radius:28px 14px 34px 18px; transform:rotate(-0.8deg); }
+  .dc-cat{ display:inline-block; font-size:10px; font-weight:800; padding:3px 9px; border-radius:99px; margin-bottom:6px; background:var(--highlight-wash); color:var(--highlight-ink); }
+  .dc-panel h4{ font-size:14px; margin:0 0 4px; font-family:'Baloo 2',sans-serif; line-height:1.25; color:var(--text); }
+  .dc-date{ font-size:10px; color:var(--text2); font-weight:700; margin-bottom:8px; }
+  .dc-people{ display:flex; }
+  .dc-people i{ width:20px; height:20px; border-radius:50%; border:2px solid #fff; margin-left:-7px; display:block; }
+  .dc-people i:first-child{ margin-left:0; }
+
+  /* bottom nav */
+  .navbar{
+    position:absolute; left:14px; right:14px; bottom:14px; height:66px; background:var(--card);
+    border-radius:26px; box-shadow:var(--shadow-lg); display:flex; align-items:center; justify-content:space-around;
+    z-index:7;
+  }
+  .navbar .nitem{ font-size:19px; color:var(--text3); background:none; border:none; padding:8px 10px; }
+  .navbar .nitem.on{ color:var(--primary-ink); }
+  .nav-fab{
+    position:absolute; left:50%; bottom:52px; transform:translateX(-50%); width:56px; height:56px; border-radius:50%;
+    background:linear-gradient(135deg,var(--primary-1),var(--primary-2)); color:#fff; font-size:24px; font-weight:800;
+    border:none; display:flex; align-items:center; justify-content:center; box-shadow:0 16px 28px -10px var(--primary-shadow);
+    z-index:8;
+  }
+
+  /* ================= EXPLORE ================= */
+  .explore-head{ padding-top:16px; }
+  .explore-head h2{ font-family:'Baloo 2',sans-serif; font-size:20px; margin:0 0 4px; }
+  .explore-head p{ font-size:12.5px; color:var(--text2); margin:0 0 14px; line-height:1.6; }
+  .seg{ display:flex; gap:8px; margin-bottom:16px; }
+  .seg button{ flex:1; padding:10px; border-radius:12px; border:1px solid var(--neutral); background:var(--card); font-weight:800; font-size:12.5px; color:var(--text2); }
+  .seg button.on{ background:var(--text); color:#fff; border-color:var(--text); }
+  /* 카드폭 대비 15% 이상 여백 확보 */
+  .explore-grid{ display:grid; grid-template-columns:1fr 1fr; gap:22px; }
+  .explore-card{
+    border-radius:24px; padding:14px 12px 12px; color:#fff; height:168px; position:relative;
+    display:flex; flex-direction:column; justify-content:flex-end; overflow:hidden;
+  }
+  .ec-top{ position:absolute; top:10px; left:10px; right:10px; display:flex; align-items:center; justify-content:space-between; z-index:1; }
+  .ec-owner{ display:flex; align-items:center; gap:5px; font-size:10.5px; font-weight:800; }
+  .ec-owner i{ width:16px; height:16px; border-radius:50%; background:rgba(255,255,255,.45); display:block; }
+  .ec-like{ font-size:10.5px; font-weight:800; background:rgba(255,255,255,.3); padding:3px 7px; border-radius:99px; }
+  .ec-emoji{ font-size:26px; margin-bottom:6px; position:relative; z-index:1; }
+  .explore-card h4{ font-size:13px; margin:0 0 5px; font-family:'Baloo 2',sans-serif; line-height:1.25; position:relative; z-index:1; }
+  .ec-chip{ align-self:flex-start; font-size:9.5px; font-weight:800; background:rgba(255,255,255,.3); padding:3px 8px; border-radius:99px; position:relative; z-index:1; }
+
+  /* ================= DETAIL (핀터레스트 무비카드 스타일) ================= */
+  .dtl-wrap{ margin:0 -18px; position:relative; }
+  .dtl-hero{ height:420px; position:relative; overflow:hidden; }
+  /* 사진 한 장이 화면 폭 전체를 꽉 채우며 이어짐(구간 분할 없음) */
+  .dtl-photo{
+    position:absolute; top:0; left:0; right:0; bottom:0; overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+    background:
+      radial-gradient(120% 140% at 30% 8%, rgba(255,255,255,.5), transparent 55%),
+      linear-gradient(135deg,#FFE7C9 0%,#FFB48B 45%,#F0806F 72%,#B4587A 100%);
+  }
+  .dtl-photo .dtl-subject{ font-size:104px; filter:drop-shadow(0 14px 18px rgba(20,20,30,.25)); margin-top:-30px; }
+  .dtl-topbtn{
+    position:absolute; top:14px; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,.88);
+    backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800;
+    color:var(--text); box-shadow:0 8px 16px -8px rgba(20,20,30,.35); z-index:4; border:none;
+  }
+  .dtl-back{ left:14px; }
+  .dtl-share{ right:14px; font-size:14px; }
+  .dtl-fab{
+    position:absolute; right:20px; top:244px; width:54px; height:54px; border-radius:50%; background:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:var(--shadow-lg); z-index:5; border:none;
+  }
+  /* 좌우 마진 5px만 두고 거의 꽉 채운, 네모반듯한 카드 */
+  .dtl-card{
+    background:var(--card); margin:-150px 5px 0; position:relative; z-index:3;
+    padding:28px 22px 26px;
+    border-radius: 26px;
+    box-shadow:0 26px 46px -18px rgba(46,42,61,.35);
+  }
+  .dtl-owner{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--text2); font-weight:700; margin-bottom:10px; }
+  .dtl-owner i{ width:20px; height:20px; border-radius:50%; background:var(--primary-2); display:block; }
+  .dtl-title{ font-size:20px; font-weight:800; margin:0 0 12px; font-family:'Baloo 2',sans-serif; line-height:1.32; color:var(--text); }
+  .dtl-tags{ display:flex; gap:7px; flex-wrap:wrap; margin-bottom:14px; }
+  .dtl-tags span{ font-size:11px; font-weight:800; padding:5px 12px; border-radius:99px; }
+  .dtl-tags .t-cat{ background:var(--neutral); color:var(--text2); }
+  .dtl-tags .t-dday{ background:var(--highlight-wash); color:var(--highlight-ink); }
+  .dtl-meta-line{ font-size:12px; font-weight:800; color:var(--secondary-ink); margin:0 0 16px; line-height:1.6; }
+  .dtl-desc{ font-size:13.5px; line-height:1.75; color:var(--text2); margin:0 0 20px; }
+  .dtl-people-label{ font-size:12px; font-weight:800; color:var(--text); margin:0 0 10px; }
+  .dtl-people-row{ display:flex; gap:9px; margin-bottom:24px; }
+  .dtl-ptile{
+    width:52px; height:52px; border-radius:16px; display:flex; align-items:center; justify-content:center;
+    font-size:19px; font-weight:800; color:#fff; position:relative; box-shadow:var(--shadow-sm);
+  }
+  .dtl-ptile.more{ background:rgba(46,42,61,.7); font-size:13px; }
+  .dtl-cta{
+    width:100%; padding:17px; font-size:15px; background:linear-gradient(135deg,var(--accent-1),var(--accent-2));
+    box-shadow:0 18px 30px -12px var(--accent-shadow);
+  }
+
+  ::-webkit-scrollbar{ width:0; }
+</style>
+</head>
+<body>
+
+  <div class="intro">
+    <h1>위시캣 · 다이어리 스타일 리디자인 시안 v3</h1>
+    <p>아이템 상세 카드는 복잡한 곡선 대신 깔끔한 네모반듯한 카드로 정리했어요 — 사진은 화면 폭 전체를 한 장으로 꽉 채우고, 흰 카드는 양옆 5px 정도만 남기고 거의 꽉 찬 채로 살짝 겹쳐 떠 있어요.<br/>
+    컬러 팔레트 + 그라디언트 카드 규칙(135deg 대각선, 톤다운, 카드색과 같은 계열의 흐린 그림자, 좌상단 글레어, 넉넉한 여백)은 앱 전체에 계속 적용돼 있어요.</p>
+    <span class="tag-note">⚠️ 정적 디자인 시안입니다 · 실제 동작은 없어요</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-view="login">로그인</button>
+    <button class="tab" data-view="mine">내 목록</button>
+    <button class="tab" data-view="explore">둘러보기</button>
+    <button class="tab" data-view="detail">아이템 상세</button>
+  </div>
+
+  <div class="stage">
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="statusbar"><span>9:41</span><span class="pill-notch"></span><span>🔋📶</span></div>
+
+        <!-- ================= LOGIN ================= -->
+        <div class="view active" id="view-login">
+          <div class="screen-body">
+            <div class="blob" style="width:120px;height:120px;top:10px;right:-30px;background:radial-gradient(circle,var(--primary-2),transparent 70%);"></div>
+            <div class="blob" style="width:70px;height:70px;top:120px;left:-24px;background:radial-gradient(circle,var(--accent-2),transparent 70%);"></div>
+            <div class="login-wrap">
+              <div class="login-badge">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">
+                  <defs>
+                    <linearGradient id="badgeSky" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#FFE7C9"/>
+                      <stop offset="55%" stop-color="#FFB48B"/>
+                      <stop offset="100%" stop-color="#F0806F"/>
+                    </linearGradient>
+                    <radialGradient id="badgeSun" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stop-color="#FFF6DC"/>
+                      <stop offset="100%" stop-color="#FFD98F"/>
+                    </radialGradient>
+                  </defs>
+                  <rect width="100" height="100" fill="url(#badgeSky)"/>
+                  <circle cx="63" cy="30" r="13" fill="url(#badgeSun)"/>
+                  <path d="M-5,72 L18,44 L33,59 L50,40 L67,62 L105,48 L105,105 L-5,105 Z" fill="#E27858" opacity=".88"/>
+                  <path d="M-5,84 L26,62 L45,77 L64,56 L105,74 L105,105 L-5,105 Z" fill="#AE5678"/>
+                  <path d="M21,80 L25,67 L29,80 Z" fill="#7A4A5E"/>
+                  <path d="M73,85 L77,73 L81,85 Z" fill="#7A4A5E"/>
+                </svg>
+              </div>
+              <p class="wordmark">위시<span>캣</span></p>
+              <p class="tagline">마음에 담아둔 꿈들을,<br/>친구와 함께 하나씩 꺼내 이뤄가요</p>
+              <div class="login-card">
+                <input class="field" placeholder="이메일" />
+                <input class="field" placeholder="비밀번호" />
+                <button class="pill-btn primary login-btn">로그인</button>
+                <div class="login-links">계정이 없어요 · <b>회원가입</b></div>
+              </div>
+              <div class="onboard-dots"><i class="on"></i><i></i><i></i></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= MINE ================= -->
+        <div class="view" id="view-mine">
+          <div class="screen-body">
+            <div class="greet">
+              <h2>안녕, 검증이 👋</h2>
+              <p>마음속에 담아둔 위시들, 하나씩 펼쳐볼까요</p>
+            </div>
+
+            <div class="summary-head"><h3>나의 위시 현황</h3><a href="#">자세히 →</a></div>
+            <div class="summary-card gcard primary">
+              <div class="summary-top">
+                <div class="summary-stats">
+                  <div class="stat-row">
+                    <div class="stat-dot"></div>
+                    <div>
+                      <div class="stat-num"><span class="stat-icon">🌱</span> 5 <small>개 완료</small></div>
+                      <div class="stat-label">이룬 위시</div>
+                    </div>
+                  </div>
+                  <div class="stat-row">
+                    <div class="stat-dot"></div>
+                    <div>
+                      <div class="stat-num"><span class="stat-icon">🔥</span> 7 <small>개 진행</small></div>
+                      <div class="stat-label">도전 중</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="ring-wrap">
+                  <svg viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="9"/>
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="#fff" stroke-width="9"
+                      stroke-linecap="round" stroke-dasharray="264" stroke-dashoffset="153"/>
+                  </svg>
+                  <div class="ring-center"><b>42%</b><span>달성</span></div>
+                </div>
+              </div>
+              <div class="macro-row">
+                <div class="macro"><b>여행</b><div class="bar"><i style="width:70%;opacity:.95;"></i></div><span>4개</span></div>
+                <div class="macro"><b>자연</b><div class="bar"><i style="width:45%;opacity:.7;"></i></div><span>3개</span></div>
+                <div class="macro"><b>관계</b><div class="bar"><i style="width:30%;opacity:.45;"></i></div><span>2개</span></div>
+              </div>
+            </div>
+
+            <div class="section-head"><h3>내 위시 리스트 · 12개</h3><a href="#">전체보기 →</a></div>
+            <div class="list-row">
+              <div class="list-thumb">🌅</div>
+              <div class="list-body">
+                <b>오로라 보러 가기</b>
+                <div class="list-meta"><span class="m-cat">여행</span><span class="m-info">⏱ D-157</span></div>
+              </div>
+            </div>
+            <div class="list-row">
+              <div class="list-thumb">🥾</div>
+              <div class="list-body">
+                <b>제주 올레길 걷기</b>
+                <div class="list-meta"><span class="m-cat">자연</span><span class="m-info">📍 제주</span></div>
+              </div>
+            </div>
+            <div class="list-row">
+              <div class="list-thumb">🌸</div>
+              <div class="list-body">
+                <b>벚꽃 절정일 때 진해 가보기</b>
+                <div class="list-meta"><span class="m-cat">관계</span><span class="m-info">👥 3명 함께</span></div>
+              </div>
+            </div>
+            <div class="list-row">
+              <div class="list-thumb">⛺</div>
+              <div class="list-body">
+                <b>밤바다 캠핑 가기</b>
+                <div class="list-meta"><span class="m-cat">도전</span><span class="m-info">⏱ D-91</span></div>
+              </div>
+            </div>
+            <div class="list-more">+ 8개 더보기</div>
+
+            <div class="section-head"><h3>랜덤 위시 픽 🎲</h3><a href="#">다시 뽑기 ↻</a></div>
+            <div class="wish-scroll">
+              <div class="wish-card gcard secondary">
+                <div class="wc-emoji">🌅</div>
+                <h4>오로라 보러 가기</h4>
+                <p>여행 · D-157</p>
+                <div class="wc-num">157<small>일 남음</small></div>
+              </div>
+              <div class="wish-card gcard accent">
+                <div class="wc-emoji">🥾</div>
+                <h4>제주 올레길 걷기</h4>
+                <p>자연 · 제주</p>
+                <div class="wc-num">70<small>% 완료</small></div>
+              </div>
+              <div class="wish-card gcard secondary">
+                <div class="wc-emoji">🌸</div>
+                <h4>벚꽃 절정일 때 진해</h4>
+                <p>관계 · D-32</p>
+                <div class="wc-num">3<small>명 함께</small></div>
+              </div>
+            </div>
+
+            <div class="section-head"><h3>이룬 꿈 🏆</h3><a href="#">전체보기 →</a></div>
+            <div class="done-scroll">
+              <div class="done-card ph-sage">
+                <div class="dc-subject">⛰️</div>
+                <div class="dc-badge">✅ 완료</div>
+                <div class="dc-phototag">📷 내 사진</div>
+                <div class="dc-panel">
+                  <span class="dc-cat">자연</span>
+                  <h4>지리산 종주하기</h4>
+                  <div class="dc-date">3일 전 완료 · 5명 함께</div>
+                  <div class="dc-people">
+                    <i style="background:var(--secondary-2);"></i>
+                    <i style="background:var(--accent-2);"></i>
+                    <i style="background:var(--primary-2);"></i>
+                  </div>
+                </div>
+              </div>
+              <div class="done-card ph-peach">
+                <div class="dc-subject">🌸</div>
+                <div class="dc-badge">✅ 완료</div>
+                <div class="dc-panel">
+                  <span class="dc-cat">관계</span>
+                  <h4>벚꽃 절정일 때 진해 가기</h4>
+                  <div class="dc-date">지난주 완료 · 3명 함께</div>
+                  <div class="dc-people">
+                    <i style="background:var(--accent-2);"></i>
+                    <i style="background:var(--highlight);"></i>
+                  </div>
+                </div>
+              </div>
+              <div class="done-card ph-sky">
+                <div class="dc-subject">🌌</div>
+                <div class="dc-badge">✅ 완료</div>
+                <div class="dc-phototag">📷 내 사진</div>
+                <div class="dc-panel">
+                  <span class="dc-cat">도전</span>
+                  <h4>별 보러 산 위에서 하루 자기</h4>
+                  <div class="dc-date">2주 전 완료 · 혼자</div>
+                  <div class="dc-people">
+                    <i style="background:var(--primary-2);"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="navbar">
+            <button class="nitem on">📖</button>
+            <button class="nitem">🧭</button>
+            <button class="nitem" style="opacity:0;">·</button>
+            <button class="nitem">🗂️</button>
+            <button class="nitem">👤</button>
+          </div>
+          <button class="nav-fab">+</button>
+        </div>
+
+        <!-- ================= EXPLORE ================= -->
+        <div class="view" id="view-explore">
+          <div class="screen-body">
+            <div class="explore-head">
+              <h2>둘러보기</h2>
+              <p>전체공개된 사람들의 버킷을 구경해요</p>
+              <div class="seg"><button class="on">전체 버킷</button><button>이룬 꿈</button></div>
+            </div>
+            <div class="explore-grid">
+              <div class="explore-card gcard secondary">
+                <div class="ec-top"><div class="ec-owner"><i></i>길동님</div><div class="ec-like">♡ 7</div></div>
+                <div class="ec-emoji">🥾</div>
+                <h4>산티아고 순례길 걷기</h4>
+                <div class="ec-chip">여행 · 2명 참여</div>
+              </div>
+              <div class="explore-card gcard accent">
+                <div class="ec-top"><div class="ec-owner"><i></i>수아님</div><div class="ec-like">♡ 14</div></div>
+                <div class="ec-emoji">⛰️</div>
+                <h4>지리산 종주하기</h4>
+                <div class="ec-chip">자연 · 5명 참여</div>
+              </div>
+              <div class="explore-card gcard secondary">
+                <div class="ec-top"><div class="ec-owner"><i></i>하은님</div><div class="ec-like">♡ 9</div></div>
+                <div class="ec-emoji">♨️</div>
+                <h4>엄마랑 온천 여행</h4>
+                <div class="ec-chip">관계 · 3명 참여</div>
+              </div>
+              <div class="explore-card gcard accent">
+                <div class="ec-top"><div class="ec-owner"><i></i>민준님</div><div class="ec-like">♡ 21</div></div>
+                <div class="ec-emoji">🏕️</div>
+                <h4>밤바다 캠핑 가기</h4>
+                <div class="ec-chip">도전 · 8명 참여</div>
+              </div>
+            </div>
+          </div>
+          <div class="navbar">
+            <button class="nitem">📖</button>
+            <button class="nitem on">🧭</button>
+            <button class="nitem" style="opacity:0;">·</button>
+            <button class="nitem">🗂️</button>
+            <button class="nitem">👤</button>
+          </div>
+          <button class="nav-fab">+</button>
+        </div>
+
+        <!-- ================= DETAIL ================= -->
+        <div class="view" id="view-detail">
+          <div class="screen-body" style="padding:0 18px 40px;">
+            <div class="dtl-wrap">
+              <div class="dtl-hero">
+                <div class="dtl-photo"><div class="dtl-subject">🥾</div></div>
+                <button class="dtl-topbtn dtl-back">‹</button>
+                <button class="dtl-topbtn dtl-share">↗</button>
+              </div>
+              <button class="dtl-fab">♡</button>
+              <div class="dtl-card">
+                <div class="dtl-owner"><i></i> 길동님의 위시 · 프로필 보기 ›</div>
+                <h3 class="dtl-title">산티아고 순례길 걷기</h3>
+                <div class="dtl-tags"><span class="t-cat">여행</span><span class="t-dday">⏱ D-277</span></div>
+                <p class="dtl-meta-line">전체공개 · 남해 · 도보여행 · 약 한 달 소요</p>
+                <p class="dtl-desc">같이 하면 더 재밌어요. 한 달 정도 시간을 내서 천천히 걸어보고 싶어요 — 같이 갈 사람 구해요 🙋</p>
+                <div class="dtl-people-label">함께하는 사람 · 5명</div>
+                <div class="dtl-people-row">
+                  <div class="dtl-ptile" style="background:var(--secondary-2);">길</div>
+                  <div class="dtl-ptile" style="background:var(--accent-2);">수</div>
+                  <div class="dtl-ptile" style="background:var(--primary-2);">하</div>
+                  <div class="dtl-ptile more">+2</div>
+                </div>
+                <button class="pill-btn dtl-cta">🙋 함께하기</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+<script>
+  document.querySelectorAll('.tab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      const key = btn.dataset.view;
+      document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
+      document.getElementById('view-' + key).classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

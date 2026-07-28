@@ -4,12 +4,16 @@ import {
 } from 'react-native';
 import Avatar from '../components/Avatar';
 import BubbleButton from '../components/Button';
+import GradientCard from '../components/GradientCard';
+import ProgressRing from '../components/ProgressRing';
 import { EmptyState, SectionHeader } from '../components/Basics';
 import ItemCard from '../components/ItemCard';
-import { CATEGORIES, catColor, colors, radius, shadow } from '../theme';
+import { CATEGORIES, catColor, catRole, colors, gradients, radius, shadow, shadowColors } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import { useApp, useMyItems } from '../context/AppContext';
 import type { Item } from '../api/types';
+
+const RANDOM_PICK_COUNT = 6;
 
 export default function MineScreen({
   onEditProfile, onMemory, onShare, onMenu, onBulkImport, onStarter,
@@ -62,6 +66,30 @@ export default function MineScreen({
   const doneTotal = items.filter((i) => i.done).length;
   const todoTotal = items.length - doneTotal;
 
+  // 카테고리별 개수 상위 3개를 요약 카드의 미니 그래프로 보여줍니다.
+  const topCategories = useMemo(() => {
+    const counts = new Map<string, number>();
+    items.forEach((i) => { if (i.category) counts.set(i.category, (counts.get(i.category) || 0) + 1); });
+    const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
+    const max = sorted.length ? sorted[0][1] : 1;
+    return sorted.map(([cat, count], idx) => ({
+      cat, count, pct: Math.round((count / max) * 100), opacity: [0.95, 0.7, 0.45][idx] ?? 0.4,
+    }));
+  }, [items]);
+
+  // "오늘 할 일" 같은 의미 없는 구획 대신, 전체 리스트 중 몇 개를 무작위로 뽑아 보여줍니다.
+  const randomPicks = useMemo(() => {
+    const pool = items.filter((i) => !i.done);
+    const shuffled = [...pool];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled.slice(0, RANDOM_PICK_COUNT);
+    // items 배열 자체가 바뀔 때만(새로고침/추가/완료 등) 다시 섞이도록 items.length를 키로 씁니다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.length]);
+
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase();
     return items.filter((i) => {
@@ -94,7 +122,7 @@ export default function MineScreen({
         ref={scrollRef}
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 20 }}
-        refreshControl={<RefreshControl refreshing={loadingMine} onRefresh={refreshMine} tintColor="#fff" />}
+        refreshControl={<RefreshControl refreshing={loadingMine} onRefresh={refreshMine} tintColor={colors.accent} />}
         onScroll={onScroll}
         scrollEventThrottle={100}
         onLayout={(e) => updateScrollState(scrollDims.current.contentHeight, e.nativeEvent.layout.height)}
@@ -121,13 +149,33 @@ export default function MineScreen({
               style={{ flex: 1 }}
             />
           </View>
-          {items.length > 0 && (
-            <View style={styles.prog}>
-              <View style={styles.progTrack}><View style={[styles.progFill, { width: `${pct}%` }]} /></View>
-              <Text style={styles.progText}>{pct}% 달성 · 이룬 꿈 {doneTotal} · 도전 중 {todoTotal}</Text>
-            </View>
-          )}
         </View>
+
+        {items.length > 0 && (
+          <GradientCard role="primary" style={styles.summaryWrap} contentStyle={styles.summaryInner}>
+            <View style={styles.summaryTop}>
+              <ProgressRing size={80} pct={pct} label="달성" />
+              <View style={styles.summaryStats}>
+                <SummaryStat label="이룬 꿈" value={doneTotal} />
+                <SummaryStat label="도전 중" value={todoTotal} />
+                <SummaryStat label="전체" value={items.length} />
+              </View>
+            </View>
+            {topCategories.length > 0 && (
+              <View style={styles.macroWrap}>
+                {topCategories.map((c) => (
+                  <View key={c.cat} style={styles.macroRow}>
+                    <Text style={styles.macroLabel} numberOfLines={1}>· {c.cat}</Text>
+                    <View style={styles.macroTrack}>
+                      <View style={[styles.macroFill, { width: `${Math.max(8, c.pct)}%`, opacity: c.opacity }]} />
+                    </View>
+                    <Text style={styles.macroCount}>{c.count}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </GradientCard>
+        )}
 
         {items.length === 0 ? (
           <>
@@ -161,6 +209,28 @@ export default function MineScreen({
                   <FilterChip key={c} label={c} active={categoryFilter === c} onPress={() => setCategoryFilter(categoryFilter === c ? null : c)} />
                 ))}
               </ScrollView>
+            )}
+
+            {!isFiltering && randomPicks.length > 0 && (
+              <View style={styles.pickSection}>
+                <SectionHeader title="오늘은 이런 건 어때요" count={randomPicks.length} />
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pickRow}>
+                  {randomPicks.map((item, idx) => (
+                    <Pressable key={item.id} onPress={() => onMemory(item)}>
+                      <GradientCard
+                        role={idx % 2 === 0 ? 'secondary' : 'accent'}
+                        borderRadius={radius.lg}
+                        style={styles.pickCard}
+                        contentStyle={styles.pickCardInner}
+                      >
+                        <Text style={styles.pickEmoji}>{item.emoji}</Text>
+                        <Text style={styles.pickTitle} numberOfLines={2}>{item.title}</Text>
+                        {item.category ? <Text style={styles.pickCatLabel}>🏷 {item.category}</Text> : null}
+                      </GradientCard>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
             )}
 
             <View style={styles.listBar}>
@@ -224,8 +294,17 @@ function Stat({ label, value }: { label: string; value: number }) {
   );
 }
 
+function SummaryStat({ label, value }: { label: string; value: number }) {
+  return (
+    <View style={styles.summaryStat}>
+      <Text style={styles.summaryStatVal}>{value}</Text>
+      <Text style={styles.summaryStatLabel}>{label}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  profile: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 26, padding: 20, marginTop: 8, ...shadow.md },
+  profile: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 26, padding: 20, marginTop: 8, ...shadow.sm },
   sticker: { position: 'absolute', top: -15, right: 24, fontSize: 30, color: colors.candyYellow, transform: [{ rotate: '14deg' }] },
   pTop: { flexDirection: 'row', alignItems: 'center', gap: 18 },
   stats: { flex: 1, flexDirection: 'row', justifyContent: 'space-around' },
@@ -235,12 +314,30 @@ const styles = StyleSheet.create({
   pName: { fontSize: 20, fontWeight: '700', color: colors.ink, marginTop: 15 },
   pBio: { fontSize: 13.5, color: colors.ink2, marginTop: 4, lineHeight: 19 },
   pActions: { flexDirection: 'row', gap: 8, marginTop: 15 },
-  prog: { marginTop: 16 },
-  progTrack: { height: 6, borderRadius: 99, backgroundColor: colors.surface3, overflow: 'hidden' },
-  progFill: { height: '100%', backgroundColor: colors.done, borderRadius: 99 },
-  progText: { fontSize: 12, color: colors.ink2, marginTop: 9 },
-  listBar: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, marginBottom: -4 },
-  viewToggle: { borderWidth: 1, borderColor: colors.line2, backgroundColor: colors.surface, borderRadius: radius.sm, paddingVertical: 7, paddingHorizontal: 12 },
+
+  summaryWrap: { marginTop: 16 },
+  summaryInner: { padding: 22 },
+  summaryTop: { flexDirection: 'row', alignItems: 'center', gap: 18 },
+  summaryStats: { flex: 1, flexDirection: 'row', justifyContent: 'space-between' },
+  summaryStat: { alignItems: 'center', gap: 2 },
+  summaryStatVal: { fontSize: 19, fontWeight: '800', color: '#fff' },
+  summaryStatLabel: { fontSize: 11, color: 'rgba(255,255,255,.85)', marginTop: 1 },
+  macroWrap: { marginTop: 20, gap: 9 },
+  macroRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  macroLabel: { width: 44, fontSize: 11.5, color: 'rgba(255,255,255,.9)', fontWeight: '600' },
+  macroTrack: { flex: 1, height: 7, borderRadius: 99, backgroundColor: 'rgba(255,255,255,.22)', overflow: 'hidden' },
+  macroFill: { height: '100%', borderRadius: 99, backgroundColor: '#fff' },
+  macroCount: { fontSize: 11, color: 'rgba(255,255,255,.85)', fontWeight: '600', width: 16, textAlign: 'right' },
+
+  pickSection: { marginTop: 4 },
+  pickRow: { flexDirection: 'row', gap: 12, paddingBottom: 4, paddingRight: 4 },
+  pickCard: { width: 132, height: 132 },
+  pickCardInner: { flex: 1, padding: 14, justifyContent: 'flex-end' },
+  pickEmoji: { fontSize: 26, marginBottom: 6 },
+  pickTitle: { fontSize: 13.5, fontWeight: '700', color: '#fff', lineHeight: 18 },
+  pickCatLabel: { fontSize: 10.5, color: 'rgba(255,255,255,.85)', fontWeight: '600', marginTop: 5 },
+
+  emptyHint: { fontSize: 12, color: colors.ink2, textAlign: 'center', marginTop: 12, fontWeight: '600' },
   searchBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surface, borderWidth: 1,
     borderColor: colors.line2, borderRadius: radius.sm, paddingHorizontal: 13, paddingVertical: 10, marginTop: 18,
@@ -249,8 +346,9 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 14, color: colors.ink, padding: 0 },
   searchClear: { fontSize: 13, color: colors.ink3, paddingHorizontal: 2 },
   chipRow: { flexDirection: 'row', gap: 7, marginTop: 10 },
-  emptyHint: { fontSize: 12, color: 'rgba(255,255,255,.9)', textAlign: 'center', marginTop: 12, fontWeight: '600' },
   chip: { borderRadius: radius.pill, paddingVertical: 7, paddingHorizontal: 13 },
+  listBar: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, marginBottom: -4 },
+  viewToggle: { borderWidth: 1, borderColor: colors.line2, backgroundColor: colors.surface, borderRadius: radius.sm, paddingVertical: 7, paddingHorizontal: 12 },
   scrollFab: {
     position: 'absolute', right: 4, bottom: 14, width: 42, height: 42, borderRadius: 21,
     backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', ...shadow.md,

@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SkyBackground from '../components/SkyBackground';
 import BubbleButton from '../components/Button';
-import { colors } from '../theme';
+import { colors, gradients, shadowColors } from '../theme';
 
 const STEPS = [
   { icon: '🚩', title: '위시캣에 오신 걸 환영해요', desc: '이루고 싶은 꿈을 적고, 친구와 함께 하나씩 지워가요.' },
@@ -41,9 +41,7 @@ export default function OnboardingScreen({ onFinish }: { onFinish: () => void })
           <BubbleButton
             title={isLast ? '시작하기 ✦' : '다음'}
             onPress={() => (isLast ? onFinish() : setStep(step + 1))}
-            style={{ backgroundColor: '#fff', paddingHorizontal: 30 }}
-            textColor={colors.accentInk}
-            shadowColor="rgba(30,50,90,.3)"
+            style={{ paddingHorizontal: 30 }}
           />
         </View>
       </View>
@@ -53,19 +51,20 @@ export default function OnboardingScreen({ onFinish }: { onFinish: () => void })
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, paddingHorizontal: 30 },
-  brand: { position: 'absolute', top: 20, left: 0, right: 0, textAlign: 'center', color: '#fff', fontSize: 18, fontWeight: '700' },
+  brand: { position: 'absolute', top: 20, left: 0, right: 0, textAlign: 'center', color: colors.ink, fontSize: 18, fontWeight: '700' },
   skip: { position: 'absolute', top: 16, right: 0, backgroundColor: 'transparent' },
   main: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   iconWrap: {
-    width: 118, height: 118, borderRadius: 36, backgroundColor: 'rgba(255,255,255,.16)',
-    borderWidth: 2, borderColor: 'rgba(255,255,255,.5)', borderStyle: 'dashed',
+    width: 118, height: 118, borderRadius: 36, backgroundColor: colors.accentWash,
+    borderWidth: 2, borderColor: colors.line, borderStyle: 'dashed',
     alignItems: 'center', justifyContent: 'center', marginBottom: 36,
+    shadowColor: shadowColors.primary, shadowOpacity: 0.6, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 3,
   },
   iconSticker: { position: 'absolute', top: -12, right: -10, fontSize: 24, color: colors.candyYellow },
-  title: { fontSize: 26, fontWeight: '700', color: '#fff', textAlign: 'center', marginBottom: 14 },
-  desc: { fontSize: 15.5, color: 'rgba(255,255,255,.92)', textAlign: 'center', lineHeight: 24, maxWidth: 300 },
+  title: { fontSize: 26, fontWeight: '700', color: colors.ink, textAlign: 'center', marginBottom: 14 },
+  desc: { fontSize: 15.5, color: colors.ink2, textAlign: 'center', lineHeight: 24, maxWidth: 300 },
   foot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   dots: { flexDirection: 'row', gap: 8 },
-  dot: { width: 8, height: 8, borderRadius: 99, backgroundColor: 'rgba(255,255,255,.42)' },
-  dotOn: { width: 22, backgroundColor: '#fff' },
+  dot: { width: 8, height: 8, borderRadius: 99, backgroundColor: colors.line2 },
+  dotOn: { width: 22, backgroundColor: colors.accent },
 });

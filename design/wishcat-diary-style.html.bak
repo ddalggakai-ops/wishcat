@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>위시캣 · 다이어리 스타일 리디자인 시안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F5F6FB; --card:#FFFFFF; --card2:#FBFBFF;
+    --ink:#2B2A3D; --ink2:#8D8CA3; --ink3:#C2C1D6; --line:#EEEEF6;
+
+    --indigo:#8F89E8; --indigo-ink:#6B63D6; --indigo-wash:#EFEDFF;
+    --coral-1:#FFDCC8; --coral-2:#FFBE9E; --coral-ink:#D97B4F;
+    --purple-1:#DAD4FF; --purple-2:#B9B0FF; --purple-ink:#6F63D9;
+    --pink-1:#FFD6EA; --pink-2:#FFAFD6; --pink-ink:#D6539B;
+    --mint-1:#CDF2E3; --mint-2:#98E3C0; --mint-ink:#379873;
+    --gold:#FFDA97; --gold-wash:#FFF3DE; --gold-ink:#B9791C;
+
+    --shadow-sm: 0 8px 18px -10px rgba(43,42,61,.18);
+    --shadow-md: 0 18px 34px -16px rgba(43,42,61,.28);
+    --shadow-lg: 0 28px 54px -20px rgba(43,42,61,.34);
+    --radius-xl:28px; --radius-lg:22px; --radius-md:16px; --radius-sm:12px;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; min-height:100vh; background:#FFFFFF;
+    font-family:'Nunito','Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    color:var(--ink);
+    padding:36px 16px 80px;
+  }
+  .intro{ max-width:900px; margin:0 auto 26px; text-align:center; }
+  .intro h1{ font-family:'Baloo 2',sans-serif; font-size:26px; margin:0 0 8px; color:var(--ink); }
+  .intro p{ margin:0; color:var(--ink2); font-size:14px; line-height:1.7; }
+  .tag-note{
+    display:inline-block; margin-top:12px; font-size:12px; color:var(--indigo-ink);
+    background:var(--indigo-wash); padding:6px 14px; border-radius:99px; font-weight:700;
+  }
+
+  .tabs{ max-width:900px; margin:24px auto 30px; display:flex; justify-content:center; gap:8px; flex-wrap:wrap; }
+  .tab{
+    border:1px solid var(--line); background:var(--card); color:var(--ink2); font-weight:700; font-size:13px;
+    padding:10px 18px; border-radius:99px; cursor:pointer; transition:.15s;
+  }
+  .tab.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
+
+  .stage{ display:flex; justify-content:center; }
+  .phone{
+    width:390px; height:844px; background:#12111A; border-radius:52px; padding:14px;
+    box-shadow: var(--shadow-lg); position:relative;
+  }
+  .phone-screen{
+    width:100%; height:100%; background:var(--bg); border-radius:38px; overflow:hidden; position:relative;
+    display:flex; flex-direction:column;
+  }
+  .statusbar{
+    height:46px; flex:0 0 auto; display:flex; align-items:center; justify-content:space-between;
+    padding:0 26px; font-size:13px; font-weight:800; color:var(--ink); position:relative; z-index:6;
+  }
+  .statusbar .pill-notch{
+    position:absolute; top:8px; left:50%; transform:translateX(-50%); width:120px; height:26px;
+    background:#12111A; border-radius:20px;
+  }
+  .screen-body{ flex:1; overflow-y:auto; padding:2px 18px 118px; -ms-overflow-style:none; scrollbar-width:none; position:relative; }
+  .screen-body::-webkit-scrollbar{ display:none; }
+
+  .view{ display:none; }
+  .view.active{ display:flex; flex-direction:column; flex:1; min-height:0; }
+
+  /* floating decorative blobs */
+  .blob{ position:absolute; border-radius:50%; filter:blur(0px); opacity:.55; pointer-events:none; z-index:0; }
+
+  /* ---------- shared ---------- */
+  .section-head{ display:flex; align-items:center; justify-content:space-between; margin:22px 2px 12px; }
+  .section-head h3{ font-family:'Baloo 2',sans-serif; font-size:16px; margin:0; color:var(--ink); }
+  .section-head a{ font-size:12.5px; font-weight:800; color:var(--indigo); text-decoration:none; display:flex; align-items:center; gap:3px; }
+
+  .pill-btn{ border:none; border-radius:99px; font-weight:800; cursor:pointer; font-family:inherit; }
+  .pill-btn.primary{ background:var(--indigo); color:#fff; box-shadow:0 12px 22px -8px rgba(107,99,214,.5); }
+  .pill-btn.ghost{ background:var(--card); color:var(--ink2); border:1px solid var(--line); }
+
+  /* ================= LOGIN ================= */
+  .login-wrap{ position:relative; padding-top:26px; flex:1; display:flex; flex-direction:column; }
+  .login-badge{
+    width:74px; height:74px; border-radius:26px; margin:6px auto 18px; position:relative; z-index:1;
+    background:linear-gradient(155deg,var(--coral-1),var(--coral-2));
+    display:flex; align-items:center; justify-content:center; font-size:34px;
+    box-shadow:0 16px 30px -12px rgba(217,123,79,.4);
+  }
+  .wordmark{ font-family:'Baloo 2',sans-serif; font-size:25px; margin:0; text-align:center; color:var(--ink); position:relative; z-index:1; }
+  .wordmark span{ color:var(--indigo); }
+  .tagline{ font-size:13px; color:var(--ink2); margin:6px 0 26px; line-height:1.6; text-align:center; position:relative; z-index:1; }
+  .login-card{
+    background:var(--card); border-radius:var(--radius-xl); padding:22px 20px; box-shadow:var(--shadow-md);
+    position:relative; z-index:1; margin-top:auto;
+  }
+  .field{
+    width:100%; border:1px solid var(--line); background:var(--card2); border-radius:14px;
+    padding:14px 15px; font-size:14px; margin-bottom:11px; color:var(--ink); font-family:inherit;
+  }
+  .field::placeholder{ color:var(--ink3); }
+  .login-btn{ width:100%; padding:15px; font-size:14.5px; margin-top:6px; }
+  .login-links{ display:flex; justify-content:center; gap:14px; margin-top:16px; font-size:12px; color:var(--ink3); }
+  .login-links b{ color:var(--indigo-ink); font-weight:800; }
+  .onboard-dots{ display:flex; gap:5px; justify-content:center; margin:20px 0 4px; position:relative; z-index:1; }
+  .onboard-dots i{ width:6px; height:6px; border-radius:99px; background:var(--line); display:block; }
+  .onboard-dots i.on{ background:var(--indigo); width:16px; }
+
+  /* ================= MINE ================= */
+  .greet{ padding-top:16px; }
+  .greet h2{ font-family:'Baloo 2',sans-serif; font-size:21px; margin:0 0 3px; }
+  .greet p{ font-size:12.5px; color:var(--ink2); margin:0; }
+
+  .summary-head{ display:flex; align-items:center; justify-content:space-between; margin:20px 2px 10px; }
+  .summary-head h3{ font-size:14.5px; font-weight:800; margin:0; }
+  .summary-head a{ font-size:12px; font-weight:800; color:var(--indigo); text-decoration:none; }
+  .summary-card{
+    background:var(--card); border-radius:var(--radius-xl); padding:20px 18px 16px; box-shadow:var(--shadow-md);
+  }
+  .summary-top{ display:flex; align-items:center; justify-content:space-between; }
+  .summary-stats{ display:flex; flex-direction:column; gap:14px; }
+  .stat-row{ display:flex; align-items:center; gap:9px; }
+  .stat-dot{ width:3px; height:28px; border-radius:99px; }
+  .stat-dot.a{ background:var(--indigo); }
+  .stat-dot.b{ background:var(--pink-2); }
+  .stat-icon{ font-size:17px; }
+  .stat-num{ font-size:16px; font-weight:800; color:var(--ink); }
+  .stat-num small{ font-size:11px; font-weight:700; color:var(--ink3); margin-left:2px; }
+  .stat-label{ font-size:11px; color:var(--ink2); font-weight:700; }
+
+  .ring-wrap{ position:relative; width:118px; height:118px; flex:0 0 auto; }
+  .ring-wrap svg{ width:100%; height:100%; transform:rotate(-90deg); }
+  .ring-center{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .ring-center b{ font-size:22px; color:var(--indigo-ink); font-family:'Baloo 2',sans-serif; }
+  .ring-center span{ font-size:10.5px; color:var(--ink2); font-weight:700; }
+
+  .macro-row{ display:flex; justify-content:space-between; margin-top:18px; padding-top:16px; border-top:1px solid var(--line); }
+  .macro{ text-align:left; }
+  .macro b{ font-size:12.5px; font-weight:800; display:block; margin-bottom:6px; }
+  .macro .bar{ width:74px; height:5px; border-radius:99px; background:var(--line); overflow:hidden; margin-bottom:6px; }
+  .macro .bar i{ display:block; height:100%; border-radius:99px; }
+  .macro span{ font-size:10.5px; color:var(--ink3); font-weight:700; }
+
+  .wish-scroll{ display:flex; gap:13px; overflow-x:auto; padding:4px 2px 10px; }
+  .wish-scroll::-webkit-scrollbar{ display:none; }
+  .wish-card{
+    flex:0 0 auto; width:140px; height:186px; border-radius:26px 26px 20px 20px; position:relative;
+    padding:16px 14px 14px; display:flex; flex-direction:column; justify-content:flex-end; color:var(--ink);
+    box-shadow:var(--shadow-md); overflow:hidden;
+  }
+  .wish-card.coral{ background:linear-gradient(165deg,var(--coral-1),var(--coral-2)); }
+  .wish-card.purple{ background:linear-gradient(165deg,var(--purple-1),var(--purple-2)); }
+  .wish-card.pink{ background:linear-gradient(165deg,var(--pink-1),var(--pink-2)); }
+  .wish-card.mint{ background:linear-gradient(165deg,var(--mint-1),var(--mint-2)); }
+  .wish-card .wc-emoji{
+    position:absolute; top:14px; left:14px; width:44px; height:44px; border-radius:16px;
+    background:rgba(255,255,255,.65); backdrop-filter:blur(2px); display:flex; align-items:center; justify-content:center;
+    font-size:22px; box-shadow:0 6px 14px -6px rgba(43,42,61,.18);
+  }
+  .wish-card h4{ font-size:14.5px; margin:0 0 4px; font-family:'Baloo 2',sans-serif; }
+  .wish-card p{ font-size:10.5px; margin:0 0 10px; opacity:.72; line-height:1.4; font-weight:700; }
+  .wish-card .wc-num{ font-size:21px; font-weight:800; font-family:'Baloo 2',sans-serif; }
+  .wish-card .wc-num small{ font-size:11px; font-weight:700; opacity:.72; margin-left:2px; }
+  .wish-card.coral .wc-num{ color:var(--coral-ink); }
+  .wish-card.purple .wc-num{ color:var(--purple-ink); }
+  .wish-card.pink .wc-num{ color:var(--pink-ink); }
+  .wish-card.mint .wc-num{ color:var(--mint-ink); }
+  .wish-card.add{
+    background:var(--card); border:1.5px dashed var(--line); box-shadow:none; align-items:center; justify-content:center;
+  }
+  .wish-add-btn{
+    width:46px; height:46px; border-radius:50%; background:var(--indigo); color:#fff; font-size:20px; border:none;
+    display:flex; align-items:center; justify-content:center; box-shadow:0 10px 20px -8px rgba(107,99,214,.5);
+  }
+  .wish-card.add span{ font-size:11px; color:var(--ink2); font-weight:800; margin-top:10px; }
+
+  .body-card{
+    background:var(--card); border-radius:var(--radius-lg); padding:16px; margin-top:6px; box-shadow:var(--shadow-sm);
+    display:flex; align-items:center; gap:12px;
+  }
+  .body-card .bc-icon{ width:42px; height:42px; border-radius:14px; background:var(--gold-wash); display:flex; align-items:center; justify-content:center; font-size:19px; }
+  .body-card .bc-text{ flex:1; }
+  .body-card .bc-text b{ font-size:13px; display:block; }
+  .body-card .bc-text span{ font-size:11px; color:var(--ink2); }
+
+  /* bottom nav */
+  .navbar{
+    position:absolute; left:14px; right:14px; bottom:14px; height:66px; background:var(--card);
+    border-radius:26px; box-shadow:var(--shadow-lg); display:flex; align-items:center; justify-content:space-around;
+    z-index:7;
+  }
+  .navbar .nitem{ font-size:19px; color:var(--ink3); background:none; border:none; padding:8px 10px; }
+  .navbar .nitem.on{ color:var(--indigo); }
+  .nav-fab{
+    position:absolute; left:50%; bottom:52px; transform:translateX(-50%); width:56px; height:56px; border-radius:50%;
+    background:linear-gradient(160deg,var(--indigo),var(--indigo-ink)); color:#fff; font-size:24px; font-weight:800;
+    border:none; display:flex; align-items:center; justify-content:center; box-shadow:0 16px 28px -10px rgba(107,99,214,.55);
+    z-index:8;
+  }
+
+  /* ================= EXPLORE ================= */
+  .explore-head{ padding-top:16px; }
+  .explore-head h2{ font-family:'Baloo 2',sans-serif; font-size:20px; margin:0 0 4px; }
+  .explore-head p{ font-size:12.5px; color:var(--ink2); margin:0 0 14px; line-height:1.6; }
+  .seg{ display:flex; gap:8px; margin-bottom:16px; }
+  .seg button{ flex:1; padding:10px; border-radius:12px; border:1px solid var(--line); background:var(--card); font-weight:800; font-size:12.5px; color:var(--ink2); }
+  .seg button.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .explore-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .explore-card{
+    border-radius:22px 22px 18px 18px; padding:14px 12px 12px; color:var(--ink); height:168px; position:relative;
+    display:flex; flex-direction:column; justify-content:flex-end; box-shadow:var(--shadow-md); overflow:hidden;
+  }
+  .explore-card.coral{ background:linear-gradient(165deg,var(--coral-1),var(--coral-2)); }
+  .explore-card.purple{ background:linear-gradient(165deg,var(--purple-1),var(--purple-2)); }
+  .explore-card.pink{ background:linear-gradient(165deg,var(--pink-1),var(--pink-2)); }
+  .explore-card.mint{ background:linear-gradient(165deg,var(--mint-1),var(--mint-2)); }
+  .ec-top{ position:absolute; top:10px; left:10px; right:10px; display:flex; align-items:center; justify-content:space-between; }
+  .ec-owner{ display:flex; align-items:center; gap:5px; font-size:10.5px; font-weight:800; }
+  .ec-owner i{ width:16px; height:16px; border-radius:50%; background:rgba(43,42,61,.16); display:block; }
+  .ec-like{ font-size:10.5px; font-weight:800; background:rgba(255,255,255,.75); padding:3px 7px; border-radius:99px; }
+  .ec-emoji{ font-size:26px; margin-bottom:6px; }
+  .explore-card h4{ font-size:13px; margin:0 0 5px; font-family:'Baloo 2',sans-serif; line-height:1.25; }
+  .ec-chip{ align-self:flex-start; font-size:9.5px; font-weight:800; background:rgba(255,255,255,.75); color:var(--ink2); padding:3px 8px; border-radius:99px; }
+
+  /* ================= DETAIL (bottom sheet) ================= */
+  .detail-backdrop{ position:relative; flex:1; background:rgba(20,18,35,.4); display:flex; flex-direction:column; justify-content:flex-end; margin:0 -18px -118px; padding-bottom:0; }
+  .detail-sheet{
+    background:var(--bg); border-radius:30px 30px 0 0; padding:10px 18px 118px; max-height:88%; overflow-y:auto;
+    box-shadow:0 -20px 40px -20px rgba(0,0,0,.3);
+  }
+  .sheet-handle{ width:38px; height:4px; border-radius:99px; background:var(--line); margin:6px auto 14px; }
+  .detail-hero{
+    height:160px; border-radius:var(--radius-xl); position:relative; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(165deg,var(--purple-1),var(--purple-2)); box-shadow:var(--shadow-md); margin-bottom:16px;
+  }
+  .detail-hero span{ font-size:56px; }
+  .detail-owner{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--ink2); font-weight:700; margin-bottom:8px; }
+  .detail-owner i{ width:20px; height:20px; border-radius:50%; background:var(--dustyblue,#8D82FF); display:block; }
+  .detail-title{ font-size:19px; font-weight:800; margin:0 0 8px; font-family:'Baloo 2',sans-serif; }
+  .detail-meta{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+  .chip{ display:inline-flex; align-items:center; gap:4px; border-radius:99px; padding:4px 11px; font-size:11px; font-weight:800; }
+  .chip.cat{ background:var(--indigo-wash); color:var(--indigo-ink); }
+  .chip.dday{ background:var(--gold-wash); color:#9A6B0F; }
+  .detail-note{ font-size:13.5px; line-height:1.7; color:var(--ink); background:var(--card); border-radius:var(--radius-lg); padding:14px 15px; box-shadow:var(--shadow-sm); margin-bottom:16px; }
+  .detail-people{ display:flex; align-items:center; gap:-6px; margin-bottom:18px; }
+  .detail-people i{ width:30px; height:30px; border-radius:50%; border:2px solid var(--bg); margin-left:-8px; display:block; }
+  .detail-people i:first-child{ margin-left:0; }
+  .detail-actions{ display:flex; gap:10px; }
+  .detail-actions .pill-btn{ flex:1; padding:14px; font-size:13.5px; }
+
+  ::-webkit-scrollbar{ width:0; }
+</style>
+</head>
+<body>
+
+  <div class="intro">
+    <h1>위시캣 · 다이어리 스타일 리디자인 시안</h1>
+    <p>업로드해주신 레퍼런스(My Diary 캘로리 앱)를 그대로 참고해서, 흰 배경 + 둥근 카드 + 그라디언트 포인트 컬러 구성으로 위시캣을 다시 그려봤어요.<br/>
+    상단 진행 링 카드, 그라디언트 위시 카드, 하단 아이콘 내비 + 플로팅 + 버튼까지 레퍼런스 구조를 최대한 따라갔어요.</p>
+    <span class="tag-note">⚠️ 정적 디자인 시안입니다 · 실제 동작은 없어요</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-view="login">로그인</button>
+    <button class="tab" data-view="mine">내 목록</button>
+    <button class="tab" data-view="explore">둘러보기</button>
+    <button class="tab" data-view="detail">아이템 상세</button>
+  </div>
+
+  <div class="stage">
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="statusbar"><span>9:41</span><span class="pill-notch"></span><span>🔋📶</span></div>
+
+        <!-- ================= LOGIN ================= -->
+        <div class="view active" id="view-login">
+          <div class="screen-body">
+            <div class="blob" style="width:120px;height:120px;top:10px;right:-30px;background:radial-gradient(circle,var(--purple-1),transparent 70%);"></div>
+            <div class="blob" style="width:70px;height:70px;top:120px;left:-24px;background:radial-gradient(circle,var(--pink-1),transparent 70%);"></div>
+            <div class="login-wrap">
+              <div class="login-badge">🐱</div>
+              <p class="wordmark">위시<span>캣</span></p>
+              <p class="tagline">먹은 만큼 채우는 다이어리처럼,<br/>이룬 만큼 채워가는 버킷리스트</p>
+              <div class="login-card">
+                <input class="field" placeholder="이메일" />
+                <input class="field" placeholder="비밀번호" />
+                <button class="pill-btn primary login-btn">로그인</button>
+                <div class="login-links">계정이 없어요 · <b>회원가입</b></div>
+              </div>
+              <div class="onboard-dots"><i class="on"></i><i></i><i></i></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= MINE ================= -->
+        <div class="view" id="view-mine">
+          <div class="screen-body">
+            <div class="greet">
+              <h2>안녕, 검증이 👋</h2>
+              <p>오늘도 위시 하나, 가볍게 채워볼까요</p>
+            </div>
+
+            <div class="summary-head"><h3>이번 달 목표</h3><a href="#">자세히 →</a></div>
+            <div class="summary-card">
+              <div class="summary-top">
+                <div class="summary-stats">
+                  <div class="stat-row">
+                    <div class="stat-dot a"></div>
+                    <div>
+                      <div class="stat-num"><span class="stat-icon">🌱</span> 5 <small>개 완료</small></div>
+                      <div class="stat-label">이룬 위시</div>
+                    </div>
+                  </div>
+                  <div class="stat-row">
+                    <div class="stat-dot b"></div>
+                    <div>
+                      <div class="stat-num"><span class="stat-icon">🔥</span> 7 <small>개 진행</small></div>
+                      <div class="stat-label">도전 중</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="ring-wrap">
+                  <svg viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="var(--line)" stroke-width="9"/>
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="var(--indigo)" stroke-width="9"
+                      stroke-linecap="round" stroke-dasharray="264" stroke-dashoffset="153"/>
+                  </svg>
+                  <div class="ring-center"><b>42%</b><span>달성</span></div>
+                </div>
+              </div>
+              <div class="macro-row">
+                <div class="macro"><b>여행</b><div class="bar"><i style="width:70%;background:var(--coral-2);"></i></div><span>4개</span></div>
+                <div class="macro"><b>자연</b><div class="bar"><i style="width:45%;background:var(--mint-2);"></i></div><span>3개</span></div>
+                <div class="macro"><b>관계</b><div class="bar"><i style="width:30%;background:var(--pink-2);"></i></div><span>2개</span></div>
+              </div>
+            </div>
+
+            <div class="section-head"><h3>오늘의 위시</h3><a href="#">전체보기 →</a></div>
+            <div class="wish-scroll">
+              <div class="wish-card coral">
+                <div class="wc-emoji">🌅</div>
+                <h4>오로라 보러 가기</h4>
+                <p>여행 · D-157</p>
+                <div class="wc-num">157<small>일 남음</small></div>
+              </div>
+              <div class="wish-card purple">
+                <div class="wc-emoji">🥾</div>
+                <h4>제주 올레길 걷기</h4>
+                <p>자연 · 제주</p>
+                <div class="wc-num">70<small>% 완료</small></div>
+              </div>
+              <div class="wish-card pink">
+                <div class="wc-emoji">🌸</div>
+                <h4>벚꽃 절정일 때 진해</h4>
+                <p>관계 · D-32</p>
+                <div class="wc-num">3<small>명 함께</small></div>
+              </div>
+              <div class="wish-card add">
+                <button class="wish-add-btn">+</button>
+                <span>새 위시 추가</span>
+              </div>
+            </div>
+
+            <div class="section-head"><h3>최근 완료</h3><a href="#">전체 →</a></div>
+            <div class="body-card">
+              <div class="bc-icon">🏔️</div>
+              <div class="bc-text"><b>지리산 종주하기</b><span>3일 전 완료 · 5명이 함께함</span></div>
+            </div>
+          </div>
+          <div class="navbar">
+            <button class="nitem on">📖</button>
+            <button class="nitem">🧭</button>
+            <button class="nitem" style="opacity:0;">·</button>
+            <button class="nitem">🗂️</button>
+            <button class="nitem">👤</button>
+          </div>
+          <button class="nav-fab">+</button>
+        </div>
+
+        <!-- ================= EXPLORE ================= -->
+        <div class="view" id="view-explore">
+          <div class="screen-body">
+            <div class="explore-head">
+              <h2>둘러보기</h2>
+              <p>전체공개된 사람들의 버킷을 구경해요</p>
+              <div class="seg"><button class="on">전체 버킷</button><button>이룬 꿈</button></div>
+            </div>
+            <div class="explore-grid">
+              <div class="explore-card coral">
+                <div class="ec-top"><div class="ec-owner"><i></i>길동님</div><div class="ec-like">♡ 7</div></div>
+                <div class="ec-emoji">🥾</div>
+                <h4>산티아고 순례길 걷기</h4>
+                <div class="ec-chip">여행 · 2명 참여</div>
+              </div>
+              <div class="explore-card mint">
+                <div class="ec-top"><div class="ec-owner"><i></i>수아님</div><div class="ec-like">♡ 14</div></div>
+                <div class="ec-emoji">⛰️</div>
+                <h4>지리산 종주하기</h4>
+                <div class="ec-chip">자연 · 5명 참여</div>
+              </div>
+              <div class="explore-card pink">
+                <div class="ec-top"><div class="ec-owner"><i></i>하은님</div><div class="ec-like">♡ 9</div></div>
+                <div class="ec-emoji">♨️</div>
+                <h4>엄마랑 온천 여행</h4>
+                <div class="ec-chip">관계 · 3명 참여</div>
+              </div>
+              <div class="explore-card purple">
+                <div class="ec-top"><div class="ec-owner"><i></i>민준님</div><div class="ec-like">♡ 21</div></div>
+                <div class="ec-emoji">🏕️</div>
+                <h4>밤바다 캠핑 가기</h4>
+                <div class="ec-chip">도전 · 8명 참여</div>
+              </div>
+            </div>
+          </div>
+          <div class="navbar">
+            <button class="nitem">📖</button>
+            <button class="nitem on">🧭</button>
+            <button class="nitem" style="opacity:0;">·</button>
+            <button class="nitem">🗂️</button>
+            <button class="nitem">👤</button>
+          </div>
+          <button class="nav-fab">+</button>
+        </div>
+
+        <!-- ================= DETAIL ================= -->
+        <div class="view" id="view-detail">
+          <div class="detail-backdrop">
+            <div class="detail-sheet">
+              <div class="sheet-handle"></div>
+              <div class="detail-hero"><span>🥾</span></div>
+              <div class="detail-owner"><i></i> 길동님의 위시 · 프로필 보기 ›</div>
+              <h3 class="detail-title">산티아고 순례길 걷기</h3>
+              <div class="detail-meta">
+                <span class="chip cat">여행</span>
+                <span class="chip dday">⏱ D-277</span>
+              </div>
+              <div class="detail-note">같이 하면 더 재밌어요. 한 달 정도 시간을 내서 천천히 걸어보고 싶어요 — 같이 갈 사람 구해요 🙋</div>
+              <div class="detail-people">
+                <i style="background:var(--coral-2);"></i>
+                <i style="background:var(--purple-2);"></i>
+                <i style="background:var(--gold);"></i>
+              </div>
+              <div class="detail-actions">
+                <button class="pill-btn ghost">공유하기</button>
+                <button class="pill-btn primary">함께하기</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+<script>
+  document.querySelectorAll('.tab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      const key = btn.dataset.view;
+      document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
+      document.getElementById('view-' + key).classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

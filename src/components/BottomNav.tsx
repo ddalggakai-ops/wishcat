@@ -1,7 +1,8 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, radius } from '../theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import { colors, gradients, shadowColors, radius } from '../theme';
 
 export type TabKey = 'mine' | 'friends' | 'explore' | 'memories';
 
@@ -19,8 +20,10 @@ export default function BottomNav({ active, onChange, onAdd }: { active: TabKey;
   return (
     <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 9) }]}>
       {left.map((t) => <NavBtn key={t.key} tab={t} active={active === t.key} onPress={() => onChange(t.key)} />)}
-      <Pressable onPress={onAdd} style={styles.addBtn}>
-        <Text style={styles.addIcon}>＋</Text>
+      <Pressable onPress={onAdd} style={styles.addBtnWrap}>
+        <LinearGradient colors={gradients.primary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.addBtn}>
+          <Text style={styles.addIcon}>＋</Text>
+        </LinearGradient>
       </Pressable>
       {right.map((t) => <NavBtn key={t.key} tab={t} active={active === t.key} onPress={() => onChange(t.key)} />)}
     </View>
@@ -45,9 +48,12 @@ const styles = StyleSheet.create({
   navBtn: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: 3 },
   navLabel: { fontSize: 10.5, fontWeight: '600', color: colors.ink3 },
   activeDot: { position: 'absolute', top: -4, width: 30, height: 30, borderRadius: 15, backgroundColor: colors.accentWash },
+  addBtnWrap: {
+    marginTop: -22, marginHorizontal: 8, borderRadius: 18,
+    shadowColor: shadowColors.primary, shadowOpacity: 1, shadowRadius: 14, shadowOffset: { width: 0, height: 8 }, elevation: 5,
+  },
   addBtn: {
-    width: 52, height: 52, borderRadius: 18, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center',
-    marginTop: -22, marginHorizontal: 8, borderBottomWidth: 4, borderBottomColor: colors.accentInk,
+    width: 52, height: 52, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
   },
   addIcon: { color: '#fff', fontSize: 26, fontWeight: '700', marginTop: -2 },
 });

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Avatar from '../components/Avatar';
+import GradientCard from '../components/GradientCard';
 import { EmptyState, ScreenHeader } from '../components/Basics';
 import { colors, radius, shadow } from '../theme';
 import { resolveImageUrl } from '../api/client';
@@ -51,50 +52,84 @@ export default function ExploreScreen({
         <EmptyState icon="🧭" title="해당하는 버킷이 없어요" subtitle="다른 필터를 눌러보세요" />
       ) : (
         <View style={styles.grid}>
-          {items.map((raw) => {
+          {items.map((raw, idx) => {
             // 담기/좋아요 직후 값이 바로 반영되도록 전역 캐시를 우선 씁니다.
             const i = itemsById[raw.id] || raw;
             const photo = resolveImageUrl(i.memory?.photo);
             const joined = !!user && i.participants.some((p) => p.id === user.id);
             const canSave = !!user && i.owner.id !== user.id && !i.done && !joined;
+            const role = idx % 2 === 0 ? 'secondary' : 'accent';
+            const onWhite = !!photo;
+
+            const saveBtn = (
+              <Pressable
+                onPress={() => {
+                  if (joined) { onToast('이미 담은 꿈이에요'); return; }
+                  if (!canSave) { onOpenItem(i); return; }
+                  joinItem(i.id)
+                    .then(() => onToast('내 목록에 담았어요 ✦'))
+                    .catch(() => onToast('담지 못했어요. 잠시 뒤 다시 시도해주세요'));
+                }}
+                hitSlop={6}
+                style={styles.likeBtn}
+                accessibilityRole="button"
+                accessibilityLabel={joined ? '이미 담음' : '내 목록에 담기'}
+              >
+                <Text style={{ color: onWhite ? (joined ? colors.accent : colors.ink3) : '#fff' }}>🔖</Text>
+                <Text style={[styles.countText, onWhite && joined && { color: colors.accent }, !onWhite && styles.countTextOnDark]}>
+                  {joined ? '담음' : i.savesCount}
+                </Text>
+              </Pressable>
+            );
+
+            const likeBtn = (
+              <Pressable onPress={() => toggleLike(i.id)} style={styles.likeBtn}>
+                <Text style={{ color: onWhite ? (i.likedByMe ? colors.like : colors.ink3) : '#fff' }}>{i.likedByMe ? '♥' : '♡'}</Text>
+                <Text style={[styles.countText, !onWhite && styles.countTextOnDark]}>{i.likesCount}</Text>
+              </Pressable>
+            );
+
+            if (photo) {
+              return (
+                <Pressable key={i.id} onPress={() => onOpenItem(i)} style={styles.tile}>
+                  <View style={styles.thumbWrap}>
+                    <Image source={{ uri: photo }} style={styles.thumb} />
+                    {i.hot ? <View style={styles.badge}><Text style={styles.badgeText}>인기</Text></View> : null}
+                    {i.done ? <View style={styles.doneBadge}><Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>✓</Text></View> : null}
+                  </View>
+                  <View style={styles.tileMeta}>
+                    <Text numberOfLines={2} style={styles.tileTitle}>{i.title}</Text>
+                    <View style={styles.ownerRow}>
+                      <Avatar name={i.owner.name} photoUrl={i.owner.photoUrl} size={18} />
+                      <Text style={styles.ownerName}>{i.owner.name}님</Text>
+                    </View>
+                    <View style={styles.counts}>{likeBtn}{saveBtn}</View>
+                  </View>
+                </Pressable>
+              );
+            }
+
             return (
-              <Pressable key={i.id} onPress={() => onOpenItem(i)} style={styles.tile}>
-                <View style={styles.thumbWrap}>
-                  {photo ? <Image source={{ uri: photo }} style={styles.thumb} /> : (
-                    <View style={[styles.thumb, styles.thumbPh]}><Text style={{ fontSize: 40 }}>{i.emoji}</Text></View>
-                  )}
-                  {i.hot ? <View style={styles.badge}><Text style={styles.badgeText}>인기</Text></View> : null}
-                  {i.done ? <View style={styles.doneBadge}><Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>✓</Text></View> : null}
-                </View>
-                <View style={styles.tileMeta}>
-                  <Text numberOfLines={2} style={styles.tileTitle}>{i.title}</Text>
-                  <View style={styles.ownerRow}>
-                    <Avatar name={i.owner.name} photoUrl={i.owner.photoUrl} size={18} />
-                    <Text style={styles.ownerName}>{i.owner.name}님</Text>
+              <Pressable key={i.id} onPress={() => onOpenItem(i)} style={styles.tileGradientWrap}>
+                <GradientCard role={role} style={{ flex: 1 }} contentStyle={styles.tileGradientInner}>
+                  <View style={styles.tileGradientTop}>
+                    <View style={styles.ownerRowDark}>
+                      <Avatar name={i.owner.name} photoUrl={i.owner.photoUrl} size={18} />
+                      <Text style={styles.ownerNameDark}>{i.owner.name}님</Text>
+                    </View>
+                    {i.hot ? <View style={styles.badgeOnGradient}><Text style={styles.badgeText}>인기</Text></View> : null}
                   </View>
-                  <View style={styles.counts}>
-                    <Pressable onPress={() => toggleLike(i.id)} style={styles.likeBtn}>
-                      <Text style={{ color: i.likedByMe ? colors.like : colors.ink3 }}>{i.likedByMe ? '♥' : '♡'}</Text>
-                      <Text style={styles.countText}>{i.likesCount}</Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => {
-                        if (joined) { onToast('이미 담은 꿈이에요'); return; }
-                        if (!canSave) { onOpenItem(i); return; }
-                        joinItem(i.id)
-                          .then(() => onToast('내 목록에 담았어요 ✦'))
-                          .catch(() => onToast('담지 못했어요. 잠시 뒤 다시 시도해주세요'));
-                      }}
-                      hitSlop={6}
-                      style={styles.likeBtn}
-                      accessibilityRole="button"
-                      accessibilityLabel={joined ? '이미 담음' : '내 목록에 담기'}
-                    >
-                      <Text style={{ color: joined ? colors.accent : colors.ink3 }}>🔖</Text>
-                      <Text style={[styles.countText, joined && { color: colors.accent }]}>{joined ? '담음' : i.savesCount}</Text>
-                    </Pressable>
+                  <Text style={styles.tileEmoji}>{i.emoji}</Text>
+                  <Text numberOfLines={2} style={styles.tileTitleDark}>{i.title}</Text>
+                  {i.category ? (
+                    <View style={styles.tileChip}><Text style={styles.tileChipText}>{i.category}</Text></View>
+                  ) : null}
+                  <View style={styles.countsDark}>
+                    {likeBtn}
+                    {saveBtn}
+                    {i.done ? <View style={styles.doneBadgeOnGradient}><Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>✓ 완료</Text></View> : null}
                   </View>
-                </View>
+                </GradientCard>
               </Pressable>
             );
           })}
@@ -112,6 +147,19 @@ const styles = StyleSheet.create({
   filterTextOn: { color: colors.accent },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 11, marginTop: 8 },
   tile: { width: '47.6%', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 19, overflow: 'hidden', ...shadow.sm },
+  tileGradientWrap: { width: '47.6%', minHeight: 190 },
+  tileGradientInner: { flex: 1, padding: 14, justifyContent: 'space-between' },
+  tileGradientTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  ownerRowDark: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  ownerNameDark: { fontSize: 11, color: 'rgba(255,255,255,.92)', fontWeight: '600' },
+  badgeOnGradient: { backgroundColor: 'rgba(255,255,255,.28)', borderRadius: 99, paddingVertical: 3, paddingHorizontal: 9 },
+  tileEmoji: { fontSize: 30, marginTop: 10 },
+  tileTitleDark: { fontSize: 13.5, fontWeight: '700', color: '#fff', lineHeight: 18, marginTop: 6 },
+  tileChip: { alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,.26)', borderRadius: 99, paddingVertical: 3, paddingHorizontal: 9, marginTop: 8 },
+  tileChipText: { fontSize: 10.5, fontWeight: '700', color: '#fff' },
+  countsDark: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 10 },
+  countTextOnDark: { color: 'rgba(255,255,255,.92)' },
+  doneBadgeOnGradient: { backgroundColor: 'rgba(255,255,255,.24)', borderRadius: 99, paddingVertical: 3, paddingHorizontal: 8, marginLeft: 'auto' },
   thumbWrap: { position: 'relative' },
   thumb: { width: '100%', aspectRatio: 1 },
   thumbPh: { backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },

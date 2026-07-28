@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SkyBackground from '../components/SkyBackground';
+import NatureBadge from '../components/NatureBadge';
 import { Field, FieldLabel } from '../components/FormBits';
 import BubbleButton from '../components/Button';
 import { colors } from '../theme';
@@ -53,7 +54,10 @@ export default function AuthScreen({ pendingInvite }: { pendingInvite?: boolean 
       <SkyBackground />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={[styles.wrap, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 40 }]} keyboardShouldPersistTaps="handled">
-          <Text style={styles.brand}>✦ 위시캣</Text>
+          <View style={styles.badgeWrap}>
+            <NatureBadge size={74} />
+          </View>
+          <Text style={styles.brand}>위시캣</Text>
           <Text style={styles.tagline}>친구와 함께 지우는 버킷리스트</Text>
 
           {pendingInvite ? (
@@ -150,9 +154,13 @@ export default function AuthScreen({ pendingInvite }: { pendingInvite?: boolean 
 
 const styles = StyleSheet.create({
   wrap: { paddingHorizontal: 28, alignItems: 'stretch' },
-  brand: { fontSize: 30, fontWeight: '700', color: '#fff', textAlign: 'center' },
-  tagline: { fontSize: 14, color: 'rgba(255,255,255,.85)', textAlign: 'center', marginTop: 8, marginBottom: 34 },
-  card: { backgroundColor: colors.surface, borderRadius: 26, padding: 22 },
+  badgeWrap: { alignItems: 'center', marginBottom: 18 },
+  brand: { fontSize: 30, fontWeight: '700', color: colors.ink, textAlign: 'center' },
+  tagline: { fontSize: 14, color: colors.ink2, textAlign: 'center', marginTop: 8, marginBottom: 34 },
+  card: {
+    backgroundColor: colors.surface, borderRadius: 26, padding: 22,
+    shadowColor: '#2E2A3D', shadowOpacity: 0.12, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 5,
+  },
   cardTitle: { fontSize: 20, fontWeight: '700', color: colors.ink, marginBottom: 6 },
   err: { color: colors.like, fontSize: 13, marginTop: 14, lineHeight: 19 },
   notice: { color: colors.done, fontSize: 13, marginTop: 14, lineHeight: 19 },
@@ -160,7 +168,7 @@ const styles = StyleSheet.create({
   linkBtn: { alignSelf: 'center', paddingVertical: 12 },
   linkText: { fontSize: 13, color: colors.ink2, textDecorationLine: 'underline' },
   inviteBanner: {
-    backgroundColor: 'rgba(255,255,255,.9)', borderRadius: 16, paddingVertical: 12, paddingHorizontal: 16, marginBottom: 14,
+    backgroundColor: colors.accentWash, borderRadius: 16, paddingVertical: 12, paddingHorizontal: 16, marginBottom: 14,
   },
   inviteText: { fontSize: 13.5, color: colors.ink, textAlign: 'center', lineHeight: 20 },
 });

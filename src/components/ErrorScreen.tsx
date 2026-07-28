@@ -62,7 +62,7 @@ export default function ErrorScreen({
 const styles = StyleSheet.create({
   wrap: { paddingHorizontal: 22, alignItems: 'stretch' },
   emoji: { fontSize: 40, textAlign: 'center' },
-  title: { fontSize: 20, fontWeight: '800', color: '#fff', textAlign: 'center', marginTop: 8, marginBottom: 18 },
+  title: { fontSize: 20, fontWeight: '800', color: colors.ink, textAlign: 'center', marginTop: 8, marginBottom: 18 },
   card: { backgroundColor: colors.surface, borderRadius: 22, padding: 20, borderWidth: 1, borderColor: colors.line },
   message: { fontSize: 15, lineHeight: 22, color: colors.ink, fontWeight: '600' },
   detailBox: { marginTop: 14, backgroundColor: colors.surface2, borderRadius: 14, padding: 12 },

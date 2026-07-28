@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Sheet from '../components/Sheet';
 import BubbleButton from '../components/Button';
 import Avatar from '../components/Avatar';
 import { CategoryChip, LocationChip } from '../components/Chips';
 import { dDayLabel } from '../components/ItemCard';
-import { colors, radius } from '../theme';
+import { colors, catRole, gradients, radius } from '../theme';
 import { resolveImageUrl } from '../api/client';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
@@ -64,7 +65,16 @@ export default function ItemDetailSheet({
   };
 
   return (
-    <Sheet visible={visible} onClose={onClose} title={`${live.emoji} ${live.title}`}>
+    <Sheet visible={visible} onClose={onClose} title={photo ? '' : `${live.emoji} ${live.title}`}>
+      {photo ? (
+        <Image source={{ uri: photo }} style={styles.hero} />
+      ) : (
+        <LinearGradient colors={gradients[catRole(live.category)]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+          <Text style={styles.heroEmoji}>{live.emoji}</Text>
+        </LinearGradient>
+      )}
+      {photo ? <Text style={styles.heroTitle}>{live.emoji} {live.title}</Text> : null}
+
       <Pressable style={styles.ownerRow} onPress={() => { onClose(); onOpenPerson(live.owner.id, live.owner.name); }}>
         <Avatar name={live.owner.name} photoUrl={live.owner.photoUrl} size={34} />
         <View style={{ flex: 1 }}>
@@ -140,13 +150,16 @@ export default function ItemDetailSheet({
 }
 
 const styles = StyleSheet.create({
+  hero: { width: '100%', height: 190, borderRadius: radius.lg, marginBottom: 14, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  heroEmoji: { fontSize: 52 },
+  heroTitle: { fontSize: 19, fontWeight: '700', color: colors.ink, marginBottom: 12 },
   ownerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4, marginBottom: 14 },
   ownerName: { fontSize: 13.5, fontWeight: '700', color: colors.ink },
   ownerSub: { fontSize: 11.5, color: colors.accent, marginTop: 2 },
   note: { fontSize: 14, color: colors.ink2, lineHeight: 20 },
   metaRow: { flexDirection: 'row', gap: 7, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' },
-  dday: { backgroundColor: 'rgba(74,144,217,.12)', borderRadius: 9, paddingVertical: 4, paddingHorizontal: 9 },
-  ddayText: { fontSize: 11.5, fontWeight: '700', color: colors.accent },
+  dday: { backgroundColor: colors.doneWash, borderRadius: 9, paddingVertical: 4, paddingHorizontal: 9 },
+  ddayText: { fontSize: 11.5, fontWeight: '700', color: colors.done },
   memWrap: { marginTop: 16, borderWidth: 1, borderColor: colors.line, borderRadius: radius.md, overflow: 'hidden' },
   memImg: { width: '100%', height: 190 },
   memCap: { padding: 12 },
@@ -159,8 +172,8 @@ const styles = StyleSheet.create({
   countBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   countText: { fontSize: 12.5, fontWeight: '600', color: colors.ink2 },
   mineNote: { fontSize: 12.5, color: colors.ink3, textAlign: 'center', marginTop: 18, lineHeight: 18 },
-  joinedPill: { backgroundColor: 'rgba(74,144,217,.12)', borderRadius: radius.sm, paddingVertical: 12, alignItems: 'center', marginTop: 18 },
-  joinedPillText: { fontSize: 13.5, color: colors.accent, fontWeight: '700' },
+  joinedPill: { backgroundColor: colors.accentWash, borderRadius: radius.sm, paddingVertical: 12, alignItems: 'center', marginTop: 18 },
+  joinedPillText: { fontSize: 13.5, color: colors.accentInk, fontWeight: '700' },
   reportBtn: { alignSelf: 'center', paddingVertical: 12, paddingHorizontal: 16, marginTop: 6 },
   reportText: { fontSize: 12, color: colors.ink3, textDecorationLine: 'underline' },
 });
