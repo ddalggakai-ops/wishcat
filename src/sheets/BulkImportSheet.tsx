@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+import { File } from 'expo-file-system';
 import Sheet from '../components/Sheet';
 import BubbleButton from '../components/Button';
 import { colors, radius } from '../theme';
@@ -53,9 +53,10 @@ export default function BulkImportSheet({ visible, onClose, onImported }: {
       // CSV는 순수 텍스트라 UTF-8 문자열로 그대로 읽어야 한글/이모지가 안 깨집니다.
       // .xlsx/.xls는 자체 포맷(zip) 안에 인코딩 정보가 있는 바이너리라 base64로 읽습니다.
       const isCsv = /\.csv$/i.test(asset.name || '') || /csv/i.test(asset.mimeType || '');
+      const file = new File(asset.uri);
       const result = isCsv
-        ? parseWorkbook({ kind: 'text', data: await FileSystem.readAsStringAsync(asset.uri) })
-        : parseWorkbook({ kind: 'base64', data: await FileSystem.readAsStringAsync(asset.uri, { encoding: 'base64' }) });
+        ? parseWorkbook({ kind: 'text', data: await file.text() })
+        : parseWorkbook({ kind: 'base64', data: await file.base64() });
       if (result.rows.length === 0) {
         setError('읽을 수 있는 줄을 찾지 못했어요. 첫 번째 줄이 "제목" 같은 헤더인지, 그 아래에 내용이 있는지 확인해주세요.');
         return;
