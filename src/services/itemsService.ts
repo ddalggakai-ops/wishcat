@@ -76,6 +76,31 @@ export async function addItem(uid: string, payload: { title: string; emoji: stri
   return hydrateItem(ref.id, raw, uid);
 }
 
+// 엑셀/CSV 가져오기로 여러 개를 한 번에 추가.
+// Firestore 배치(batch) 하나에는 최대 500개의 쓰기만 담을 수 있어서 넉넉히 400개씩 나눠 커밋합니다.
+export async function bulkAddItems(
+  uid: string,
+  payloads: { title: string; emoji: string; note?: string; category?: string | null; location?: { name: string; region: Region } | null }[]
+): Promise<number> {
+  const CHUNK = 400;
+  let added = 0;
+  for (let i = 0; i < payloads.length; i += CHUNK) {
+    const slice = payloads.slice(i, i + CHUNK);
+    const batch = writeBatch(db);
+    for (const payload of slice) {
+      const raw: RawItem = {
+        ownerId: uid, title: payload.title, emoji: payload.emoji, note: payload.note || '',
+        category: payload.category || null, location: payload.location || null,
+        done: false, memory: null, participants: [], origin: 'own', helpedBy: [], likesCount: 0, savesCount: 0,
+      };
+      batch.set(doc(itemsCol()), { ...raw, createdAt: serverTimestamp() });
+    }
+    await batch.commit();
+    added += slice.length;
+  }
+  return added;
+}
+
 export async function editItem(id: string, uid: string, patch: Partial<{ title: string; emoji: string; note: string; category: string | null; location: Location | null }>): Promise<Item> {
   await updateDoc(itemDoc(id), patch as any);
   const snap = await getDoc(itemDoc(id));

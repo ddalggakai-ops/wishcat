@@ -15,6 +15,7 @@ interface AppState {
   refreshMine: () => Promise<void>;
   refreshFriends: () => Promise<void>;
   addItem: (payload: { title: string; emoji: string; note?: string; category?: string | null; location?: { name: string; region: 'domestic' | 'overseas' } | null }) => Promise<Item>;
+  bulkAddItems: (payloads: { title: string; emoji: string; note?: string; category?: string | null; location?: { name: string; region: 'domestic' | 'overseas' } | null }[]) => Promise<number>;
   editItem: (id: string, patch: Partial<{ title: string; emoji: string; note: string; category: string | null; location: { name: string; region: 'domestic' | 'overseas' } | null }>) => Promise<Item>;
   deleteItem: (id: string) => Promise<void>;
   completeItem: (id: string, payload: { photo?: string | null; text?: string }) => Promise<Item>;
@@ -88,6 +89,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return item;
   }, [mergeItems]);
 
+  const bulkAddItems: AppState['bulkAddItems'] = useCallback(async (payloads) => {
+    const count = await itemsService.bulkAddItems(requireUid(), payloads);
+    await refreshMine(); // 여러 개를 한 번에 만들었으니 개별 병합 대신 통째로 다시 불러옵니다.
+    return count;
+  }, [refreshMine]);
+
   const editItem: AppState['editItem'] = useCallback(async (id, patch) => {
     const item = await itemsService.editItem(id, requireUid(), patch);
     mergeItems([item]);
@@ -159,9 +166,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<AppState>(() => ({
     itemsById, mineIds, friends, loadingMine, loadingFriends,
     getItem, mergeItems, refreshMine, refreshFriends,
-    addItem, editItem, deleteItem, completeItem, reopenItem,
+    addItem, bulkAddItems, editItem, deleteItem, completeItem, reopenItem,
     joinItem, leaveItem, helpItem, toggleLike, createInvite,
-  }), [itemsById, mineIds, friends, loadingMine, loadingFriends, getItem, mergeItems, refreshMine, refreshFriends, addItem, editItem, deleteItem, completeItem, reopenItem, joinItem, leaveItem, helpItem, toggleLike, createInvite]);
+  }), [itemsById, mineIds, friends, loadingMine, loadingFriends, getItem, mergeItems, refreshMine, refreshFriends, addItem, bulkAddItems, editItem, deleteItem, completeItem, reopenItem, joinItem, leaveItem, helpItem, toggleLike, createInvite]);
 
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;
 }

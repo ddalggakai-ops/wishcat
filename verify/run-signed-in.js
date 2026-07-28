@@ -222,12 +222,10 @@ async function scenario(browser, label, fsMode, how) {
   await how(page);
   await page.waitForTimeout(9000);
 
-  const text = (await page.evaluate(() => (document.getElementById('root') || document.body).innerText))
-    .replace(/\s+/g, ' ')
-    .trim();
-  const nodes = await page.evaluate(
-    () => (document.getElementById('root') || document.body).querySelectorAll('*').length
-  );
+  // body 전체를 봅니다 — Modal(Sheet)은 #root 밖(body 바로 아래)으로 포털되기 때문에,
+  // #root만 보면 열려 있는 시트의 내용을 놓칩니다.
+  const text = (await page.evaluate(() => document.body.innerText)).replace(/\s+/g, ' ').trim();
+  const nodes = await page.evaluate(() => document.body.querySelectorAll('*').length);
   await page.screenshot({ path: `verify/${label.slice(0, 2)}-shot.png` });
   const bad = logs.filter((l) => /pageerror|\[error\]/.test(l));
 
@@ -248,6 +246,12 @@ const loginAs = async (page) => {
   await page.getByText('로그인', { exact: true }).last().click();
 };
 
+const openBulkImportAs = async (page) => {
+  await loginAs(page);
+  await page.waitForTimeout(500);
+  await page.getByText('📊 엑셀로 추가', { exact: false }).first().click();
+};
+
 const registerAs = async (page) => {
   await page.getByText('계정이 없어요 · 회원가입', { exact: false }).first().click();
   await page.waitForTimeout(500);
@@ -265,6 +269,7 @@ const registerAs = async (page) => {
   const b = await scenario(browser, '06 회원가입 성공 후', 'ok', registerAs);
   const c = await scenario(browser, '07 로그인은 되지만 Firestore 권한 거부(403)', 'denied', loginAs);
   const d = await scenario(browser, '08 데이터베이스가 없는 경우(404)', 'nodb', loginAs);
+  const e = await scenario(browser, '09 엑셀로 여러 개 추가 시트 열기', 'ok', openBulkImportAs);
   await browser.close();
 
   console.log('\n\n========== 판정 ==========');
@@ -303,6 +308,12 @@ const registerAs = async (page) => {
       d.text.slice(0, 300),
     ],
     ['[DB없음] 다시 시도 버튼이 있다', /다시 시도/.test(d.text), ''],
+
+    ['[엑셀] 시트가 열리고 빈 화면이 아니다', e.nodes > 30, `노드 ${e.nodes}`],
+    ['[엑셀] 시트 제목이 보인다', /엑셀로 여러 개 추가/.test(e.text), ''],
+    ['[엑셀] 형식 안내(헤더 예시)가 보인다', /제목.*이모지.*메모.*카테고리.*장소/s.test(e.text.replace(/\s+/g, '')), e.text.slice(0, 200)],
+    ['[엑셀] 파일 선택 버튼이 있다', /엑셀\/CSV 파일 선택/.test(e.text), ''],
+    ['[엑셀] 콘솔 치명적 오류 없음', e.errors.length === 0, e.errors.join(' | ').slice(0, 200)],
   ];
   for (const [n, p, d] of checks) console.log(`${p ? 'PASS' : 'FAIL'} — ${n}${d ? `  ⟨${d}⟩` : ''}`);
   const failed = checks.filter((x) => !x[1]).length;

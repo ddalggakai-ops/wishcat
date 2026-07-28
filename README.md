@@ -54,12 +54,13 @@ src/
     personService.ts        다른 사람 프로필 페이지 데이터 조합
     exploreService.ts       둘러보기(공개 피드) 조회
     uploadService.ts        Firebase Storage 사진 업로드
+    bulkImportService.ts    엑셀(.xlsx)/CSV 내용을 파싱해서 아이템 목록으로 변환
   api/                    types.ts(도메인 타입), client.ts(resolveImageUrl만 남음)
   context/                AuthContext(로그인 상태), AppContext(버킷/친구 데이터+액션) — 화면들은 이 두 Context만 통해 데이터를 사용해요
   theme.ts                색상/카테고리/폰트 등 디자인 토큰 (웹 프로토타입과 톤 통일)
   components/             공용 컴포넌트 (SkyBackground, ItemCard, BottomNav, Sheet 등)
   screens/                나/친구/둘러보기/추억/개인페이지/로그인/온보딩
-  sheets/                 모달 시트들 (등록/수정, 추억 남기기, 도와주기, 프로필, 초대, 상세보기)
+  sheets/                 모달 시트들 (등록/수정, 추억 남기기, 도와주기, 프로필, 초대, 상세보기, 엑셀 가져오기)
   HomeShell.tsx            로그인 이후 메인 앱 껍데기 (탭+모달 상태 관리)
 ```
 

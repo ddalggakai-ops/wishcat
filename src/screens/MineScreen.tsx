@@ -10,12 +10,13 @@ import { useApp, useMyItems } from '../context/AppContext';
 import type { Item } from '../api/types';
 
 export default function MineScreen({
-  onEditProfile, onMemory, onShare, onMenu,
+  onEditProfile, onMemory, onShare, onMenu, onBulkImport,
 }: {
   onEditProfile: () => void;
   onMemory: (item: Item) => void;
   onShare: (item: Item) => void;
   onMenu: (item: Item) => void;
+  onBulkImport: () => void;
 }) {
   const { user, updateMe } = useAuth();
   const { refreshMine, loadingMine, completeItem, reopenItem } = useApp();
@@ -71,10 +72,16 @@ export default function MineScreen({
       </View>
 
       {items.length === 0 ? (
-        <EmptyState icon="🚩" title="아직 꿈이 없어요" subtitle="아래 + 버튼으로 첫 번째 꿈을 적어보세요" />
+        <>
+          <EmptyState icon="🚩" title="아직 꿈이 없어요" subtitle="아래 + 버튼으로 첫 번째 꿈을 적어보세요" />
+          <BubbleButton small variant="line" title="📊 엑셀로 여러 개 한 번에 추가" onPress={onBulkImport} style={{ alignSelf: 'center' }} />
+        </>
       ) : (
         <>
           <View style={styles.listBar}>
+            <Pressable onPress={onBulkImport} style={styles.viewToggle}>
+              <Text style={{ fontSize: 12.5, fontWeight: '600', color: colors.ink2 }}>📊 엑셀로 추가</Text>
+            </Pressable>
             <Pressable onPress={() => setCompact(!compact)} style={styles.viewToggle}>
               <Text style={{ fontSize: 12.5, fontWeight: '600', color: colors.ink2 }}>{compact ? '상세 보기' : '간단히 보기'}</Text>
             </Pressable>
@@ -125,6 +132,6 @@ const styles = StyleSheet.create({
   progTrack: { height: 6, borderRadius: 99, backgroundColor: colors.surface3, overflow: 'hidden' },
   progFill: { height: '100%', backgroundColor: colors.done, borderRadius: 99 },
   progText: { fontSize: 12, color: colors.ink2, marginTop: 9 },
-  listBar: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 16, marginBottom: -4 },
+  listBar: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, marginBottom: -4 },
   viewToggle: { borderWidth: 1, borderColor: colors.line2, backgroundColor: colors.surface, borderRadius: radius.sm, paddingVertical: 7, paddingHorizontal: 12 },
 });

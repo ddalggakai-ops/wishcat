@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SkyBackground from './components/SkyBackground';
 import BottomNav, { TabKey } from './components/BottomNav';
 import Toast from './components/Toast';
@@ -16,12 +17,14 @@ import ProfileSheet from './sheets/ProfileSheet';
 import ItemMenuSheet from './sheets/ItemMenuSheet';
 import ViewerModal from './sheets/ViewerModal';
 import InviteModal from './sheets/InviteModal';
+import BulkImportSheet from './sheets/BulkImportSheet';
 import { useApp } from './context/AppContext';
 import type { Item } from './api/types';
 
 type PersonView = { id: string; name: string; isFriendTab: boolean } | null;
 
 export default function HomeShell() {
+  const insets = useSafeAreaInsets();
   const { addItem, editItem, deleteItem, completeItem, helpItem } = useApp();
 
   const [tab, setTab] = useState<TabKey>('mine');
@@ -37,6 +40,7 @@ export default function HomeShell() {
   const [menuItem, setMenuItem] = useState<Item | null>(null);
   const [viewerItem, setViewerItem] = useState<Item | null>(null);
   const [inviteItem, setInviteItem] = useState<Item | null | 'general'>(null);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -107,6 +111,7 @@ export default function HomeShell() {
         onMemory={setMemoryItem}
         onShare={setViewerItem}
         onMenu={setMenuItem}
+        onBulkImport={() => setBulkImportOpen(true)}
       />
     );
   } else if (tab === 'friends') {
@@ -121,7 +126,7 @@ export default function HomeShell() {
     <View style={{ flex: 1 }}>
       <SkyBackground />
       <View style={styles.app}>
-        <View style={styles.main}>{content}</View>
+        <View style={[styles.main, { paddingTop: insets.top + 4 }]}>{content}</View>
         <BottomNav active={person ? (person.isFriendTab ? 'friends' : 'explore') : tab} onChange={onChangeTab} onAdd={openAdd} />
       </View>
 
@@ -140,6 +145,11 @@ export default function HomeShell() {
         onDelete={confirmDelete}
       />
       <ViewerModal visible={!!viewerItem} item={viewerItem} onClose={() => setViewerItem(null)} />
+      <BulkImportSheet
+        visible={bulkImportOpen}
+        onClose={() => setBulkImportOpen(false)}
+        onImported={(count) => showToast(`꿈 ${count}개를 추가했어요`)}
+      />
       <InviteModal
         visible={!!inviteItem}
         onClose={() => setInviteItem(null)}
