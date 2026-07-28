@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where, writeBatch } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where, writeBatch } from 'firebase/firestore/lite';
 import { db } from '../firebase/config';
 import { getUserPublicCached } from './usersService';
 import { joinItem } from './itemsService';

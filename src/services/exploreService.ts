@@ -1,4 +1,4 @@
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore/lite';
 import { db } from '../firebase/config';
 import { hydrateItem } from './itemsService';
 import { primeUserCache } from './usersService';

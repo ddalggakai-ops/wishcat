@@ -40,3 +40,9 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# 검증(브라우저 구동 테스트) 산출물
+dist-web/
+dist-boom/
+dist-and/
+verify/*.png

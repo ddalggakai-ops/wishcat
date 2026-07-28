@@ -1,7 +1,10 @@
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore/lite';
 import { db } from '../firebase/config';
 import { colorFor } from '../theme';
+import { withTimeout } from './withTimeout';
 import type { MeUser, PublicUser, UserBrief } from '../api/types';
+
+export const DEFAULT_BIO = '✦ 오늘도 꿈을 하나씩 채우는 중';
 
 const cache = new Map<string, PublicUser>();
 
@@ -33,13 +36,25 @@ export async function getUserPublicCached(uid: string): Promise<PublicUser> {
 }
 
 export async function createUserProfile(uid: string, name: string) {
-  const bio = '✦ 오늘도 꿈을 하나씩 채우는 중';
-  await setDoc(doc(db, 'users', uid), { name, bio, listPublic: true, createdAt: serverTimestamp() });
+  const bio = DEFAULT_BIO;
+  await withTimeout(
+    setDoc(doc(db, 'users', uid), { name, bio, listPublic: true, createdAt: serverTimestamp() }),
+    '프로필 저장'
+  );
   primeUserCache(uid, { name, bio, listPublic: true });
 }
 
-export async function fetchMe(uid: string, email: string): Promise<MeUser> {
-  const snap = await getDoc(doc(db, 'users', uid));
+export async function fetchMe(uid: string, email: string, fallbackName?: string): Promise<MeUser> {
+  const snap = await withTimeout(getDoc(doc(db, 'users', uid)), '내 프로필 불러오기');
+
+  // Auth 계정은 있는데 users 문서가 없는 경우(예: 예전 가입이 중간에 끊긴 계정)를
+  // 여기서 스스로 복구합니다. 안 그러면 그 계정은 영구히 앱을 못 쓰게 돼요.
+  if (!snap.exists()) {
+    const name = (fallbackName || email.split('@')[0] || '나').slice(0, 12);
+    await createUserProfile(uid, name);
+    return { id: uid, name, avatarColor: colorFor(name), bio: DEFAULT_BIO, listPublic: true, email };
+  }
+
   const data = snap.data() as any;
   const u = primeUserCache(uid, { name: data?.name || '나', bio: data?.bio, listPublic: data?.listPublic });
   return { ...u, email };

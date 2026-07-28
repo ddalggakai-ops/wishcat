@@ -1,7 +1,7 @@
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, increment, orderBy,
   query, serverTimestamp, setDoc, updateDoc, where, arrayUnion, arrayRemove, writeBatch,
-} from 'firebase/firestore';
+} from 'firebase/firestore/lite';
 import { db } from '../firebase/config';
 import { getUserBrief } from './usersService';
 import type { Item, Location, Region } from '../api/types';

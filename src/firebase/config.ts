@@ -1,8 +1,9 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { initializeAuth, getReactNativePersistence, getAuth, Auth } from 'firebase/auth';
 // getReactNativePersistence 타입은 src/types/firebase-auth-rn.d.ts 에서 보강합니다.
-import { getFirestore, initializeFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+// Firestore는 "lite"(순수 REST) 빌드를 씁니다. 이유는 아래 주석 참고.
+import { getFirestore, Firestore } from 'firebase/firestore/lite';
+import { getStorage, FirebaseStorage } from 'firebase/storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
@@ -16,35 +17,102 @@ const firebaseConfig = {
 };
 
 export const firebaseConfigured = !!(firebaseConfig.apiKey && firebaseConfig.projectId);
+export const firebaseProjectId = firebaseConfig.projectId || '(없음)';
+
+// ────────────────────────────────────────────────────────────────────────────
+// 이 파일은 "절대 throw하지 않는다"가 규칙입니다.
+// 모듈 최상단에서 예외가 나면 React가 마운트되기도 전에 앱이 죽어서
+// 화면에 아무것도 안 뜨는(=원인도 알 수 없는) 상태가 됩니다.
+// 그래서 모든 초기화를 try/catch로 감싸고, 실패 사유는 firebaseInitError에
+// 담아 진단 화면에서 그대로 보여줍니다.
+// ────────────────────────────────────────────────────────────────────────────
+let initError: string | null = null;
+const initLog: string[] = [];
+
+function note(msg: string) {
+  initLog.push(msg);
+}
+
+function fail(step: string, e: unknown) {
+  const msg = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+  initError = initError ? `${initError}\n${step}: ${msg}` : `${step}: ${msg}`;
+  note(`✗ ${step} — ${msg}`);
+}
 
 if (!firebaseConfigured) {
-  // eslint-disable-next-line no-console
-  console.warn(
-    '[wishcat] Firebase 설정이 비어 있어요. .env 파일에 EXPO_PUBLIC_FIREBASE_* 값을 채워주세요 (.env.example 참고).'
-  );
+  fail('설정 확인', new Error('EXPO_PUBLIC_FIREBASE_* 값이 비어 있어요 (.env / eas.json 확인)'));
 }
 
-export const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-
-// 웹(Expo web)에서는 RN persistence 모듈이 없어서 갈라줌 — 실제 배포 타깃은 iOS/Android(Expo Go)라 여기가 핵심 경로
-let authInstance: Auth;
-if (Platform.OS === 'web') {
-  authInstance = getAuth(app);
-} else {
-  authInstance = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage),
-  });
+// 1) App
+let appInstance: FirebaseApp | null = null;
+try {
+  appInstance = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  note(`✓ initializeApp (${firebaseConfig.projectId})`);
+} catch (e) {
+  fail('initializeApp', e);
 }
-export const auth = authInstance;
 
-// RN(iOS/Android)에서는 Firestore 기본 스트리밍(WebChannel) 방식이 RN의 fetch 구현과
-// 궁합이 안 맞아서 첫 읽기/쓰기가 응답 없이 멈추는 문제가 있어요 — long polling을 강제해서 우회합니다.
-// (웹에서는 필요 없어서 기본 방식 그대로 둡니다.)
-export const db =
-  Platform.OS === 'web'
-    ? getFirestore(app)
-    : initializeFirestore(app, {
-        experimentalForceLongPolling: true,
+// 2) Auth — 네이티브는 AsyncStorage 영속화, 웹은 기본 영속화
+let authInstance: Auth | null = null;
+if (appInstance) {
+  try {
+    if (Platform.OS === 'web') {
+      authInstance = getAuth(appInstance);
+      note('✓ getAuth (web)');
+    } else {
+      authInstance = initializeAuth(appInstance, {
+        persistence: getReactNativePersistence(AsyncStorage),
       });
+      note('✓ initializeAuth + AsyncStorage 영속화');
+    }
+  } catch (e) {
+    // 이미 초기화됐거나 persistence 모듈이 없을 때 — 최소한 로그인은 되게 폴백
+    try {
+      authInstance = getAuth(appInstance);
+      note(`△ initializeAuth 실패 → getAuth 폴백 (로그인 유지 안 될 수 있음): ${(e as Error)?.message}`);
+    } catch (e2) {
+      fail('auth 초기화', e2);
+    }
+  }
+}
 
-export const storage = getStorage(app);
+// 3) Firestore — lite 빌드(순수 REST)
+//
+// 왜 lite인가:
+//   일반 firebase/firestore는 WebChannel(스트리밍) 전송을 쓰는데, React Native/Hermes
+//   환경에서는 이게 응답 없이 멈추는 사례가 많습니다(첫 읽기/쓰기가 영원히 pending).
+//   experimentalForceLongPolling으로 우회할 수 있다고들 하지만 여전히 불안정합니다.
+//   이 앱은 실시간 리스너(onSnapshot)를 전혀 쓰지 않고 전부 단발성 읽기/쓰기라서,
+//   lite 빌드(fetch 기반 REST, 스트리밍 없음)로 바꾸면 이 문제가 원천적으로 사라집니다.
+//   대가는 오프라인 캐시가 없다는 것뿐인데, 어차피 쓰지 않던 기능입니다.
+let dbInstance: Firestore | null = null;
+if (appInstance) {
+  try {
+    dbInstance = getFirestore(appInstance);
+    note('✓ getFirestore (lite / REST)');
+  } catch (e) {
+    fail('getFirestore', e);
+  }
+}
+
+// 4) Storage
+let storageInstance: FirebaseStorage | null = null;
+if (appInstance) {
+  try {
+    storageInstance = getStorage(appInstance);
+    note('✓ getStorage');
+  } catch (e) {
+    fail('getStorage', e);
+  }
+}
+
+export const firebaseInitError = initError;
+export const firebaseInitLog = initLog;
+export const firebaseReady = !!(appInstance && authInstance && dbInstance);
+
+// 아래 3개는 초기화 실패 시 null이지만, 타입 편의상 non-null로 내보냅니다.
+// 실패했다면 firebaseReady가 false이고 화면에 안내가 뜨므로 여기서 쓰이지 않습니다.
+export const app = appInstance as FirebaseApp;
+export const auth = authInstance as Auth;
+export const db = dbInstance as Firestore;
+export const storage = storageInstance as FirebaseStorage;

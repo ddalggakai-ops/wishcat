@@ -1,4 +1,4 @@
-import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, where } from 'firebase/firestore/lite';
 import { db } from '../firebase/config';
 import { getUserPublicCached } from './usersService';
 import { areFriends } from './friendsService';
