@@ -5,14 +5,14 @@ import {
 import { db } from '../firebase/config';
 import { getUserBrief } from './usersService';
 import { getMyVisibility } from './visibility';
-import type { Item, Location, Region } from '../api/types';
+import type { Item, Location } from '../api/types';
 
 export interface NewItemPayload {
   title: string;
   emoji: string;
   note?: string;
   category?: string | null;
-  location?: { name: string; region: Region } | null;
+  location?: Location | null;
   targetDate?: string | null;
 }
 

@@ -3,7 +3,7 @@ import * as itemsService from '../services/itemsService';
 import type { NewItemPayload } from '../services/itemsService';
 import * as friendsService from '../services/friendsService';
 import { cancelReminder, syncReminder } from '../services/reminderService';
-import type { FriendEntry, Item } from '../api/types';
+import type { FriendEntry, Item, Location } from '../api/types';
 import { useAuth } from './AuthContext';
 
 interface AppState {
@@ -18,7 +18,7 @@ interface AppState {
   refreshFriends: () => Promise<void>;
   addItem: (payload: NewItemPayload) => Promise<Item>;
   bulkAddItems: (payloads: NewItemPayload[]) => Promise<number>;
-  editItem: (id: string, patch: Partial<{ title: string; emoji: string; note: string; category: string | null; location: { name: string; region: 'domestic' | 'overseas' } | null; targetDate: string | null }>) => Promise<Item>;
+  editItem: (id: string, patch: Partial<{ title: string; emoji: string; note: string; category: string | null; location: Location | null; targetDate: string | null }>) => Promise<Item>;
   deleteItem: (id: string) => Promise<void>;
   completeItem: (id: string, payload: { photo?: string | null; text?: string }) => Promise<Item>;
   reopenItem: (id: string) => Promise<Item>;

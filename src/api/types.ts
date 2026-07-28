@@ -27,6 +27,9 @@ export interface Memory {
 export interface Location {
   name: string;
   region: Region;
+  /** 지도에서 직접 찍은 경우에만 채워집니다. 이름만 입력한 기존 아이템은 없을 수 있어요. */
+  lat?: number;
+  lng?: number;
 }
 
 export interface ItemSource {

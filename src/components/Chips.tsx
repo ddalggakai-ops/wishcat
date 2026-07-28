@@ -1,7 +1,23 @@
 import React from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { catColor, colors, radius } from '../theme';
+import { lonLatToTile, tileUrl } from '../utils/geo';
 import type { Location } from '../api/types';
+
+/** 위경도로 찍은 위치를 작은 지도 썸네일 한 장으로 보여줍니다. (API 키 없이 OSM 타일 사용) */
+export function LocationPreview({ lat, lng, size = 22 }: { lat: number; lng: number; size?: number }) {
+  const zoom = size >= 40 ? 14 : 12;
+  const t = lonLatToTile(lng, lat, zoom);
+  const tx = Math.floor(t.x);
+  const ty = Math.floor(t.y);
+  return (
+    <Image
+      source={{ uri: tileUrl(tx, ty, zoom) }}
+      style={{ width: size, height: size, borderRadius: size >= 40 ? radius.sm : 6, backgroundColor: colors.surface3 }}
+      resizeMode="cover"
+    />
+  );
+}
 
 export function CategoryChip({ category }: { category: string }) {
   const c = catColor(category);
@@ -14,9 +30,14 @@ export function CategoryChip({ category }: { category: string }) {
 
 export function LocationChip({ location }: { location: Location }) {
   const onPress = () => openMap(location);
+  const hasPin = location.lat != null && location.lng != null;
   return (
     <Pressable onPress={onPress} style={styles.locChip}>
-      <Text style={styles.locChipIcon}>📍</Text>
+      {hasPin ? (
+        <LocationPreview lat={location.lat as number} lng={location.lng as number} size={20} />
+      ) : (
+        <Text style={styles.locChipIcon}>📍</Text>
+      )}
       <Text style={styles.locChipText}>{location.name}</Text>
       <View style={styles.mapKind}>
         <Text style={styles.mapKindText}>{location.region === 'overseas' ? '구글맵' : '네이버'}</Text>

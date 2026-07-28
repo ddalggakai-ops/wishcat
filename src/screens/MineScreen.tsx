@@ -1,5 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  NativeScrollEvent, NativeSyntheticEvent, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
+} from 'react-native';
 import Avatar from '../components/Avatar';
 import BubbleButton from '../components/Button';
 import { EmptyState, SectionHeader } from '../components/Basics';
@@ -26,7 +28,34 @@ export default function MineScreen({
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 
+  const scrollRef = useRef<ScrollView>(null);
+  const [atTop, setAtTop] = useState(true);
+  const [scrollable, setScrollable] = useState(false);
+  const scrollDims = useRef({ contentHeight: 0, viewportHeight: 0 });
+
   useEffect(() => { refreshMine(); }, [refreshMine]);
+
+  // 지금 내가 가진 아이템에 실제로 쓰인 카테고리만 필터로 보여줍니다. (전체 8개를 다 보여주면
+  // 정작 내 목록엔 없는 카테고리도 계속 떠서 고를 게 없는 빈 목록만 나오기 쉬웠어요)
+  const presentCategories = useMemo(
+    () => CATEGORIES.filter((c) => items.some((i) => i.category === c)),
+    [items]
+  );
+  useEffect(() => {
+    if (categoryFilter && !presentCategories.includes(categoryFilter)) setCategoryFilter(null);
+  }, [categoryFilter, presentCategories]);
+
+  const updateScrollState = useCallback((contentHeight: number, viewportHeight: number) => {
+    scrollDims.current = { contentHeight, viewportHeight };
+    setScrollable(contentHeight - viewportHeight > 40);
+  }, []);
+  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setAtTop(e.nativeEvent.contentOffset.y < 120);
+  }, []);
+  const jumpScroll = useCallback(() => {
+    if (atTop) scrollRef.current?.scrollToEnd({ animated: true });
+    else scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }, [atTop]);
 
   // 진행률/전체 통계는 필터와 무관하게 항상 전체 목록 기준으로 보여줍니다.
   const pct = items.length ? Math.round((items.filter((i) => i.done).length / items.length) * 100) : 0;
@@ -60,106 +89,120 @@ export default function MineScreen({
   if (!user) return null;
 
   return (
-    <ScrollView
-      style={{ flex: 1 }}
-      contentContainerStyle={{ paddingBottom: 20 }}
-      refreshControl={<RefreshControl refreshing={loadingMine} onRefresh={refreshMine} tintColor="#fff" />}
-    >
-      <View style={styles.profile}>
-        <Text style={styles.sticker}>✦</Text>
-        <View style={styles.pTop}>
-          <Avatar name={user.name} photoUrl={user.photoUrl} size={74} dashed />
-          <View style={styles.stats}>
-            <Stat label="꿈" value={items.length} />
-            <Stat label="이룬 꿈" value={doneTotal} />
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        ref={scrollRef}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 20 }}
+        refreshControl={<RefreshControl refreshing={loadingMine} onRefresh={refreshMine} tintColor="#fff" />}
+        onScroll={onScroll}
+        scrollEventThrottle={100}
+        onLayout={(e) => updateScrollState(scrollDims.current.contentHeight, e.nativeEvent.layout.height)}
+        onContentSizeChange={(_w, h) => updateScrollState(h, scrollDims.current.viewportHeight)}
+      >
+        <View style={styles.profile}>
+          <Text style={styles.sticker}>✦</Text>
+          <View style={styles.pTop}>
+            <Avatar name={user.name} photoUrl={user.photoUrl} size={74} dashed />
+            <View style={styles.stats}>
+              <Stat label="꿈" value={items.length} />
+              <Stat label="이룬 꿈" value={doneTotal} />
+            </View>
           </View>
-        </View>
-        <Text style={styles.pName}>{user.name}</Text>
-        <Text style={styles.pBio}>{user.bio}</Text>
-        <View style={styles.pActions}>
-          <BubbleButton small variant="ghost" title="프로필 편집" onPress={onEditProfile} style={{ flex: 1 }} />
-          <BubbleButton
-            small
-            variant={user.listPublic ? 'ghost' : 'primary'}
-            title={user.listPublic ? '전체공개' : '비공개'}
-            onPress={() => updateMe({ listPublic: !user.listPublic })}
-            style={{ flex: 1 }}
-          />
-        </View>
-        {items.length > 0 && (
-          <View style={styles.prog}>
-            <View style={styles.progTrack}><View style={[styles.progFill, { width: `${pct}%` }]} /></View>
-            <Text style={styles.progText}>{pct}% 달성 · 이룬 꿈 {doneTotal} · 도전 중 {todoTotal}</Text>
-          </View>
-        )}
-      </View>
-
-      {items.length === 0 ? (
-        <>
-          <EmptyState icon="🚩" title="아직 꿈이 없어요" subtitle="뭘 적을지 막막하다면 아래에서 골라 담아보세요" />
-          <BubbleButton title="✦ 시작 템플릿에서 골라 담기" onPress={onStarter} full style={{ marginTop: 2 }} />
-          <BubbleButton small variant="line" title="📊 엑셀로 여러 개 한 번에 추가" onPress={onBulkImport} style={{ alignSelf: 'center', marginTop: 10 }} />
-          <Text style={styles.emptyHint}>직접 쓰고 싶다면 아래 + 버튼을 눌러주세요</Text>
-        </>
-      ) : (
-        <>
-          <View style={styles.searchBox}>
-            <Text style={styles.searchIcon}>🔍</Text>
-            <TextInput
-              value={search}
-              onChangeText={setSearch}
-              placeholder="제목 · 메모 · 장소로 검색"
-              placeholderTextColor={colors.ink3}
-              style={styles.searchInput}
+          <Text style={styles.pName}>{user.name}</Text>
+          <Text style={styles.pBio}>{user.bio}</Text>
+          <View style={styles.pActions}>
+            <BubbleButton small variant="ghost" title="프로필 편집" onPress={onEditProfile} style={{ flex: 1 }} />
+            <BubbleButton
+              small
+              variant={user.listPublic ? 'ghost' : 'primary'}
+              title={user.listPublic ? '전체공개' : '비공개'}
+              onPress={() => updateMe({ listPublic: !user.listPublic })}
+              style={{ flex: 1 }}
             />
-            {search ? (
-              <Pressable onPress={() => setSearch('')} hitSlop={8}>
-                <Text style={styles.searchClear}>✕</Text>
-              </Pressable>
-            ) : null}
           </View>
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-            <FilterChip label="전체" active={!categoryFilter} onPress={() => setCategoryFilter(null)} />
-            {CATEGORIES.map((c) => (
-              <FilterChip key={c} label={c} active={categoryFilter === c} onPress={() => setCategoryFilter(categoryFilter === c ? null : c)} />
-            ))}
-          </ScrollView>
-
-          <View style={styles.listBar}>
-            <Pressable onPress={onBulkImport} style={styles.viewToggle}>
-              <Text style={{ fontSize: 12.5, fontWeight: '600', color: colors.ink2 }}>📊 엑셀로 추가</Text>
-            </Pressable>
-            <Pressable onPress={() => setCompact(!compact)} style={styles.viewToggle}>
-              <Text style={{ fontSize: 12.5, fontWeight: '600', color: colors.ink2 }}>{compact ? '상세 보기' : '간단히 보기'}</Text>
-            </Pressable>
-          </View>
-
-          {isFiltering && filteredItems.length === 0 ? (
-            <EmptyState icon="🔍" title="검색 결과가 없어요" subtitle="다른 검색어나 카테고리를 눌러보세요" />
-          ) : (
-            <>
-              {todo.length > 0 && (
-                <>
-                  <SectionHeader title="도전 중" count={todo.length} />
-                  {todo.map((i) => (
-                    <ItemCard key={i.id} item={i} ctx="mine" compact={compact} onToggleDone={onToggleDone} onMemory={onMemory} onShare={onShare} onMenu={onMenu} />
-                  ))}
-                </>
-              )}
-              {done.length > 0 && (
-                <>
-                  <SectionHeader title="이룬 꿈" count={done.length} />
-                  {done.map((i) => (
-                    <ItemCard key={i.id} item={i} ctx="mine" compact={compact} onToggleDone={onToggleDone} onMemory={onMemory} onShare={onShare} onMenu={onMenu} />
-                  ))}
-                </>
-              )}
-            </>
+          {items.length > 0 && (
+            <View style={styles.prog}>
+              <View style={styles.progTrack}><View style={[styles.progFill, { width: `${pct}%` }]} /></View>
+              <Text style={styles.progText}>{pct}% 달성 · 이룬 꿈 {doneTotal} · 도전 중 {todoTotal}</Text>
+            </View>
           )}
-        </>
-      )}
-    </ScrollView>
+        </View>
+
+        {items.length === 0 ? (
+          <>
+            <EmptyState icon="🚩" title="아직 꿈이 없어요" subtitle="뭘 적을지 막막하다면 아래에서 골라 담아보세요" />
+            <BubbleButton title="✦ 시작 템플릿에서 골라 담기" onPress={onStarter} full style={{ marginTop: 2 }} />
+            <BubbleButton small variant="line" title="📊 엑셀로 여러 개 한 번에 추가" onPress={onBulkImport} style={{ alignSelf: 'center', marginTop: 10 }} />
+            <Text style={styles.emptyHint}>직접 쓰고 싶다면 아래 + 버튼을 눌러주세요</Text>
+          </>
+        ) : (
+          <>
+            <View style={styles.searchBox}>
+              <Text style={styles.searchIcon}>🔍</Text>
+              <TextInput
+                value={search}
+                onChangeText={setSearch}
+                placeholder="제목 · 메모 · 장소로 검색"
+                placeholderTextColor={colors.ink3}
+                style={styles.searchInput}
+              />
+              {search ? (
+                <Pressable onPress={() => setSearch('')} hitSlop={8}>
+                  <Text style={styles.searchClear}>✕</Text>
+                </Pressable>
+              ) : null}
+            </View>
+
+            {presentCategories.length > 1 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+                <FilterChip label="전체" active={!categoryFilter} onPress={() => setCategoryFilter(null)} />
+                {presentCategories.map((c) => (
+                  <FilterChip key={c} label={c} active={categoryFilter === c} onPress={() => setCategoryFilter(categoryFilter === c ? null : c)} />
+                ))}
+              </ScrollView>
+            )}
+
+            <View style={styles.listBar}>
+              <Pressable onPress={onBulkImport} style={styles.viewToggle}>
+                <Text style={{ fontSize: 12.5, fontWeight: '600', color: colors.ink2 }}>📊 엑셀로 추가</Text>
+              </Pressable>
+              <Pressable onPress={() => setCompact(!compact)} style={styles.viewToggle}>
+                <Text style={{ fontSize: 12.5, fontWeight: '600', color: colors.ink2 }}>{compact ? '상세 보기' : '간단히 보기'}</Text>
+              </Pressable>
+            </View>
+
+            {isFiltering && filteredItems.length === 0 ? (
+              <EmptyState icon="🔍" title="검색 결과가 없어요" subtitle="다른 검색어나 카테고리를 눌러보세요" />
+            ) : (
+              <>
+                {todo.length > 0 && (
+                  <>
+                    <SectionHeader title="도전 중" count={todo.length} />
+                    {todo.map((i) => (
+                      <ItemCard key={i.id} item={i} ctx="mine" compact={compact} onToggleDone={onToggleDone} onMemory={onMemory} onShare={onShare} onMenu={onMenu} />
+                    ))}
+                  </>
+                )}
+                {done.length > 0 && (
+                  <>
+                    <SectionHeader title="이룬 꿈" count={done.length} />
+                    {done.map((i) => (
+                      <ItemCard key={i.id} item={i} ctx="mine" compact={compact} onToggleDone={onToggleDone} onMemory={onMemory} onShare={onShare} onMenu={onMenu} />
+                    ))}
+                  </>
+                )}
+              </>
+            )}
+          </>
+        )}
+      </ScrollView>
+      {scrollable ? (
+        <Pressable onPress={jumpScroll} style={styles.scrollFab} hitSlop={6}>
+          <Text style={styles.scrollFabText}>{atTop ? '↓' : '↑'}</Text>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
@@ -208,4 +251,9 @@ const styles = StyleSheet.create({
   chipRow: { flexDirection: 'row', gap: 7, marginTop: 10 },
   emptyHint: { fontSize: 12, color: 'rgba(255,255,255,.9)', textAlign: 'center', marginTop: 12, fontWeight: '600' },
   chip: { borderRadius: radius.pill, paddingVertical: 7, paddingHorizontal: 13 },
+  scrollFab: {
+    position: 'absolute', right: 4, bottom: 14, width: 42, height: 42, borderRadius: 21,
+    backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', ...shadow.md,
+  },
+  scrollFabText: { color: '#fff', fontSize: 18, fontWeight: '800' },
 });
