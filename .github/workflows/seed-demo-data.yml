@@ -1,0 +1,44 @@
+name: Seed Demo Data (10 personas)
+
+# Actions 탭에서 "Run workflow" 버튼으로 수동 실행합니다.
+#
+# 주의: 실제 운영 Firebase 프로젝트(wishcat-945d4)에 진짜 계정 10개(persona01~10@wishcat.test)와
+# 버킷 데이터를 씁니다. 되돌리는 자동화는 없으니(Firebase 콘솔에서 수동 삭제) 필요할 때만,
+# 한 번만 실행해주세요. 이미 만들어진 계정이 있으면 그 계정은 건너뛰고 나머지만 새로 만듭니다.
+#
+# 여기 적힌 EXPO_PUBLIC_FIREBASE_* 값들은 eas.json에도 이미 그대로 들어있는, 공개해도 안전한
+# Firebase 웹 설정값입니다(진짜 보안은 firestore.rules/storage.rules가 담당). 이 스크립트도
+# 앱과 똑같이 그 규칙을 그대로 통과해서 씁니다.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    env:
+      EXPO_PUBLIC_FIREBASE_API_KEY: AIzaSyC8sFy5JJFRR2rYV9NGYYO_9yA3Qpz-nAA
+      EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: wishcat-945d4.firebaseapp.com
+      EXPO_PUBLIC_FIREBASE_PROJECT_ID: wishcat-945d4
+      EXPO_PUBLIC_FIREBASE_DATABASE_ID: wishcat
+      EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET: wishcat-945d4.firebasestorage.app
+      EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "1004771808048"
+      EXPO_PUBLIC_FIREBASE_APP_ID: "1:1004771808048:web:c2b530d60bf90b3734aef5"
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run seed script
+        run: node scripts/seed-demo-data.js
+
+      - name: Upload seed result (uid/이름/개수 요약 — 로그인 비밀번호 포함)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seed-output
+          path: scripts/.seed-output.json
+          if-no-files-found: warn

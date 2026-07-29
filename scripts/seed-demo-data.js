@@ -11,20 +11,26 @@
 // 되돌리려면(계정+데이터 삭제) node scripts/delete-seed-data.js 를 만들어 쓰거나, Firebase 콘솔에서
 // `@wishcat.test` 이메일 계정들을 지우고 그 uid로 만들어진 items 문서를 지우면 됩니다.
 // (이 스크립트가 만든 uid 목록은 scripts/.seed-output.json 에 남습니다.)
+//
+// 로컬 컴퓨터에서 돌릴 땐 프로젝트 루트의 .env 를 그대로 읽고, GitHub Actions처럼 .env 파일이
+// 없는 환경(이 저장소의 "Seed Demo Data" 워크플로 등)에서는 이미 설정된 process.env 값을 그대로
+// 씁니다 — 둘 다 안전하게 지원하려고 process.env를 항상 우선합니다.
 
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 
-// ── .env 읽기 (별도 패키지 없이 아주 단순한 파서) ──────────────────────────
+// ── 환경변수 읽기: process.env 우선, 없는 값은 .env 파일(있으면)에서 보충 ─────
 function loadEnv() {
+  const out = { ...process.env };
   const envPath = path.join(__dirname, '..', '.env');
-  const text = fs.readFileSync(envPath, 'utf8');
-  const out = {};
-  text.split('\n').forEach((line) => {
-    const m = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
-    if (m) out[m[1]] = m[2];
-  });
+  if (fs.existsSync(envPath)) {
+    const text = fs.readFileSync(envPath, 'utf8');
+    text.split('\n').forEach((line) => {
+      const m = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
+      if (m && !out[m[1]]) out[m[1]] = m[2];
+    });
+  }
   return out;
 }
 const env = loadEnv();
