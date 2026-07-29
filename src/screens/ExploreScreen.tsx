@@ -121,8 +121,8 @@ export default function ExploreScreen({
                   </View>
                   <Text style={styles.tileEmoji}>{i.emoji}</Text>
                   <Text numberOfLines={2} style={styles.tileTitleDark}>{i.title}</Text>
-                  {i.category ? (
-                    <View style={styles.tileChip}><Text style={styles.tileChipText}>{i.category}</Text></View>
+                  {i.categories?.length ? (
+                    <View style={styles.tileChip}><Text style={styles.tileChipText}>{i.categories.join(' · ')}</Text></View>
                   ) : null}
                   <View style={styles.countsDark}>
                     {likeBtn}

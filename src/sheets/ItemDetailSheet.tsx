@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Sheet from '../components/Sheet';
 import BubbleButton from '../components/Button';
 import Avatar from '../components/Avatar';
-import { CategoryChip, LocationChip } from '../components/Chips';
+import { CategoryChips, LocationChip, PriorityBadge } from '../components/Chips';
 import { dDayLabel } from '../components/ItemCard';
 import { colors, catRole, gradients, radius } from '../theme';
 import { resolveImageUrl } from '../api/client';
@@ -69,7 +69,7 @@ export default function ItemDetailSheet({
       {photo ? (
         <Image source={{ uri: photo }} style={styles.hero} />
       ) : (
-        <LinearGradient colors={gradients[catRole(live.category)]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+        <LinearGradient colors={gradients[catRole(live.categories?.[0])]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
           <Text style={styles.heroEmoji}>{live.emoji}</Text>
         </LinearGradient>
       )}
@@ -85,10 +85,11 @@ export default function ItemDetailSheet({
 
       {live.note ? <Text style={styles.note}>{live.note}</Text> : null}
 
-      {(live.category || live.location || dday) ? (
+      {(live.categories?.length || live.location || dday || live.priority) ? (
         <View style={styles.metaRow}>
-          {live.category ? <CategoryChip category={live.category} /> : null}
+          <CategoryChips categories={live.categories} />
           {live.location ? <LocationChip location={live.location} /> : null}
+          <PriorityBadge priority={live.priority} />
           {dday ? <View style={styles.dday}><Text style={styles.ddayText}>🗓 {dday}</Text></View> : null}
         </View>
       ) : null}

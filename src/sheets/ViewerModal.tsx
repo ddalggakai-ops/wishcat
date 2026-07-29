@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image, Modal, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import Avatar from '../components/Avatar';
-import { CategoryChip, LocationChip } from '../components/Chips';
+import { CategoryChips, LocationChip } from '../components/Chips';
 import { absoluteFill, colors, radius, shadow } from '../theme';
 import { resolveImageUrl } from '../api/client';
 import { useApp } from '../context/AppContext';
@@ -38,9 +38,9 @@ export default function ViewerModal({ visible, item, onClose }: { visible: boole
               <Text style={styles.headText}>{isMe ? '나' : item.owner.name} · {item.memory?.date}</Text>
             </View>
             <Text style={styles.title}>{item.emoji} {item.title}</Text>
-            {(item.category || item.location) ? (
+            {(item.categories?.length || item.location) ? (
               <View style={styles.metaRow}>
-                {item.category ? <CategoryChip category={item.category} /> : null}
+                <CategoryChips categories={item.categories} />
                 {item.location ? <LocationChip location={item.location} /> : null}
               </View>
             ) : null}

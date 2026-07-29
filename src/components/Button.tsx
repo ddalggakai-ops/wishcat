@@ -41,7 +41,7 @@ export default function BubbleButton({
             style={[
               styles.text,
               small && styles.textSmall,
-              { color: disabled ? colors.ink3 : (textColor || (isGradient ? '#FFFFFF' : variant === 'line' ? colors.ink2 : colors.accentInk)) },
+              { color: disabled ? colors.ink2 : (textColor || (isGradient ? '#FFFFFF' : variant === 'line' ? colors.ink2 : colors.accentInk)) },
             ]}
           >
             {title}
@@ -110,7 +110,9 @@ const styles = StyleSheet.create({
   small: { paddingVertical: 9, paddingHorizontal: 15 },
   ghost: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
   line: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.accentWash, alignItems: 'center', justifyContent: 'center' },
-  disabled: { opacity: 0.6, backgroundColor: colors.surface3 },
+  // 예전엔 opacity까지 곱해져서 글자색(ink3)이 배경(surface3)에 거의 묻혀 안 보이는 문제가 있었어요.
+  // opacity 감쇠 없이 배경만 중립톤으로 바꿔서 "비활성 상태"는 알아보되 글자는 또렷하게 남깁니다.
+  disabled: { backgroundColor: colors.surface3, borderWidth: 1, borderColor: colors.line },
   inner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   text: { fontSize: 14.5, fontWeight: '700' },
   textSmall: { fontSize: 13 },

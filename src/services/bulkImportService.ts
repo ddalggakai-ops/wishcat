@@ -6,7 +6,7 @@ export interface ParsedRow {
   title: string;
   emoji: string;
   note: string;
-  category: string | null;
+  categories: string[];
   location: { name: string; region: Region } | null;
 }
 
@@ -22,7 +22,7 @@ const HEADER_ALIASES: Record<keyof Omit<ParsedRow, 'location'> | 'location' | 'r
   title: ['제목', '이름', '꿈', 'title', 'name'],
   emoji: ['이모지', '아이콘', 'emoji', 'icon'],
   note: ['메모', '설명', '내용', 'note', 'memo', 'description'],
-  category: ['카테고리', '분류', 'category'],
+  categories: ['카테고리', '분류', 'category'],
   location: ['장소', '위치', 'location', 'place'],
   region: ['국내해외', '지역', 'region', '국내/해외'],
 };
@@ -74,7 +74,7 @@ export function parseWorkbook(source: WorkbookSource): ParseResult {
     title: findColumn(headers, HEADER_ALIASES.title),
     emoji: findColumn(headers, HEADER_ALIASES.emoji),
     note: findColumn(headers, HEADER_ALIASES.note),
-    category: findColumn(headers, HEADER_ALIASES.category),
+    categories: findColumn(headers, HEADER_ALIASES.categories),
     location: findColumn(headers, HEADER_ALIASES.location),
     region: findColumn(headers, HEADER_ALIASES.region),
   };
@@ -94,14 +94,17 @@ export function parseWorkbook(source: WorkbookSource): ParseResult {
 
     const note = idx.note >= 0 ? String(row[idx.note] ?? '').trim() : '';
 
-    const rawCategory = idx.category >= 0 ? String(row[idx.category] ?? '').trim() : '';
-    const category = CATEGORIES.includes(rawCategory) ? rawCategory : null;
+    // 카테고리 칸에 쉼표/슬래시/가운뎃점으로 여러 개를 적어도 각각 인식합니다. (예: "여행,자연")
+    const rawCategory = idx.categories >= 0 ? String(row[idx.categories] ?? '').trim() : '';
+    const categories = rawCategory
+      ? rawCategory.split(/[,/·]/).map((c) => c.trim()).filter((c) => CATEGORIES.includes(c))
+      : [];
 
     const locName = idx.location >= 0 ? String(row[idx.location] ?? '').trim() : '';
     const region = (idx.region >= 0 ? toRegion(row[idx.region]) : null) || 'domestic';
     const location = locName ? { name: locName, region } : null;
 
-    rows.push({ title: title.slice(0, 60), emoji, note: note.slice(0, 80), category, location });
+    rows.push({ title: title.slice(0, 60), emoji, note: note.slice(0, 80), categories, location });
   });
 
   return { rows, skipped, totalRows: dataRows.length, sheetName };

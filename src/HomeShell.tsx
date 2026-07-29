@@ -120,6 +120,8 @@ export default function HomeShell() {
         onMenu={setMenuItem}
         onBulkImport={() => setBulkImportOpen(true)}
         onStarter={() => setStarterOpen(true)}
+        onEdit={openEdit}
+        onDetail={setDetailItem}
       />
     );
   } else if (tab === 'friends') {

@@ -133,7 +133,7 @@ export default function BulkImportSheet({ visible, onClose, onImported }: {
                 <Text style={styles.previewTitle} numberOfLines={1}>{r.title}</Text>
                 {(r.note || r.location) ? (
                   <Text style={styles.previewSub} numberOfLines={1}>
-                    {[r.category, r.note, r.location?.name].filter(Boolean).join(' · ')}
+                    {[r.categories.join('/'), r.note, r.location?.name].filter(Boolean).join(' · ')}
                   </Text>
                 ) : null}
               </View>

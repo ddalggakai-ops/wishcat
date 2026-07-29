@@ -222,7 +222,8 @@ const login = async (page) => {
       return el ? el.scrollTop : null;
     });
     const hasUpArrowAfter = await page.locator('text=↑').count();
-    return { hasFabBefore, scrollTopBefore, scrollTopAfter, hasUpArrowAfter };
+    const hasDownArrowAfter = await page.locator('text=↓').count();
+    return { hasFabBefore, scrollTopBefore, scrollTopAfter, hasUpArrowAfter, hasDownArrowAfter };
   }, { many: true });
 
   // ② 지도에서 위치 선택 + 작은 미리보기
@@ -278,7 +279,8 @@ const login = async (page) => {
     ['[①] 버튼을 누르면 실제로 스크롤 위치가 바뀐다',
       manyScroll.scrollTopBefore !== null && manyScroll.scrollTopAfter !== null && manyScroll.scrollTopAfter > manyScroll.scrollTopBefore,
       `${manyScroll.scrollTopBefore} → ${manyScroll.scrollTopAfter}`],
-    ['[①] 맨 아래까지 내려가면 버튼이 ↑로 바뀐다', manyScroll.hasUpArrowAfter > 0, String(manyScroll.hasUpArrowAfter)],
+    ['[①] 맨 아래까지 내려가면 ↑ 버튼이 나타난다', manyScroll.hasUpArrowAfter > 0, String(manyScroll.hasUpArrowAfter)],
+    ['[①] 맨 아래까지 내려가면 ↓ 버튼은 사라진다(위/아래 버튼이 분리되어 있다)', manyScroll.hasDownArrowAfter === 0, String(manyScroll.hasDownArrowAfter)],
     ['[②] "지도에서 고르기"를 누르면 지도 선택 시트가 열린다', mapPick.sheetOpen, String(mapPick.sheetOpen)],
     ['[②] 지도 박스(270x270)가 실제로 렌더된다', mapPick.boxFound, String(mapPick.boxFound)],
     ['[②] 위치를 고른 뒤 "다시 고르기" 문구 + 작은 미리보기로 바뀐다',

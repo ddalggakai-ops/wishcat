@@ -61,19 +61,48 @@ export function Field({
   );
 }
 
-export function CategoryPicker({ value, onChange }: { value: string; onChange: (c: string) => void }) {
+/** 카테고리 여러 개를 고를 수 있어요 — 눌러서 켜고 끄기(다중선택) */
+export function CategoryPicker({ value, onChange }: { value: string[]; onChange: (c: string[]) => void }) {
+  const toggle = (c: string) => {
+    onChange(value.includes(c) ? value.filter((x) => x !== c) : [...value, c]);
+  };
   return (
     <View style={styles.wrapRow}>
       {CATEGORIES.map((c) => {
-        const sel = c === value;
+        const sel = value.includes(c);
         const cc = catColor(c);
         return (
           <Pressable
             key={c}
-            onPress={() => onChange(c)}
+            onPress={() => toggle(c)}
             style={[styles.catPickBtn, { backgroundColor: sel ? colors.accent : cc.bg }]}
           >
-            <Text style={{ color: sel ? '#fff' : cc.ink, fontSize: 13, fontWeight: '600' }}>{c}</Text>
+            <Text style={{ color: sel ? '#fff' : cc.ink, fontSize: 13, fontWeight: '600' }}>{sel ? '✓ ' : ''}{c}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/** 우선순위 상/중/하 선택 */
+export function PriorityPicker({ value, onChange }: { value: 'high' | 'mid' | 'low' | null; onChange: (p: 'high' | 'mid' | 'low' | null) => void }) {
+  const OPTIONS: { key: 'high' | 'mid' | 'low'; label: string }[] = [
+    { key: 'high', label: '🔴 상' },
+    { key: 'mid', label: '🟡 중' },
+    { key: 'low', label: '⚪ 하' },
+  ];
+  return (
+    <View style={styles.wrapRow}>
+      {OPTIONS.map((o) => {
+        const sel = value === o.key;
+        return (
+          <Pressable
+            key={o.key}
+            onPress={() => onChange(sel ? null : o.key)}
+            style={[styles.catPickBtn, { backgroundColor: sel ? colors.accent : colors.surface2, borderWidth: sel ? 0 : 1, borderColor: colors.line2 }]}
+          >
+            <Text style={{ color: sel ? '#fff' : colors.ink2, fontSize: 13, fontWeight: '600' }}>{o.label}</Text>
           </Pressable>
         );
       })}

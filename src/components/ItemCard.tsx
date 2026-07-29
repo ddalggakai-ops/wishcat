@@ -3,7 +3,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { catColor, colors, radius, shadow } from '../theme';
 import type { Item } from '../api/types';
 import Avatar from './Avatar';
-import { CategoryChip, LocationChip, Tag } from './Chips';
+import { CategoryChips, LocationChip, PriorityBadge, Tag } from './Chips';
 import BubbleButton from './Button';
 import { resolveImageUrl } from '../api/client';
 
@@ -24,6 +24,7 @@ export function dDayLabel(targetDate: string | null | undefined, today = new Dat
 
 export default function ItemCard({
   item, ctx, compact, viewerId, onToggleDone, onMemory, onShare, onJoin, onLeave, onHelp, onMenu, onReport,
+  onCardPress, selectable, selected, onToggleSelect, onLongPress, canMoveUp, canMoveDown, onMoveUp, onMoveDown,
 }: {
   item: Item;
   ctx: ItemCtx;
@@ -38,6 +39,17 @@ export default function ItemCard({
   onHelp?: (item: Item) => void;
   onMenu?: (item: Item) => void;
   onReport?: (item: Item) => void;
+  /** 카드(빈 곳)를 눌렀을 때 — 자세히 보기에서는 수정으로, 간단히 보기에서는 상세보기로 씁니다 */
+  onCardPress?: (item: Item) => void;
+  /** 다중선택(삭제/순서변경) 모드 — 길게 눌러 진입 */
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (item: Item) => void;
+  onLongPress?: (item: Item) => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
+  onMoveUp?: (item: Item) => void;
+  onMoveDown?: (item: Item) => void;
 }) {
   // 예전에는 '함께하기' 버튼이 좋아요(likedByMe) 상태를 보고 색만 바뀌었습니다.
   // 이미 함께하고 있어도 버튼이 그대로 남아 있어서 몇 번이고 다시 누르게 됐어요.
@@ -51,18 +63,45 @@ export default function ItemCard({
   }
   if (ctx === 'explore' && item.hot) tags.push(<Tag key="hot" tone="hot" label="인기" />);
 
-  const catBg = catColor(item.category).bg;
-  const lead = ctx === 'mine' ? (
+  const catBg = catColor(item.categories?.[0]).bg;
+  const selectBox = ctx === 'mine' && selectable ? (
+    <Pressable onPress={() => onToggleSelect?.(item)} style={[styles.selectBox, selected && styles.selectBoxOn]} hitSlop={6}>
+      {selected ? <Text style={styles.selectMark}>✓</Text> : null}
+    </Pressable>
+  ) : null;
+  const lead = selectBox || (ctx === 'mine' ? (
     <Pressable onPress={() => onToggleDone?.(item)} style={[styles.check, item.done && styles.checkDone]}>
       {item.done ? <Text style={styles.checkMark}>✓</Text> : null}
     </Pressable>
   ) : (
     <View style={[styles.catIcon, { backgroundColor: catBg }]}><Text style={{ fontSize: 19 }}>{item.emoji}</Text></View>
-  );
+  ));
+
+  const reorderCol = ctx === 'mine' && selectable ? (
+    <View style={styles.reorderCol}>
+      <Pressable onPress={() => onMoveUp?.(item)} disabled={!canMoveUp} hitSlop={4} style={[styles.reorderBtn, !canMoveUp && styles.reorderBtnOff]}>
+        <Text style={[styles.reorderText, !canMoveUp && styles.reorderTextOff]}>▲</Text>
+      </Pressable>
+      <Pressable onPress={() => onMoveDown?.(item)} disabled={!canMoveDown} hitSlop={4} style={[styles.reorderBtn, !canMoveDown && styles.reorderBtnOff]}>
+        <Text style={[styles.reorderText, !canMoveDown && styles.reorderTextOff]}>▼</Text>
+      </Pressable>
+    </View>
+  ) : null;
+
+  const handlePress = () => {
+    if (selectable) { onToggleSelect?.(item); return; }
+    onCardPress?.(item);
+  };
+  const handleLongPress = ctx === 'mine' ? () => onLongPress?.(item) : undefined;
 
   if (compact) {
     return (
-      <View style={[styles.card, styles.compactCard]}>
+      <Pressable
+        onPress={handlePress}
+        onLongPress={handleLongPress}
+        delayLongPress={380}
+        style={[styles.card, styles.compactCard, selected && styles.cardSelected]}
+      >
         <View style={styles.row}>
           {lead}
           <View style={{ flex: 1 }}>
@@ -72,8 +111,9 @@ export default function ItemCard({
             </View>
             {tags.length ? <View style={styles.tagRow}>{tags}</View> : null}
           </View>
+          {reorderCol}
         </View>
-      </View>
+      </Pressable>
     );
   }
 
@@ -81,8 +121,13 @@ export default function ItemCard({
   const showMemory = item.done && item.memory && (item.memory.text || photoUri);
 
   return (
-    <View style={styles.card}>
-      {ctx === 'mine' && onMenu ? (
+    <Pressable
+      onPress={handlePress}
+      onLongPress={handleLongPress}
+      delayLongPress={380}
+      style={[styles.card, selected && styles.cardSelected]}
+    >
+      {ctx === 'mine' && onMenu && !selectable ? (
         <Pressable style={styles.more} onPress={() => onMenu(item)}>
           <Text style={{ fontSize: 16, color: colors.ink3 }}>⋯</Text>
         </Pressable>
@@ -97,10 +142,11 @@ export default function ItemCard({
           {tags.length ? <View style={styles.tagRow}>{tags}</View> : null}
           {item.note ? <Text style={styles.note}>{item.note}</Text> : null}
 
-          {(item.category || item.location || dday) ? (
+          {(item.categories?.length || item.location || dday || item.priority) ? (
             <View style={styles.metaRow}>
-              {item.category ? <CategoryChip category={item.category} /> : null}
+              <CategoryChips categories={item.categories} />
               {item.location ? <LocationChip location={item.location} /> : null}
+              <PriorityBadge priority={item.priority} />
               {dday ? (
                 <View style={[styles.dday, dday.endsWith('지남') && styles.ddayPast]}>
                   <Text style={[styles.ddayText, dday.endsWith('지남') && styles.ddayTextPast]}>🗓 {dday}</Text>
@@ -138,52 +184,59 @@ export default function ItemCard({
             </View>
           ) : null}
 
-          <View style={styles.actions}>
-            {ctx === 'mine' && item.done && (
-              <>
-                <BubbleButton small variant="ghost" title={item.memory?.text || item.memory?.photo ? '추억 수정' : '추억 남기기'} onPress={() => onMemory?.(item)} />
-                <BubbleButton small variant="line" title="공유" onPress={() => onShare?.(item)} />
-              </>
-            )}
-            {ctx === 'mine' && !item.done && (
-              <BubbleButton small variant="line" title="완료하기" onPress={() => onMemory?.(item)} />
-            )}
-            {ctx !== 'mine' && item.done && (
-              <View style={styles.mutedPill}><Text style={styles.mutedPillText}>{(item.helpedBy || []).length ? '✓ 이미 이룬 꿈' : '✓ 이미 이룬 꿈'}</Text></View>
-            )}
-            {ctx !== 'mine' && !item.done && (
-              <>
-                {joined ? (
-                  <>
-                    <View style={styles.joinedPill}><Text style={styles.joinedPillText}>✓ 함께하는 중</Text></View>
-                    <BubbleButton small variant="ghost" title="함께하기 취소" onPress={() => onLeave?.(item)} />
-                  </>
-                ) : (
-                  <BubbleButton small variant="primary" title="함께하기" onPress={() => onJoin?.(item)} />
-                )}
-                {ctx === 'friend' && <BubbleButton small variant="gift" title="도와줬어요" onPress={() => onHelp?.(item)} />}
-              </>
-            )}
-            {ctx !== 'mine' && onReport ? (
-              <Pressable onPress={() => onReport(item)} hitSlop={8} style={styles.reportBtn} accessibilityRole="button" accessibilityLabel="신고하기">
-                <Text style={styles.reportText}>신고</Text>
-              </Pressable>
-            ) : null}
-          </View>
+          {!selectable && (
+            <View style={styles.actions}>
+              {ctx === 'mine' && item.done && (
+                <>
+                  <BubbleButton small variant="ghost" title={item.memory?.text || item.memory?.photo ? '추억 수정' : '추억 남기기'} onPress={() => onMemory?.(item)} />
+                  <BubbleButton small variant="line" title="공유" onPress={() => onShare?.(item)} />
+                </>
+              )}
+              {ctx === 'mine' && !item.done && (
+                <BubbleButton small variant="line" title="완료하기" onPress={() => onMemory?.(item)} />
+              )}
+              {ctx !== 'mine' && item.done && (
+                <View style={styles.mutedPill}><Text style={styles.mutedPillText}>{(item.helpedBy || []).length ? '✓ 이미 이룬 꿈' : '✓ 이미 이룬 꿈'}</Text></View>
+              )}
+              {ctx !== 'mine' && !item.done && (
+                <>
+                  {joined ? (
+                    <>
+                      <View style={styles.joinedPill}><Text style={styles.joinedPillText}>✓ 함께하는 중</Text></View>
+                      <BubbleButton small variant="ghost" title="함께하기 취소" onPress={() => onLeave?.(item)} />
+                    </>
+                  ) : (
+                    <BubbleButton small variant="primary" title="함께하기" onPress={() => onJoin?.(item)} />
+                  )}
+                  {ctx === 'friend' && <BubbleButton small variant="gift" title="도와줬어요" onPress={() => onHelp?.(item)} />}
+                </>
+              )}
+              {ctx !== 'mine' && onReport ? (
+                <Pressable onPress={() => onReport(item)} hitSlop={8} style={styles.reportBtn} accessibilityRole="button" accessibilityLabel="신고하기">
+                  <Text style={styles.reportText}>신고</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          )}
         </View>
+        {reorderCol}
       </View>
-    </View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: radius.lg, padding: 15, marginBottom: 10, ...shadow.sm },
+  cardSelected: { borderColor: colors.accent, backgroundColor: colors.accentWash },
   compactCard: { paddingVertical: 12, paddingHorizontal: 14 },
   more: { position: 'absolute', top: 9, right: 9, width: 28, height: 28, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   row: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   check: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: colors.line2, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   checkDone: { backgroundColor: colors.done, borderColor: colors.done, borderStyle: 'solid' },
   checkMark: { color: '#fff', fontSize: 13, fontWeight: '800' },
+  selectBox: { width: 24, height: 24, borderRadius: 7, borderWidth: 2, borderColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginTop: 1, backgroundColor: colors.surface },
+  selectBoxOn: { backgroundColor: colors.accent },
+  selectMark: { color: '#fff', fontSize: 13, fontWeight: '800' },
   catIcon: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.line },
   titleRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
   title: { fontSize: 15.5, fontWeight: '600', color: colors.ink, letterSpacing: -0.2, flexShrink: 1 },
@@ -213,4 +266,9 @@ const styles = StyleSheet.create({
   ddayTextPast: { color: '#c05656' },
   reportBtn: { paddingVertical: 8, paddingHorizontal: 8, marginLeft: 'auto' },
   reportText: { fontSize: 11.5, color: colors.ink3 },
+  reorderCol: { gap: 4, marginLeft: 4 },
+  reorderBtn: { width: 26, height: 26, borderRadius: 8, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.line2 },
+  reorderBtnOff: { opacity: 0.35 },
+  reorderText: { fontSize: 11, color: colors.ink2, fontWeight: '700' },
+  reorderTextOff: { color: colors.ink3 },
 });

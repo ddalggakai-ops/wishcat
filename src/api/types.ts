@@ -40,16 +40,22 @@ export interface ItemSource {
   emoji: string;
 }
 
+export type Priority = 'high' | 'mid' | 'low';
+
 export interface Item {
   id: string;
   owner: UserBrief;
   title: string;
   emoji: string;
   note: string;
-  category: string | null;
+  /** 카테고리 여러 개를 붙일 수 있어요. 없으면 빈 배열. */
+  categories: string[];
   location: Location | null;
   /** 목표일 (YYYY-MM-DD). 없으면 null */
   targetDate: string | null;
+  priority: Priority | null;
+  /** 내가 직접 정렬한 순서(작을수록 위). 길게 눌러 순서를 바꾸면 갱신됩니다. */
+  order: number;
   done: boolean;
   memory: Memory | null;
   participants: UserBrief[];

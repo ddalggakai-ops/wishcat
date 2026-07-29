@@ -1,20 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Sheet from '../components/Sheet';
-import { CategoryPicker, EmojiPicker, Field, FieldLabel, RegionToggle } from '../components/FormBits';
+import { CategoryPicker, EmojiPicker, Field, FieldLabel, PriorityPicker, RegionToggle } from '../components/FormBits';
 import BubbleButton from '../components/Button';
 import LocationMapPicker, { PickedLocation } from '../components/LocationMapPicker';
 import { LocationPreview } from '../components/Chips';
 import { CATEGORIES, EMOJIS, colors, radius } from '../theme';
-import type { Item, Location, Region } from '../api/types';
+import type { Item, Location, Priority, Region } from '../api/types';
 
 export interface AddEditPayload {
   title: string;
   emoji: string;
   note: string;
-  category: string;
+  categories: string[];
   location: Location | null;
   targetDate: string | null;
+  priority: Priority | null;
 }
 
 /** 오늘로부터 n개월 뒤를 'YYYY-MM-DD' 로 */
@@ -49,7 +50,8 @@ export default function AddEditSheet({
   const [title, setTitle] = useState('');
   const [note, setNote] = useState('');
   const [emoji, setEmoji] = useState(EMOJIS[0]);
-  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [categories, setCategories] = useState<string[]>([CATEGORIES[0]]);
+  const [priority, setPriority] = useState<Priority | null>(null);
   const [region, setRegion] = useState<Region>('domestic');
   const [locName, setLocName] = useState('');
   const [pickedLoc, setPickedLoc] = useState<PickedLocation | null>(null);
@@ -63,7 +65,8 @@ export default function AddEditSheet({
       setTitle(editingItem.title);
       setNote(editingItem.note || '');
       setEmoji(editingItem.emoji);
-      setCategory(editingItem.category || CATEGORIES[0]);
+      setCategories(editingItem.categories?.length ? editingItem.categories : []);
+      setPriority(editingItem.priority || null);
       setRegion(editingItem.location?.region || 'domestic');
       setLocName(editingItem.location?.name || '');
       setPickedLoc(
@@ -73,7 +76,7 @@ export default function AddEditSheet({
       );
       setTargetDate(editingItem.targetDate || '');
     } else {
-      setTitle(''); setNote(''); setEmoji(EMOJIS[0]); setCategory(CATEGORIES[0]); setRegion('domestic');
+      setTitle(''); setNote(''); setEmoji(EMOJIS[0]); setCategories([CATEGORIES[0]]); setPriority(null); setRegion('domestic');
       setLocName(''); setPickedLoc(null); setTargetDate('');
     }
   }, [visible, editingItem]);
@@ -86,11 +89,12 @@ export default function AddEditSheet({
     setSaving(true);
     try {
       await onSubmit({
-        title: title.trim(), emoji, note: note.trim(), category,
+        title: title.trim(), emoji, note: note.trim(), categories,
         location: locName.trim()
           ? { name: locName.trim(), region, ...(pickedLoc ? { lat: pickedLoc.lat, lng: pickedLoc.lng } : {}) }
           : null,
         targetDate: isValidDate(targetDate.trim()) ? targetDate.trim() : null,
+        priority,
       });
       onClose();
     } finally {
@@ -100,8 +104,10 @@ export default function AddEditSheet({
 
   return (
     <Sheet visible={visible} onClose={onClose} title={editingItem ? '꿈 수정' : '새로운 꿈'} subtitle="이루고 싶은 걸 적어보세요. 친구도 함께 이룰 수 있어요.">
-      <FieldLabel>카테고리</FieldLabel>
-      <CategoryPicker value={category} onChange={setCategory} />
+      <FieldLabel>카테고리 (여러 개 선택 가능)</FieldLabel>
+      <CategoryPicker value={categories} onChange={setCategories} />
+      <FieldLabel>우선순위 (선택)</FieldLabel>
+      <PriorityPicker value={priority} onChange={setPriority} />
       <FieldLabel>아이콘</FieldLabel>
       <EmojiPicker options={EMOJIS} value={emoji} onChange={setEmoji} />
       <FieldLabel>무엇을 이루고 싶나요?</FieldLabel>

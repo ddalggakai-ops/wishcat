@@ -100,6 +100,13 @@ export function colorFor(seed: string) {
   return AVATAR_COLORS[s % AVATAR_COLORS.length];
 }
 
+// 우선순위 3단계 — 상(급함/중요) → Accent, 중 → Highlight, 하 → Neutral
+export const PRIORITY_META: Record<'high' | 'mid' | 'low', { label: string; dot: string; bg: string; ink: string }> = {
+  high: { label: '상', dot: roleColors.accent.ink, bg: roleColors.accent.wash, ink: roleColors.accent.ink },
+  mid: { label: '중', dot: roleColors.highlight.ink, bg: roleColors.highlight.wash, ink: roleColors.highlight.ink },
+  low: { label: '하', dot: '#C7C3DC', bg: '#EAE6F5', ink: '#8B87A0' },
+};
+
 export const EMOJIS = ['🌴', '🪂', '🏃', '🌌', '🎨', '🍜', '🏔️', '✈️', '🎸', '📚', '🐬', '🍰', '🚗', '💃', '🏄', '🎤', '⛺', '🎢', '🥾', '🌅', '🎬', '🎹'];
 export const HELP_EMOJIS = ['🎁', '💘', '🤝', '🥂', '🎉', '💐', '🍾', '🫶', '📷', '🎊', '🌟', '☕'];
 

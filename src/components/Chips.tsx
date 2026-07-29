@@ -1,8 +1,8 @@
 import React from 'react';
 import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
-import { catColor, colors, radius } from '../theme';
+import { catColor, colors, PRIORITY_META, radius } from '../theme';
 import { lonLatToTile, tileUrl } from '../utils/geo';
-import type { Location } from '../api/types';
+import type { Location, Priority } from '../api/types';
 
 /** 위경도로 찍은 위치를 작은 지도 썸네일 한 장으로 보여줍니다. (API 키 없이 OSM 타일 사용) */
 export function LocationPreview({ lat, lng, size = 22 }: { lat: number; lng: number; size?: number }) {
@@ -24,6 +24,27 @@ export function CategoryChip({ category }: { category: string }) {
   return (
     <View style={[styles.catChip, { backgroundColor: c.bg, borderColor: c.ink + '55' }]}>
       <Text style={[styles.catChipText, { color: c.ink }]}>{category}</Text>
+    </View>
+  );
+}
+
+/** 카테고리 여러 개를 한 줄에 칩으로 나열 */
+export function CategoryChips({ categories }: { categories: string[] | null | undefined }) {
+  if (!categories || !categories.length) return null;
+  return (
+    <>
+      {categories.map((c) => <CategoryChip key={c} category={c} />)}
+    </>
+  );
+}
+
+export function PriorityBadge({ priority }: { priority: Priority | null | undefined }) {
+  if (!priority) return null;
+  const m = PRIORITY_META[priority];
+  return (
+    <View style={[styles.prioChip, { backgroundColor: m.bg }]}>
+      <View style={[styles.prioDot, { backgroundColor: m.dot }]} />
+      <Text style={[styles.prioText, { color: m.ink }]}>우선순위 {m.label}</Text>
     </View>
   );
 }
@@ -94,4 +115,7 @@ const styles = StyleSheet.create({
   mapKindText: { fontSize: 9.5, fontWeight: '700', color: '#fff' },
   tag: { borderRadius: 7, paddingVertical: 2.5, paddingHorizontal: 8, transform: [{ rotate: '-2deg' }] },
   tagText: { fontSize: 11, fontWeight: '700' },
+  prioChip: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: radius.pill, paddingVertical: 3, paddingHorizontal: 10 },
+  prioDot: { width: 7, height: 7, borderRadius: 4 },
+  prioText: { fontSize: 11, fontWeight: '700' },
 });

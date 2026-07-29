@@ -3,7 +3,7 @@ import * as itemsService from '../services/itemsService';
 import type { NewItemPayload } from '../services/itemsService';
 import * as friendsService from '../services/friendsService';
 import { cancelReminder, syncReminder } from '../services/reminderService';
-import type { FriendEntry, Item, Location } from '../api/types';
+import type { FriendEntry, Item, Location, Priority } from '../api/types';
 import { useAuth } from './AuthContext';
 
 interface AppState {
@@ -18,8 +18,10 @@ interface AppState {
   refreshFriends: () => Promise<void>;
   addItem: (payload: NewItemPayload) => Promise<Item>;
   bulkAddItems: (payloads: NewItemPayload[]) => Promise<number>;
-  editItem: (id: string, patch: Partial<{ title: string; emoji: string; note: string; category: string | null; location: Location | null; targetDate: string | null }>) => Promise<Item>;
+  editItem: (id: string, patch: Partial<{ title: string; emoji: string; note: string; categories: string[]; location: Location | null; targetDate: string | null; priority: Priority | null }>) => Promise<Item>;
   deleteItem: (id: string) => Promise<void>;
+  deleteItems: (ids: string[]) => Promise<void>;
+  reorderItems: (updates: { id: string; order: number }[]) => Promise<void>;
   completeItem: (id: string, payload: { photo?: string | null; text?: string }) => Promise<Item>;
   reopenItem: (id: string) => Promise<Item>;
   joinItem: (id: string) => Promise<void>;
@@ -112,6 +114,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setMineIds((prev) => prev.filter((x) => x !== id));
   }, []);
 
+  const deleteItems = useCallback(async (ids: string[]) => {
+    if (!ids.length) return;
+    await itemsService.deleteItems(ids);
+    ids.forEach(cancelReminder);
+    const idSet = new Set(ids);
+    setItemsById((prev) => {
+      const next = { ...prev };
+      idSet.forEach((id) => delete next[id]);
+      return next;
+    });
+    setMineIds((prev) => prev.filter((x) => !idSet.has(x)));
+  }, []);
+
+  const reorderItems = useCallback(async (updates: { id: string; order: number }[]) => {
+    if (!updates.length) return;
+    await itemsService.reorderItems(updates);
+    setItemsById((prev) => {
+      const next = { ...prev };
+      updates.forEach(({ id, order }) => { if (next[id]) next[id] = { ...next[id], order }; });
+      return next;
+    });
+  }, []);
+
   const completeItem: AppState['completeItem'] = useCallback(async (id, payload) => {
     const item = await itemsService.completeItem(id, requireUid(), payload);
     mergeItems([item]);
@@ -173,9 +198,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<AppState>(() => ({
     itemsById, mineIds, friends, loadingMine, loadingFriends,
     getItem, mergeItems, refreshMine, refreshFriends,
-    addItem, bulkAddItems, editItem, deleteItem, completeItem, reopenItem,
+    addItem, bulkAddItems, editItem, deleteItem, deleteItems, reorderItems, completeItem, reopenItem,
     joinItem, leaveItem, helpItem, toggleLike, createInvite,
-  }), [itemsById, mineIds, friends, loadingMine, loadingFriends, getItem, mergeItems, refreshMine, refreshFriends, addItem, bulkAddItems, editItem, deleteItem, completeItem, reopenItem, joinItem, leaveItem, helpItem, toggleLike, createInvite]);
+  }), [itemsById, mineIds, friends, loadingMine, loadingFriends, getItem, mergeItems, refreshMine, refreshFriends, addItem, bulkAddItems, editItem, deleteItem, deleteItems, reorderItems, completeItem, reopenItem, joinItem, leaveItem, helpItem, toggleLike, createInvite]);
 
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;
 }

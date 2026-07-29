@@ -5,15 +5,18 @@ import {
 import { db } from '../firebase/config';
 import { getUserBrief } from './usersService';
 import { getMyVisibility } from './visibility';
-import type { Item, Location } from '../api/types';
+import type { Item, Location, Priority } from '../api/types';
 
 export interface NewItemPayload {
   title: string;
   emoji: string;
   note?: string;
+  /** 카테고리 여러 개 지정 가능. 예전 category(단일) 필드도 계속 받되 내부에서 배열로 합칩니다. */
+  categories?: string[];
   category?: string | null;
   location?: Location | null;
   targetDate?: string | null;
+  priority?: Priority | null;
 }
 
 interface RawItem {
@@ -21,9 +24,15 @@ interface RawItem {
   title: string;
   emoji: string;
   note: string;
-  category: string | null;
+  /** 새 문서는 이 필드를 씁니다. */
+  categories?: string[];
+  /** 다중선택 이전에 만들어진 문서는 이 단일 필드만 있을 수 있어요(읽을 때만 호환 처리). */
+  category?: string | null;
   location: Location | null;
   targetDate?: string | null;
+  priority?: Priority | null;
+  /** 수동 정렬 순서. 없으면 생성일 역순(기본 정렬)을 그대로 따릅니다. */
+  order?: number;
   /** users.listPublic을 비정규화한 값. 둘러보기 쿼리가 이 필드 하나로 걸러집니다. */
   ownerPublic?: boolean;
   done: boolean;
@@ -39,6 +48,13 @@ interface RawItem {
   likesCount: number;
   savesCount: number;
   createdAt?: any;
+}
+
+/** 새/구 스키마 어느 쪽이든 카테고리 배열로 통일해서 꺼냅니다. */
+function rawCategories(raw: Pick<RawItem, 'categories' | 'category'>): string[] {
+  if (raw.categories && raw.categories.length) return raw.categories;
+  if (raw.category) return [raw.category];
+  return [];
 }
 
 function itemsCol() { return collection(db, 'items'); }
@@ -83,7 +99,8 @@ export async function hydrateItem(id: string, raw: RawItem, viewerId?: string): 
 
   return {
     id, owner, title: raw.title, emoji: raw.emoji, note: raw.note || '',
-    category: raw.category || null, location: raw.location || null, targetDate: raw.targetDate || null,
+    categories: rawCategories(raw), location: raw.location || null, targetDate: raw.targetDate || null,
+    priority: raw.priority || null, order: typeof raw.order === 'number' ? raw.order : 0,
     done: !!raw.done, memory: raw.memory || null,
     participants, origin: raw.origin || 'own', source, helpedFor, helpedBy,
     likesCount, likedByMe: primedLikes ? primedLikes.has(id) : !!likedSnap?.exists(), savesCount: raw.savesCount || 0,
@@ -103,11 +120,19 @@ export async function getItemById(id: string, viewerId?: string): Promise<Item |
   return hydrateItem(id, snap.data() as RawItem, viewerId);
 }
 
+/** payload에 categories(배열) 또는 category(단일, 예전 호출부 호환)로 오든 배열로 통일 */
+function payloadCategories(payload: Pick<NewItemPayload, 'categories' | 'category'>): string[] {
+  if (payload.categories) return payload.categories;
+  if (payload.category) return [payload.category];
+  return [];
+}
+
 export async function addItem(uid: string, payload: NewItemPayload): Promise<Item> {
   const raw: RawItem = {
     ownerId: uid, title: payload.title, emoji: payload.emoji, note: payload.note || '',
-    category: payload.category || null, location: payload.location || null,
-    targetDate: payload.targetDate || null, ownerPublic: getMyVisibility(),
+    categories: payloadCategories(payload), location: payload.location || null,
+    targetDate: payload.targetDate || null, priority: payload.priority || null, order: 0,
+    ownerPublic: getMyVisibility(),
     done: false, memory: null, participants: [], origin: 'own', helpedBy: [], likesCount: 0, savesCount: 0,
   };
   const ref = await addDoc(itemsCol(), { ...raw, createdAt: serverTimestamp() });
@@ -126,8 +151,8 @@ export async function bulkAddItems(uid: string, payloads: NewItemPayload[]): Pro
     for (const payload of slice) {
       const raw: RawItem = {
         ownerId: uid, title: payload.title, emoji: payload.emoji, note: payload.note || '',
-        category: payload.category || null, location: payload.location || null,
-        targetDate: payload.targetDate || null, ownerPublic,
+        categories: payloadCategories(payload), location: payload.location || null,
+        targetDate: payload.targetDate || null, priority: payload.priority || null, order: 0, ownerPublic,
         done: false, memory: null, participants: [], origin: 'own', helpedBy: [], likesCount: 0, savesCount: 0,
       };
       batch.set(doc(itemsCol()), { ...raw, createdAt: serverTimestamp() });
@@ -138,7 +163,7 @@ export async function bulkAddItems(uid: string, payloads: NewItemPayload[]): Pro
   return added;
 }
 
-export async function editItem(id: string, uid: string, patch: Partial<{ title: string; emoji: string; note: string; category: string | null; location: Location | null; targetDate: string | null }>): Promise<Item> {
+export async function editItem(id: string, uid: string, patch: Partial<{ title: string; emoji: string; note: string; categories: string[]; location: Location | null; targetDate: string | null; priority: Priority | null }>): Promise<Item> {
   await updateDoc(itemDoc(id), patch as any);
   const snap = await getDoc(itemDoc(id));
   return hydrateItem(id, snap.data() as RawItem, uid);
@@ -146,6 +171,23 @@ export async function editItem(id: string, uid: string, patch: Partial<{ title: 
 
 export async function deleteItem(id: string): Promise<void> {
   await deleteDoc(itemDoc(id));
+}
+
+/** 여러 개를 한 번에 삭제 (다중선택 삭제용) */
+export async function deleteItems(ids: string[]): Promise<void> {
+  const CHUNK = 400;
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const batch = writeBatch(db);
+    ids.slice(i, i + CHUNK).forEach((id) => batch.delete(itemDoc(id)));
+    await batch.commit();
+  }
+}
+
+/** 수동 정렬 순서를 한 번에 반영 (위/아래로 옮기기) */
+export async function reorderItems(updates: { id: string; order: number }[]): Promise<void> {
+  const batch = writeBatch(db);
+  updates.forEach(({ id, order }) => batch.update(itemDoc(id), { order }));
+  await batch.commit();
 }
 
 export async function completeItem(id: string, uid: string, payload: { photo?: string | null; text?: string }): Promise<Item> {
@@ -178,8 +220,8 @@ export async function joinItem(targetId: string, uid: string): Promise<void> {
   if (existing.empty) {
     const newRef = doc(itemsCol());
     batch.set(newRef, {
-      ownerId: uid, title: target.title, emoji: target.emoji, note: target.note, category: target.category, location: target.location,
-      targetDate: null, ownerPublic: getMyVisibility(),
+      ownerId: uid, title: target.title, emoji: target.emoji, note: target.note, categories: rawCategories(target), location: target.location,
+      targetDate: null, priority: null, order: 0, ownerPublic: getMyVisibility(),
       done: false, memory: null, participants: [target.ownerId], origin: 'joined',
       sourceOwnerId: target.ownerId, sourceItemId: targetId, helpedBy: [], likesCount: 0, savesCount: 0, createdAt: serverTimestamp(),
     });
@@ -212,8 +254,8 @@ export async function helpItem(targetId: string, uid: string, payload: { title: 
   batch.update(itemDoc(targetId), { done: true, helpedBy: arrayUnion(uid), participants: arrayUnion(uid) });
   const newRef = doc(itemsCol());
   const rec: RawItem = {
-    ownerId: uid, title: payload.title, emoji: payload.emoji, note: payload.note || '', category: null, location: null,
-    targetDate: null, ownerPublic: getMyVisibility(),
+    ownerId: uid, title: payload.title, emoji: payload.emoji, note: payload.note || '', categories: [], location: null,
+    targetDate: null, priority: null, order: 0, ownerPublic: getMyVisibility(),
     done: true, memory: { photo: null, text: payload.text || '', date }, participants: [target.ownerId],
     origin: 'helped', helpedForId: target.ownerId, sourceTitle: target.title, sourceEmoji: target.emoji, sourceItemId: targetId,
     helpedBy: [], likesCount: 0, savesCount: 0,
