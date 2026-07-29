@@ -14,16 +14,18 @@ interface AppState {
   loadingFriends: boolean;
   getItem: (id: string) => Item | undefined;
   mergeItems: (items: Item[]) => void;
-  refreshMine: () => Promise<void>;
-  refreshFriends: () => Promise<void>;
+  refreshMine: (opts?: { force?: boolean }) => Promise<void>;
+  refreshFriends: (opts?: { force?: boolean }) => Promise<void>;
   addItem: (payload: NewItemPayload) => Promise<Item>;
   bulkAddItems: (payloads: NewItemPayload[]) => Promise<number>;
   editItem: (id: string, patch: Partial<{ title: string; emoji: string; note: string; categories: string[]; location: Location | null; targetDate: string | null; priority: Priority | null }>) => Promise<Item>;
   deleteItem: (id: string) => Promise<void>;
   deleteItems: (ids: string[]) => Promise<void>;
   reorderItems: (updates: { id: string; order: number }[]) => Promise<void>;
-  completeItem: (id: string, payload: { photo?: string | null; text?: string }) => Promise<Item>;
+  completeItem: (id: string, payload: { photos?: string[]; text?: string }) => Promise<Item>;
   reopenItem: (id: string) => Promise<Item>;
+  startItem: (id: string) => Promise<Item>;
+  stopItem: (id: string) => Promise<Item>;
   joinItem: (id: string) => Promise<void>;
   leaveItem: (id: string) => Promise<void>;
   helpItem: (id: string, payload: { title: string; emoji: string; note?: string; text?: string }) => Promise<Item>;
@@ -44,6 +46,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   cacheRef.current = itemsById;
   const uidRef = useRef<string | null>(null);
   uidRef.current = user?.id || null;
+  // 탭을 왔다갔다 할 때마다 화면이 통째로 다시 마운트되면서 useEffect가 다시 돌아요.
+  // 방금 막 받아온 목록을 또 통째로 다시 읽지 않도록 마지막으로 받아온 시각을 기억해 둡니다.
+  const mineFetchedAt = useRef(0);
+  const friendsFetchedAt = useRef(0);
+  const MINE_TTL_MS = 15_000;
+  const FRIENDS_TTL_MS = 15_000;
 
   const mergeItems = useCallback((items: Item[]) => {
     setItemsById((prev) => {
@@ -61,30 +69,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return uid;
   };
 
-  const refreshMine = useCallback(async () => {
+  const refreshMine = useCallback(async (opts?: { force?: boolean }) => {
     const uid = uidRef.current;
     if (!uid) return;
+    // 방금(15초 안에) 이미 받아온 상태면 화면이 다시 마운트돼도 그냥 캐시를 씁니다.
+    // pull-to-refresh처럼 진짜 새로고침이 필요할 땐 force로 건너뜁니다.
+    if (!opts?.force && Date.now() - mineFetchedAt.current < MINE_TTL_MS) return;
     setLoadingMine(true);
     try {
       const items = await itemsService.getMyItems(uid);
       mergeItems(items);
       setMineIds(items.map((i) => i.id));
+      mineFetchedAt.current = Date.now();
     } finally {
       setLoadingMine(false);
     }
   }, [mergeItems]);
 
-  const refreshFriends = useCallback(async () => {
+  const refreshFriends = useCallback(async (opts?: { force?: boolean }) => {
     const uid = uidRef.current;
     if (!uid) return;
+    if (!opts?.force && Date.now() - friendsFetchedAt.current < FRIENDS_TTL_MS) return;
     setLoadingFriends(true);
     try {
-      const list = await friendsService.getFriends(uid);
-      setFriends(list);
+      const list = await friendsService.getFriends(uid, { force: opts?.force });
+      // withMeCount(그 친구의 아이템 중 내가 함께하는 중인 것)는 따로 안 읽고,
+      // 이미 갖고 있는 내 목록(origin==='joined')에서 바로 셉니다 — 추가 조회가 필요 없어요.
+      const myItems = mineIds.map((id) => cacheRef.current[id]).filter(Boolean);
+      const withMeByOwner = new Map<string, number>();
+      myItems.forEach((it) => {
+        if (it.origin === 'joined' && it.source?.ownerId) {
+          withMeByOwner.set(it.source.ownerId, (withMeByOwner.get(it.source.ownerId) || 0) + 1);
+        }
+      });
+      setFriends(list.map((f) => ({ ...f, withMeCount: withMeByOwner.get(f.id) || 0 })));
+      friendsFetchedAt.current = Date.now();
     } finally {
       setLoadingFriends(false);
     }
-  }, []);
+  }, [mineIds]);
 
   const addItem: AppState['addItem'] = useCallback(async (payload) => {
     const item = await itemsService.addItem(requireUid(), payload);
@@ -151,6 +174,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return item;
   }, [mergeItems]);
 
+  const startItem = useCallback(async (id: string) => {
+    const item = await itemsService.startItem(id, requireUid());
+    mergeItems([item]);
+    return item;
+  }, [mergeItems]);
+
+  const stopItem = useCallback(async (id: string) => {
+    const item = await itemsService.stopItem(id, requireUid());
+    mergeItems([item]);
+    return item;
+  }, [mergeItems]);
+
   const joinItem = useCallback(async (id: string) => {
     await itemsService.joinItem(id, requireUid());
     const item = await itemsService.getItemById(id, uidRef.current || undefined);
@@ -199,8 +234,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     itemsById, mineIds, friends, loadingMine, loadingFriends,
     getItem, mergeItems, refreshMine, refreshFriends,
     addItem, bulkAddItems, editItem, deleteItem, deleteItems, reorderItems, completeItem, reopenItem,
+    startItem, stopItem,
     joinItem, leaveItem, helpItem, toggleLike, createInvite,
-  }), [itemsById, mineIds, friends, loadingMine, loadingFriends, getItem, mergeItems, refreshMine, refreshFriends, addItem, bulkAddItems, editItem, deleteItem, deleteItems, reorderItems, completeItem, reopenItem, joinItem, leaveItem, helpItem, toggleLike, createInvite]);
+  }), [itemsById, mineIds, friends, loadingMine, loadingFriends, getItem, mergeItems, refreshMine, refreshFriends, addItem, bulkAddItems, editItem, deleteItem, deleteItems, reorderItems, completeItem, reopenItem, startItem, stopItem, joinItem, leaveItem, helpItem, toggleLike, createInvite]);
 
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;
 }

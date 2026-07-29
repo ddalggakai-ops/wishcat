@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Sheet from '../components/Sheet';
 import { Field, FieldLabel } from '../components/FormBits';
 import BubbleButton from '../components/Button';
-import { absoluteFill, colors, radius } from '../theme';
+import { colors } from '../theme';
 import { resolveImageUrl } from '../api/client';
 import { uploadPhoto } from '../services/uploadService';
 import { useAuth } from '../context/AuthContext';
+import { MAX_MEMORY_PHOTOS } from '../api/types';
 import type { Item } from '../api/types';
 
 export default function MemorySheet({
@@ -16,73 +17,90 @@ export default function MemorySheet({
   visible: boolean;
   onClose: () => void;
   item: Item | null;
-  onSubmit: (payload: { photoUrl: string | null; text: string }) => Promise<void>;
+  onSubmit: (payload: { photoUrls: string[]; text: string }) => Promise<void>;
 }) {
   const { user } = useAuth();
-  const [localUri, setLocalUri] = useState<string | null>(null);
-  const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<string[]>([]);
   const [text, setText] = useState('');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!visible) return;
-    setLocalUri(null);
-    setUploadedUrl(item?.memory?.photo || null);
+    const existing = item?.memory?.photos?.length ? item.memory.photos : (item?.memory?.photo ? [item.memory.photo] : []);
+    setPhotos(existing);
     setText(item?.memory?.text || '');
   }, [visible, item]);
 
-  const pickPhoto = async () => {
+  const remaining = MAX_MEMORY_PHOTOS - photos.length;
+
+  const pickPhotos = async () => {
+    if (remaining <= 0) return;
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
       Alert.alert('사진 접근 권한이 필요해요', '설정에서 사진 라이브러리 접근을 허용해주세요.');
       return;
     }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7, allowsEditing: true, aspect: [1, 1] });
-    if (result.canceled || !result.assets?.[0]) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.7,
+      allowsMultipleSelection: remaining > 1,
+      selectionLimit: remaining,
+    });
+    if (result.canceled || !result.assets?.length) return;
     if (!user) return;
-    const uri = result.assets[0].uri;
-    setLocalUri(uri);
+    const assets = result.assets.slice(0, remaining);
     setUploading(true);
     try {
-      const res = await uploadPhoto(uri, user.id);
-      setUploadedUrl(res.url);
+      const uploaded = await Promise.all(assets.map((a) => uploadPhoto(a.uri, user.id)));
+      setPhotos((prev) => [...prev, ...uploaded.map((r) => r.url)].slice(0, MAX_MEMORY_PHOTOS));
     } catch (e) {
       Alert.alert('업로드 실패', '사진을 업로드하지 못했어요. 다시 시도해주세요.');
-      setLocalUri(null);
     } finally {
       setUploading(false);
     }
   };
 
+  const removePhoto = (url: string) => setPhotos((prev) => prev.filter((p) => p !== url));
+
   const submit = async () => {
     setSaving(true);
     try {
-      await onSubmit({ photoUrl: uploadedUrl, text: text.trim() });
+      await onSubmit({ photoUrls: photos, text: text.trim() });
       onClose();
     } finally {
       setSaving(false);
     }
   };
 
-  const previewUri = localUri || resolveImageUrl(uploadedUrl);
-
   return (
     <Sheet visible={visible} onClose={onClose} title={item?.done ? '추억 수정하기' : '완료하고 추억 남기기'} subtitle={item ? `${item.emoji} ${item.title}` : ''}>
-      {previewUri ? (
-        <View style={styles.thumbWrap}>
-          <Image source={{ uri: previewUri }} style={styles.thumb} />
-          <Pressable style={styles.rm} onPress={() => { setLocalUri(null); setUploadedUrl(null); }}>
-            <Text style={{ color: '#fff', fontSize: 14 }}>✕</Text>
+      <View style={styles.photoHeadRow}>
+        <FieldLabel>{`사진 (${photos.length}/${MAX_MEMORY_PHOTOS}장)`}</FieldLabel>
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
+        {photos.map((uri) => {
+          const previewUri = resolveImageUrl(uri) || uri;
+          return (
+            <View key={uri} style={styles.thumbWrap}>
+              <Image source={{ uri: previewUri }} style={styles.thumb} />
+              <Pressable style={styles.rm} onPress={() => removePhoto(uri)} hitSlop={4}>
+                <Text style={{ color: '#fff', fontSize: 13 }}>✕</Text>
+              </Pressable>
+            </View>
+          );
+        })}
+        {remaining > 0 ? (
+          <Pressable onPress={pickPhotos} style={styles.drop} disabled={uploading}>
+            {uploading ? <ActivityIndicator color={colors.accent} /> : (
+              <>
+                <Text style={{ fontSize: 20 }}>📷</Text>
+                <Text style={styles.dropText}>사진 추가</Text>
+              </>
+            )}
           </Pressable>
-          {uploading ? <View style={styles.uploadingOverlay}><Text style={{ color: '#fff' }}>업로드 중…</Text></View> : null}
-        </View>
-      ) : (
-        <Pressable onPress={pickPhoto} style={styles.drop}>
-          <Text style={{ fontSize: 22 }}>📷</Text>
-          <Text style={styles.dropText}>사진 추가하기</Text>
-        </Pressable>
-      )}
+        ) : null}
+      </ScrollView>
       <FieldLabel>그날의 기록</FieldLabel>
       <Field value={text} onChangeText={setText} placeholder="어땠어요? 누구와 함께였나요? 느낀 점을 적어보세요." multiline />
       <BubbleButton title={item?.done ? '저장하기' : '완료하고 저장'} onPress={submit} loading={saving || uploading} full style={{ marginTop: 22 }} />
@@ -91,10 +109,14 @@ export default function MemorySheet({
 }
 
 const styles = StyleSheet.create({
-  drop: { borderWidth: 1.5, borderColor: colors.line2, borderStyle: 'dashed', borderRadius: 13, paddingVertical: 22, alignItems: 'center', gap: 8 },
-  dropText: { fontSize: 13.5, color: colors.ink2, fontWeight: '500' },
-  thumbWrap: { borderRadius: 13, overflow: 'hidden', position: 'relative' },
-  thumb: { width: '100%', height: 220 },
-  rm: { position: 'absolute', top: 9, right: 9, width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(28,27,24,.62)', alignItems: 'center', justifyContent: 'center' },
-  uploadingOverlay: { ...absoluteFill, backgroundColor: 'rgba(0,0,0,.35)', alignItems: 'center', justifyContent: 'center' },
+  photoHeadRow: { flexDirection: 'row', alignItems: 'center' },
+  photoRow: { flexDirection: 'row', gap: 10, paddingVertical: 4 },
+  drop: {
+    width: 96, height: 96, borderWidth: 1.5, borderColor: colors.line2, borderStyle: 'dashed', borderRadius: 13,
+    alignItems: 'center', justifyContent: 'center', gap: 6,
+  },
+  dropText: { fontSize: 11.5, color: colors.ink2, fontWeight: '500' },
+  thumbWrap: { width: 96, height: 96, borderRadius: 13, overflow: 'hidden', position: 'relative' },
+  thumb: { width: '100%', height: '100%' },
+  rm: { position: 'absolute', top: 5, right: 5, width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(28,27,24,.62)', alignItems: 'center', justifyContent: 'center' },
 });

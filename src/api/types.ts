@@ -18,8 +18,14 @@ export interface PublicUser extends UserBrief {
   listPublic: boolean;
 }
 
+/** 버킷 하나에 담을 수 있는 추억 사진 최대 개수 */
+export const MAX_MEMORY_PHOTOS = 10;
+
 export interface Memory {
+  /** @deprecated 첫 번째 사진의 별칭이에요(예전 버전 호환용). 항상 photos[0]과 같은 값이 들어가요. */
   photo: string | null;
+  /** 추억 사진 여러 장 (최대 MAX_MEMORY_PHOTOS장) */
+  photos: string[];
   text: string;
   date: string;
 }
@@ -57,6 +63,8 @@ export interface Item {
   /** 내가 직접 정렬한 순서(작을수록 위). 길게 눌러 순서를 바꾸면 갱신됩니다. */
   order: number;
   done: boolean;
+  /** 진행 시작 시각(ISO). null이면 아직 시작 전. done이면 의미 없어요. */
+  startedAt: string | null;
   memory: Memory | null;
   participants: UserBrief[];
   origin: 'own' | 'joined' | 'helped';

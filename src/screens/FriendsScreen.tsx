@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Avatar from '../components/Avatar';
 import { ScreenHeader } from '../components/Basics';
@@ -10,12 +10,13 @@ export default function FriendsScreen({ onOpenPerson, onInvite }: { onOpenPerson
   const { friends, refreshFriends, loadingFriends } = useApp();
 
   useEffect(() => { refreshFriends(); }, [refreshFriends]);
+  const onRefresh = useCallback(() => refreshFriends({ force: true }), [refreshFriends]);
 
   return (
     <ScrollView
       style={{ flex: 1 }}
       contentContainerStyle={{ paddingBottom: 20 }}
-      refreshControl={<RefreshControl refreshing={loadingFriends} onRefresh={refreshFriends} tintColor="#fff" />}
+      refreshControl={<RefreshControl refreshing={loadingFriends} onRefresh={onRefresh} tintColor="#fff" />}
     >
       <ScreenHeader
         title="친구"

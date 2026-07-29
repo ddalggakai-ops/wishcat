@@ -31,7 +31,7 @@ export default function MineScreen({
   onDetail: (item: Item) => void;
 }) {
   const { user, updateMe } = useAuth();
-  const { refreshMine, loadingMine, completeItem, reopenItem, deleteItems, reorderItems } = useApp();
+  const { refreshMine, loadingMine, completeItem, reopenItem, deleteItems, reorderItems, startItem, stopItem } = useApp();
   const items = useMyItems();
   const [compact, setCompact] = useState(false);
   const [search, setSearch] = useState('');
@@ -48,6 +48,7 @@ export default function MineScreen({
   const scrollDims = useRef({ contentHeight: 0, viewportHeight: 0 });
 
   useEffect(() => { refreshMine(); }, [refreshMine]);
+  const onRefresh = useCallback(() => refreshMine({ force: true }), [refreshMine]);
 
   // 지금 내가 가진 아이템에 실제로 쓰인 카테고리만 필터로 보여줍니다. (전체 8개를 다 보여주면
   // 정작 내 목록엔 없는 카테고리도 계속 떠서 고를 게 없는 빈 목록만 나오기 쉬웠어요)
@@ -183,6 +184,25 @@ export default function MineScreen({
     else reopenItem(item.id);
   }, [onMemory, reopenItem]);
 
+  const onStartProgress = useCallback((item: Item) => {
+    startItem(item.id).catch(() => Alert.alert('시작하지 못했어요', '잠시 뒤 다시 시도해주세요.'));
+  }, [startItem]);
+
+  const onStopProgress = useCallback((item: Item) => {
+    Alert.alert(
+      '진행을 중단할까요?',
+      `${item.emoji} ${item.title}\n정말로 중단하시겠어요?`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '중단하기', style: 'destructive', onPress: () => {
+            stopItem(item.id).catch(() => Alert.alert('중단하지 못했어요', '잠시 뒤 다시 시도해주세요.'));
+          },
+        },
+      ]
+    );
+  }, [stopItem]);
+
   const onCardPress = useCallback((item: Item) => {
     if (compact) onDetail(item);
     else onEdit(item);
@@ -198,7 +218,7 @@ export default function MineScreen({
         ref={scrollRef}
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 20 }}
-        refreshControl={<RefreshControl refreshing={loadingMine} onRefresh={refreshMine} tintColor={colors.accent} />}
+        refreshControl={<RefreshControl refreshing={loadingMine} onRefresh={onRefresh} tintColor={colors.accent} />}
         onScroll={onScroll}
         scrollEventThrottle={100}
         onLayout={(e) => updateScrollState(scrollDims.current.contentHeight, e.nativeEvent.layout.height)}
@@ -337,6 +357,8 @@ export default function MineScreen({
                         onShare={onShare}
                         onMenu={onMenu}
                         onCardPress={onCardPress}
+                        onStartProgress={onStartProgress}
+                        onStopProgress={onStopProgress}
                         selectable={selectMode}
                         selected={selectedIds.has(i.id)}
                         onToggleSelect={toggleSelect}
@@ -363,6 +385,8 @@ export default function MineScreen({
                         onShare={onShare}
                         onMenu={onMenu}
                         onCardPress={onCardPress}
+                        onStartProgress={onStartProgress}
+                        onStopProgress={onStopProgress}
                         selectable={selectMode}
                         selected={selectedIds.has(i.id)}
                         onToggleSelect={toggleSelect}

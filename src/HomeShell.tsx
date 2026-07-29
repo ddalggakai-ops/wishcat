@@ -73,10 +73,10 @@ export default function HomeShell() {
     }
   };
 
-  const submitMemory = async (payload: { photoUrl: string | null; text: string }) => {
+  const submitMemory = async (payload: { photoUrls: string[]; text: string }) => {
     if (!memoryItem) return;
     const wasDone = memoryItem.done;
-    await completeItem(memoryItem.id, { photo: payload.photoUrl, text: payload.text });
+    await completeItem(memoryItem.id, { photos: payload.photoUrls, text: payload.text });
     showToast(wasDone ? '추억을 저장했어요' : '축하해요 · 꿈을 이뤘어요 ✦');
   };
 

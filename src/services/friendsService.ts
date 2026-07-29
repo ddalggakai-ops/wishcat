@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where, writeBatch } from 'firebase/firestore/lite';
+import { collection, doc, getCount, getDoc, getDocs, query, serverTimestamp, setDoc, where, writeBatch } from 'firebase/firestore/lite';
 import { db } from '../firebase/config';
 import { getUserPublicCached } from './usersService';
 import { joinItem } from './itemsService';
@@ -6,22 +6,41 @@ import type { FriendEntry } from '../api/types';
 
 function friendshipId(owner: string, friend: string) { return `${owner}_${friend}`; }
 
-export async function getFriends(uid: string): Promise<FriendEntry[]> {
+// 친구 화면을 열 때마다(탭을 왔다갔다 하면 화면이 통째로 다시 마운트돼요) 매번 새로 읽지
+// 않도록 최근 결과를 잠깐 기억해 둡니다. 새로고침(pull-to-refresh)은 force로 건너뜁니다.
+let friendsCache: { uid: string; at: number; list: FriendEntry[] } | null = null;
+const FRIENDS_CACHE_TTL_MS = 15_000;
+
+// 예전에는 친구마다 items 문서를 전부 읽어(제목·메모·사진 URL까지) 개수만 세느라 느렸어요.
+// 지금은 문서 내용을 안 받고 개수만 세는 집계 쿼리(getCount)로 바꿔서 같은 걸 훨씬 가볍게 구합니다.
+// (withMeCount는 "내가 함께하는 중"인 아이템 수인데, 이건 어차피 내가 이미 가진 목록(origin==='joined')에서
+// 바로 셀 수 있어서 여기서 따로 안 읽고 AppContext에서 채워 넣습니다 — 그래서 여기선 0으로 둬요.)
+export async function getFriends(uid: string, opts?: { force?: boolean }): Promise<FriendEntry[]> {
+  if (!opts?.force && friendsCache && friendsCache.uid === uid && Date.now() - friendsCache.at < FRIENDS_CACHE_TTL_MS) {
+    return friendsCache.list;
+  }
+
   const q = query(collection(db, 'friendships'), where('owner', '==', uid));
   const snap = await getDocs(q);
   const friendIds = snap.docs.map((d) => (d.data() as any).friend as string);
 
-  return Promise.all(friendIds.map(async (fid) => {
-    const profile = await getUserPublicCached(fid);
-    const itemsSnap = await getDocs(query(collection(db, 'items'), where('ownerId', '==', fid)));
-    let done = 0, withMe = 0;
-    itemsSnap.forEach((d) => {
-      const data = d.data() as any;
-      if (data.done) done++;
-      if ((data.participants || []).includes(uid)) withMe++;
-    });
-    return { ...profile, itemsCount: itemsSnap.size, doneCount: done, withMeCount: withMe };
+  const list = await Promise.all(friendIds.map(async (fid) => {
+    const itemsCol = collection(db, 'items');
+    const [profile, totalCount, doneCount] = await Promise.all([
+      getUserPublicCached(fid),
+      getCount(query(itemsCol, where('ownerId', '==', fid))),
+      getCount(query(itemsCol, where('ownerId', '==', fid), where('done', '==', true))),
+    ]);
+    return {
+      ...profile,
+      itemsCount: totalCount.data().count,
+      doneCount: doneCount.data().count,
+      withMeCount: 0,
+    };
   }));
+
+  friendsCache = { uid, at: Date.now(), list };
+  return list;
 }
 
 export async function createInvite(uid: string, itemId?: string): Promise<string> {

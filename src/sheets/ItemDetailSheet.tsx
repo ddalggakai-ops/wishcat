@@ -6,6 +6,7 @@ import BubbleButton from '../components/Button';
 import Avatar from '../components/Avatar';
 import { CategoryChips, LocationChip, PriorityBadge } from '../components/Chips';
 import { dDayLabel } from '../components/ItemCard';
+import MemoryPhotoCarousel from '../components/MemoryPhotos';
 import { colors, catRole, gradients, radius } from '../theme';
 import { resolveImageUrl } from '../api/client';
 import { useApp } from '../context/AppContext';
@@ -39,6 +40,9 @@ export default function ItemDetailSheet({
   const joined = !!user && live.participants.some((p) => p.id === user.id);
   const dday = !live.done ? dDayLabel(live.targetDate) : null;
   const photo = resolveImageUrl(live.memory?.photo);
+  const memoryPhotos = (live.memory?.photos?.length ? live.memory.photos : (live.memory?.photo ? [live.memory.photo] : []))
+    .map(resolveImageUrl)
+    .filter((u): u is string => !!u);
 
   const doJoin = async () => {
     setBusy(true);
@@ -96,7 +100,9 @@ export default function ItemDetailSheet({
 
       {live.done ? (
         <View style={styles.memWrap}>
-          {photo ? <Image source={{ uri: photo }} style={styles.memImg} /> : null}
+          {memoryPhotos.length ? (
+            <MemoryPhotoCarousel photos={memoryPhotos} height={190} emoji={live.emoji} role={catRole(live.categories?.[0])} />
+          ) : null}
           <View style={styles.memCap}>
             <Text style={styles.memBadge}>✓ 이미 이룬 꿈</Text>
             {live.memory?.text ? <Text style={styles.memText}>{live.memory.text}</Text> : null}
@@ -162,7 +168,6 @@ const styles = StyleSheet.create({
   dday: { backgroundColor: colors.doneWash, borderRadius: 9, paddingVertical: 4, paddingHorizontal: 9 },
   ddayText: { fontSize: 11.5, fontWeight: '700', color: colors.done },
   memWrap: { marginTop: 16, borderWidth: 1, borderColor: colors.line, borderRadius: radius.md, overflow: 'hidden' },
-  memImg: { width: '100%', height: 190 },
   memCap: { padding: 12 },
   memBadge: { fontSize: 12, fontWeight: '700', color: colors.done },
   memText: { fontSize: 13.5, color: colors.ink, lineHeight: 19, marginTop: 6 },

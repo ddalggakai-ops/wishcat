@@ -1,11 +1,11 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { catColor, catRole, colors, gradients, radius, shadow } from '../theme';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { catColor, catRole, colors, radius, shadow } from '../theme';
 import type { Item } from '../api/types';
 import Avatar from './Avatar';
 import { CategoryChips, LocationChip, PriorityBadge, Tag } from './Chips';
 import BubbleButton from './Button';
+import MemoryPhotoCarousel from './MemoryPhotos';
 import { resolveImageUrl } from '../api/client';
 
 export type ItemCtx = 'mine' | 'friend' | 'explore';
@@ -23,9 +23,20 @@ export function dDayLabel(targetDate: string | null | undefined, today = new Dat
   return `${-days}일 지남`;
 }
 
+/** 진행을 시작한 날로부터 며칠째인지 — 시작한 날이 D+0, 다음날부터 D+1, D+2 ... */
+export function elapsedDaysLabel(startedAt: string | null | undefined, today = new Date()): number | null {
+  if (!startedAt) return null;
+  const start = new Date(startedAt);
+  if (isNaN(start.getTime())) return null;
+  const startUTC = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
+  const now = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  return Math.max(0, Math.round((now - startUTC) / 86400000));
+}
+
 export default function ItemCard({
   item, ctx, compact, viewerId, onToggleDone, onMemory, onShare, onJoin, onLeave, onHelp, onMenu, onReport,
   onCardPress, selectable, selected, onToggleSelect, onLongPress, canMoveUp, canMoveDown, onMoveUp, onMoveDown,
+  onStartProgress, onStopProgress,
 }: {
   item: Item;
   ctx: ItemCtx;
@@ -40,6 +51,10 @@ export default function ItemCard({
   onHelp?: (item: Item) => void;
   onMenu?: (item: Item) => void;
   onReport?: (item: Item) => void;
+  /** 진행 시작 — '진행중' 상태로 바뀌고 D+n일이 표시됩니다 */
+  onStartProgress?: (item: Item) => void;
+  /** 진행 중단 — 누르면 호출부에서 확인 팝업을 띄운 뒤 호출해요 */
+  onStopProgress?: (item: Item) => void;
   /** 카드(빈 곳)를 눌렀을 때 — 자세히 보기에서는 수정으로, 간단히 보기에서는 상세보기로 씁니다 */
   onCardPress?: (item: Item) => void;
   /** 다중선택(삭제/순서변경) 모드 — 길게 눌러 진입 */
@@ -56,6 +71,8 @@ export default function ItemCard({
   // 이미 함께하고 있어도 버튼이 그대로 남아 있어서 몇 번이고 다시 누르게 됐어요.
   const joined = !!viewerId && item.participants.some((p) => p.id === viewerId);
   const dday = !item.done ? dDayLabel(item.targetDate) : null;
+  const inProgress = !item.done && !!item.startedAt;
+  const progressDays = inProgress ? elapsedDaysLabel(item.startedAt) : null;
   const tags: React.ReactNode[] = [];
   if (ctx === 'mine') {
     if (item.origin === 'helped' && item.helpedFor) tags.push(<Tag key="h" tone="helped" label={`🎁 ${item.helpedFor.name}님을 도움`} />);
@@ -118,8 +135,10 @@ export default function ItemCard({
     );
   }
 
-  const photoUri = resolveImageUrl(item.memory?.photo);
-  const showMemory = item.done && item.memory && (item.memory.text || photoUri);
+  const memoryPhotos = (item.memory?.photos?.length ? item.memory.photos : (item.memory?.photo ? [item.memory.photo] : []))
+    .map(resolveImageUrl)
+    .filter((u): u is string => !!u);
+  const showMemory = item.done && item.memory && (item.memory.text || memoryPhotos.length > 0);
 
   return (
     <Pressable
@@ -143,7 +162,7 @@ export default function ItemCard({
           {tags.length ? <View style={styles.tagRow}>{tags}</View> : null}
           {item.note ? <Text style={styles.note}>{item.note}</Text> : null}
 
-          {(item.categories?.length || item.location || dday || item.priority) ? (
+          {(item.categories?.length || item.location || dday || item.priority || (ctx === 'mine' && !item.done)) ? (
             <View style={styles.metaRow}>
               <CategoryChips categories={item.categories} />
               {item.location ? <LocationChip location={item.location} /> : null}
@@ -152,6 +171,17 @@ export default function ItemCard({
                 <View style={[styles.dday, dday.endsWith('지남') && styles.ddayPast]}>
                   <Text style={[styles.ddayText, dday.endsWith('지남') && styles.ddayTextPast]}>🗓 {dday}</Text>
                 </View>
+              ) : null}
+              {ctx === 'mine' && !item.done ? (
+                inProgress ? (
+                  <Pressable onPress={() => onStopProgress?.(item)} style={styles.progressPill} hitSlop={4}>
+                    <Text style={styles.progressPillText}>🏃 진행중 D+{progressDays}일째</Text>
+                  </Pressable>
+                ) : (
+                  <Pressable onPress={() => onStartProgress?.(item)} style={styles.startPill} hitSlop={4}>
+                    <Text style={styles.startPillText}>▶ 진행 시작</Text>
+                  </Pressable>
+                )
               ) : null}
             </View>
           ) : null}
@@ -180,18 +210,7 @@ export default function ItemCard({
                 <Text style={styles.memBadge}>✓ 이룬 꿈</Text>
                 {item.memory?.date ? <Text style={styles.memHeadDate}>📷 {item.memory.date}</Text> : null}
               </View>
-              {photoUri ? (
-                <Image source={{ uri: photoUri }} style={styles.memImg} />
-              ) : (
-                <LinearGradient
-                  colors={gradients[catRole(item.categories?.[0])]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={[styles.memImg, styles.memImgPh]}
-                >
-                  <Text style={styles.memPhEmoji}>{item.emoji}</Text>
-                </LinearGradient>
-              )}
+              <MemoryPhotoCarousel photos={memoryPhotos} height={190} emoji={item.emoji} role={catRole(item.categories?.[0])} />
               {item.memory?.text ? (
                 <View style={styles.memCap}>
                   <Text style={styles.memText}>{item.memory.text}</Text>
@@ -269,9 +288,6 @@ const styles = StyleSheet.create({
   memHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingTop: 11, paddingBottom: 9 },
   memBadge: { fontSize: 12.5, fontWeight: '700', color: colors.done },
   memHeadDate: { fontSize: 11, color: colors.ink3 },
-  memImg: { width: '100%', height: 190 },
-  memImgPh: { alignItems: 'center', justifyContent: 'center' },
-  memPhEmoji: { fontSize: 46 },
   memCap: { padding: 12 },
   memText: { fontSize: 13.5, color: colors.ink, lineHeight: 19 },
   actions: { flexDirection: 'row', gap: 7, marginTop: 12, flexWrap: 'wrap' },
@@ -283,6 +299,10 @@ const styles = StyleSheet.create({
   ddayPast: { backgroundColor: 'rgba(220,110,110,.14)' },
   ddayText: { fontSize: 11.5, fontWeight: '700', color: colors.done },
   ddayTextPast: { color: '#c05656' },
+  progressPill: { backgroundColor: colors.accentWash, borderRadius: 9, paddingVertical: 4, paddingHorizontal: 9 },
+  progressPillText: { fontSize: 11.5, fontWeight: '700', color: colors.accentInk },
+  startPill: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.line2, borderRadius: 9, paddingVertical: 4, paddingHorizontal: 9 },
+  startPillText: { fontSize: 11.5, fontWeight: '700', color: colors.ink2 },
   reportBtn: { paddingVertical: 8, paddingHorizontal: 8, marginLeft: 'auto' },
   reportText: { fontSize: 11.5, color: colors.ink3 },
   reorderCol: { gap: 4, marginLeft: 4 },

@@ -5,9 +5,9 @@ import {
 } from 'firebase/auth';
 import { auth, firebaseReady, firebaseInitError } from '../firebase/config';
 import { createUserProfile, fetchMe, updateMyProfile } from '../services/usersService';
-import { backfillOwnerPublic, clearViewerLikes } from '../services/itemsService';
+import { backfillOwnerPublic, clearViewerLikes, primeViewerLikes } from '../services/itemsService';
 import { purgeMyData } from '../services/accountService';
-import { clearBlockCache } from '../services/moderationService';
+import { clearBlockCache, getBlockedIds } from '../services/moderationService';
 import { setMyVisibility } from '../services/visibility';
 import { authErrorMessage } from '../firebase/authErrors';
 import type { MeUser } from '../api/types';
@@ -103,6 +103,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // 로그인 직후 한 번: 서비스 계층에 공개 여부를 알려주고,
   // 예전에 만들어져 ownerPublic 필드가 없는 내 아이템들을 조용히 채워 넣습니다.
   // (둘러보기가 이 필드로 조회하기 때문에, 안 채우면 예전 아이템이 영영 안 보여요)
+  //
+  // 겸사겸사 "내가 누른 좋아요"와 "내가 차단한 사람" 목록도 여기서 미리 읽어 둡니다.
+  // 이 둘은 내 목록/둘러보기를 열 때마다 필요한데, 로그인 시점에 미리 캐시를 데워 두면
+  // 사용자가 실제로 그 화면을 열 때는 이미 준비돼 있어서 그만큼 안 기다려도 돼요.
   const backfilledRef = useRef<string | null>(null);
   useEffect(() => {
     if (!user) { backfilledRef.current = null; return; }
@@ -110,6 +114,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (backfilledRef.current === user.id) return;
     backfilledRef.current = user.id;
     backfillOwnerPublic(user.id, user.listPublic).catch(() => {});
+    primeViewerLikes(user.id).catch(() => {});
+    getBlockedIds(user.id).catch(() => {});
   }, [user]);
 
   const retryStartup = useCallback(() => {

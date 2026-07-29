@@ -22,11 +22,11 @@ export default function ExploreScreen({
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { force?: boolean }) => {
     if (!user) return;
     setLoading(true);
     try {
-      const res = await getExploreItems(user.id, filter);
+      const res = await getExploreItems(user.id, filter, opts);
       setItems(res);
       mergeItems(res);
     } finally {
@@ -35,9 +35,10 @@ export default function ExploreScreen({
   }, [filter, mergeItems, user]);
 
   useEffect(() => { load(); }, [load]);
+  const onRefresh = useCallback(() => load({ force: true }), [load]);
 
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#fff" />}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor="#fff" />}>
       <ScreenHeader title="둘러보기" subtitle="전체공개된 사람들의 버킷을 구경해요. 타일을 누르면 자세히 보고 내 목록에 담을 수 있어요." />
       <View style={styles.filterBar}>
         <Pressable onPress={() => setFilter('all')} style={[styles.filterBtn, filter === 'all' && styles.filterBtnOn]}>
