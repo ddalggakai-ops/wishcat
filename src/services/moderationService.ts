@@ -40,14 +40,17 @@ export async function getBlockedIds(uid: string, force = false): Promise<Set<str
   try {
     const snap = await getDocs(collection(db, 'blocks', uid, 'blocked'));
     snap.forEach((d) => set.add(d.id));
+    // 성공했을 때만 캐시합니다.
+    blockCache.set(uid, set);
   } catch {
-    // 규칙이 아직 배포되지 않았을 수 있음 — 차단 없음으로 취급
+    // 목록을 못 읽었는데 "차단 없음"으로 캐시해 버리면, 한 번 실패한 뒤로 그 세션 내내 차단이
+    // 무효가 됐어요(껐다 켜야 복구). 실패한 결과는 저장하지 않고 다음에 다시 시도하게 둡니다.
   }
-  blockCache.set(uid, set);
   return set;
 }
 
 export async function blockUser(uid: string, targetUid: string): Promise<void> {
+  if (uid === targetUid) throw new Error('자기 자신은 차단할 수 없어요');
   await setDoc(blockDoc(uid, targetUid), { createdAt: serverTimestamp() });
   (await getBlockedIds(uid)).add(targetUid);
 }

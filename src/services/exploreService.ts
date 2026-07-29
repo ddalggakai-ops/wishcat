@@ -20,6 +20,11 @@ export const EXPLORE_LIMIT = 150;
 let exploreCache: { key: string; at: number; items: Item[] } | null = null;
 const EXPLORE_CACHE_TTL_MS = 20_000;
 
+/** 방금 누군가를 차단했을 때처럼, 캐시된 둘러보기 결과를 즉시 버려야 할 때 부릅니다. */
+export function clearExploreCache() {
+  exploreCache = null;
+}
+
 export async function getExploreItems(viewerUid: string, filter: 'all' | 'done' = 'all', opts?: { force?: boolean }): Promise<Item[]> {
   const cacheKey = `${viewerUid}:${filter}`;
   if (!opts?.force && exploreCache && exploreCache.key === cacheKey && Date.now() - exploreCache.at < EXPLORE_CACHE_TTL_MS) {

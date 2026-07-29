@@ -4,6 +4,7 @@ import Sheet from '../components/Sheet';
 import { EmojiPicker, Field, FieldLabel } from '../components/FormBits';
 import BubbleButton from '../components/Button';
 import { colors, radius, HELP_EMOJIS } from '../theme';
+import { alertDialog } from '../utils/dialog';
 import type { Item } from '../api/types';
 
 export default function HelpSheet({
@@ -30,6 +31,8 @@ export default function HelpSheet({
     try {
       await onSubmit({ title: title.trim(), emoji, text: text.trim() });
       onClose();
+    } catch {
+      await alertDialog('저장하지 못했어요', '잠시 뒤 다시 시도해주세요.');
     } finally {
       setSaving(false);
     }

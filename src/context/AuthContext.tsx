@@ -5,9 +5,11 @@ import {
 } from 'firebase/auth';
 import { auth, firebaseReady, firebaseInitError } from '../firebase/config';
 import { createUserProfile, fetchMe, updateMyProfile } from '../services/usersService';
-import { backfillOwnerPublic, clearViewerLikes, primeViewerLikes } from '../services/itemsService';
+import { backfillOwnerPublic, clearViewerLikes, migrateLegacyItems, primeViewerLikes } from '../services/itemsService';
 import { purgeMyData } from '../services/accountService';
 import { clearBlockCache, getBlockedIds } from '../services/moderationService';
+import { clearExploreCache } from '../services/exploreService';
+import { cancelAllReminders } from '../services/reminderService';
 import { setMyVisibility } from '../services/visibility';
 import { authErrorMessage } from '../firebase/authErrors';
 import type { MeUser } from '../api/types';
@@ -113,7 +115,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setMyVisibility(user.listPublic);
     if (backfilledRef.current === user.id) return;
     backfilledRef.current = user.id;
-    backfillOwnerPublic(user.id, user.listPublic).catch(() => {});
+    // 예전 아이템에 빠진 필드(ownerPublic/order/participants/helpedBy/categories)를 한 번에 채웁니다.
+    // (ownerPublic 백필도 여기에 포함됩니다.)
+    migrateLegacyItems(user.id, user.listPublic).catch(() => {});
     primeViewerLikes(user.id).catch(() => {});
     getBlockedIds(user.id).catch(() => {});
   }, [user]);
@@ -162,17 +166,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // 로그아웃/계정삭제 때 계정에 묶인 모든 흔적을 비웁니다.
+  // 예약된 목표일 알림을 취소하지 않으면 다른 계정으로 로그인해도 이전 계정 알림이 계속 왔고,
+  // 공개 여부를 기억하는 모듈 변수(visibility)나 캐시(좋아요/차단/둘러보기)가 계정 사이에 섞였어요.
+  const resetSessionState = useCallback(() => {
+    cancelAllReminders();
+    clearViewerLikes();
+    clearBlockCache();
+    clearExploreCache();
+    setMyVisibility(true); // 다음 로그인 전까지 기본값(공개)으로 되돌립니다.
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await signOut(auth);
     } finally {
-      clearViewerLikes();
-      clearBlockCache();
+      resetSessionState();
       setUser(null);
       setStartupError(null);
       setReady(true);
     }
-  }, []);
+  }, [resetSessionState]);
 
   const updateMe = useCallback(async (patch: Partial<Pick<MeUser, 'name' | 'bio' | 'listPublic' | 'photoUrl'>>, opts?: { knownItemIds?: string[] }) => {
     const current = userRef.current;
@@ -219,8 +233,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await reauthenticateWithCredential(fbUser, EmailAuthProvider.credential(fbUser.email || current.email, password));
       await purgeMyData(current.id);
       await deleteUser(fbUser);
-      clearViewerLikes();
-      clearBlockCache();
+      resetSessionState();
       setUser(null);
       setStartupError(null);
       setReady(true);
@@ -230,7 +243,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [resetSessionState]);
 
   const clearError = useCallback(() => setError(null), []);
   const clearJustRegistered = useCallback(() => setJustRegistered(false), []);

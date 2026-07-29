@@ -1,4 +1,4 @@
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, listAll, deleteObject } from 'firebase/storage';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { storage } from '../firebase/config';
 
@@ -40,4 +40,23 @@ export async function uploadPhoto(localUri: string, uid: string, folder: 'memori
   await uploadBytes(storageRef, blob, { contentType: `image/${ext}` });
   const url = await getDownloadURL(storageRef);
   return { url };
+}
+
+// 계정 삭제용 — 내가 올린 추억/프로필 사진 원본을 Storage에서 전부 지웁니다.
+// (예전엔 Firestore 문서만 지우고 Storage 파일은 남겨 용량을 계속 차지했어요.)
+// 규칙/네트워크 문제로 일부가 실패해도 계정 삭제 흐름을 막지 않도록 best-effort 로 처리합니다.
+export async function deleteAllUserPhotos(uid: string): Promise<number> {
+  let deleted = 0;
+  for (const folder of ['memories', 'avatars'] as const) {
+    try {
+      const dir = ref(storage, `${folder}/${uid}`);
+      const listing = await listAll(dir);
+      await Promise.all(
+        listing.items.map((it) => deleteObject(it).then(() => { deleted += 1; }).catch(() => {})),
+      );
+    } catch {
+      // 목록 조회 자체가 막히면 조용히 건너뜁니다.
+    }
+  }
+  return deleted;
 }

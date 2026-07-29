@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Sheet from '../components/Sheet';
 import { Field, FieldLabel } from '../components/FormBits';
@@ -8,7 +8,12 @@ import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
 import { colors } from '../theme';
 import { uploadPhoto } from '../services/uploadService';
+import { getBlockedIds, unblockUser } from '../services/moderationService';
+import { clearExploreCache } from '../services/exploreService';
+import { getUserBrief } from '../services/usersService';
+import { alertDialog, confirmDialog } from '../utils/dialog';
 import { useAuth } from '../context/AuthContext';
+import type { UserBrief } from '../api/types';
 
 export default function ProfileSheet({ visible, onClose, onReplayOnboarding }: { visible: boolean; onClose: () => void; onReplayOnboarding: () => void }) {
   const { user, updateMe, logout, deleteAccount } = useAuth();
@@ -21,6 +26,23 @@ export default function ProfileSheet({ visible, onClose, onReplayOnboarding }: {
   const [deletePw, setDeletePw] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [blocked, setBlocked] = useState<UserBrief[]>([]);
+  const [loadingBlocked, setLoadingBlocked] = useState(false);
+  const [unblocking, setUnblocking] = useState<string | null>(null);
+
+  const loadBlocked = useCallback(async () => {
+    if (!user) return;
+    setLoadingBlocked(true);
+    try {
+      const ids = await getBlockedIds(user.id, true);
+      const briefs = await Promise.all([...ids].map((id) => getUserBrief(id)));
+      setBlocked(briefs);
+    } catch {
+      setBlocked([]);
+    } finally {
+      setLoadingBlocked(false);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!visible || !user) return;
@@ -30,38 +52,48 @@ export default function ProfileSheet({ visible, onClose, onReplayOnboarding }: {
     setShowDelete(false);
     setDeletePw('');
     setDeleteError(null);
-  }, [visible, user]);
+    loadBlocked();
+  }, [visible, user, loadBlocked]);
 
-  const confirmDelete = () => {
-    Alert.alert(
-      '정말 계정을 삭제할까요?',
-      '내가 적은 꿈, 추억, 친구 관계가 모두 지워지고 되돌릴 수 없어요.',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '삭제할게요',
-          style: 'destructive',
-          onPress: async () => {
-            setDeleting(true);
-            setDeleteError(null);
-            try {
-              await deleteAccount(deletePw);
-              // 계정이 사라지면 로그인 화면으로 돌아갑니다.
-            } catch (e: any) {
-              setDeleteError(e?.message || '계정을 삭제하지 못했어요');
-            } finally {
-              setDeleting(false);
-            }
-          },
-        },
-      ],
-    );
+  const doUnblock = async (target: UserBrief) => {
+    if (!user) return;
+    setUnblocking(target.id);
+    try {
+      await unblockUser(user.id, target.id);
+      // 차단을 풀면 둘러보기에 그 사람이 다시 나타나야 하므로 캐시를 비웁니다.
+      clearExploreCache();
+      setBlocked((prev) => prev.filter((b) => b.id !== target.id));
+    } catch {
+      await alertDialog('차단을 풀지 못했어요', '잠시 뒤 다시 시도해주세요.');
+    } finally {
+      setUnblocking(null);
+    }
+  };
+
+  const confirmDelete = async () => {
+    const ok = await confirmDialog({
+      title: '정말 계정을 삭제할까요?',
+      message: '내가 적은 꿈, 추억, 친구 관계가 모두 지워지고 되돌릴 수 없어요.',
+      confirmLabel: '삭제할게요',
+      destructive: true,
+    });
+    if (!ok) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteAccount(deletePw);
+      // 계정이 사라지면 로그인 화면으로 돌아갑니다.
+    } catch (e: any) {
+      setDeleteError(e?.message || '계정을 삭제하지 못했어요');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const pickPhoto = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('사진 접근 권한이 필요해요', '설정에서 사진 라이브러리 접근을 허용해주세요.');
+      await alertDialog('사진 접근 권한이 필요해요', '설정에서 사진 라이브러리 접근을 허용해주세요.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7, allowsEditing: true, aspect: [1, 1] });
@@ -71,7 +103,7 @@ export default function ProfileSheet({ visible, onClose, onReplayOnboarding }: {
       const res = await uploadPhoto(result.assets[0].uri, user.id, 'avatars');
       setPhotoUrl(res.url);
     } catch (e) {
-      Alert.alert('업로드 실패', '사진을 업로드하지 못했어요. 다시 시도해주세요.');
+      await alertDialog('업로드 실패', '사진을 업로드하지 못했어요. 다시 시도해주세요.');
     } finally {
       setUploadingPhoto(false);
     }
@@ -82,6 +114,8 @@ export default function ProfileSheet({ visible, onClose, onReplayOnboarding }: {
     try {
       await updateMe({ name: name.trim() || '나', bio: bio.trim(), photoUrl });
       onClose();
+    } catch {
+      await alertDialog('저장하지 못했어요', '잠시 뒤 다시 시도해주세요.');
     } finally {
       setSaving(false);
     }
@@ -112,6 +146,35 @@ export default function ProfileSheet({ visible, onClose, onReplayOnboarding }: {
       <BubbleButton title="저장하기" onPress={submit} loading={saving} disabled={uploadingPhoto} full style={{ marginTop: 22 }} />
       <BubbleButton title="✦ 앱 소개 다시 보기" onPress={() => { onClose(); onReplayOnboarding(); }} variant="ghost" full style={{ marginTop: 12 }} />
       <BubbleButton title="로그아웃" onPress={() => { onClose(); logout(); }} variant="ghost" full style={{ marginTop: 12 }} textColor="#D8544E" />
+
+      <View style={styles.blockSection}>
+        <Text style={styles.blockTitle}>차단한 사용자</Text>
+        {loadingBlocked ? (
+          <ActivityIndicator color={colors.accent} style={{ marginTop: 10 }} />
+        ) : blocked.length === 0 ? (
+          <Text style={styles.blockEmpty}>차단한 사용자가 없어요.</Text>
+        ) : (
+          blocked.map((b) => (
+            <View key={b.id} style={styles.blockRow}>
+              <Avatar name={b.name} photoUrl={b.photoUrl} size={34} />
+              <Text style={styles.blockName} numberOfLines={1}>{b.name}</Text>
+              <Pressable
+                onPress={() => doUnblock(b)}
+                disabled={unblocking === b.id}
+                style={styles.unblockBtn}
+                accessibilityRole="button"
+                accessibilityLabel={`${b.name} 차단 해제`}
+              >
+                {unblocking === b.id ? (
+                  <ActivityIndicator size="small" color={colors.accent} />
+                ) : (
+                  <Text style={styles.unblockText}>차단 해제</Text>
+                )}
+              </Pressable>
+            </View>
+          ))
+        )}
+      </View>
 
       <View style={styles.danger}>
         {!showDelete ? (
@@ -160,6 +223,13 @@ const styles = StyleSheet.create({
   },
   photoLabel: { fontSize: 12.5, fontWeight: '700', color: colors.accentInk, marginTop: 8 },
   photoRemove: { fontSize: 11.5, color: colors.ink3, marginTop: 4 },
+  blockSection: { marginTop: 24, paddingTop: 18, borderTopWidth: 1, borderTopColor: colors.line },
+  blockTitle: { fontSize: 13, fontWeight: '700', color: colors.ink2, marginBottom: 8 },
+  blockEmpty: { fontSize: 12.5, color: colors.ink3, marginTop: 2 },
+  blockRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 7 },
+  blockName: { flex: 1, fontSize: 13.5, fontWeight: '600', color: colors.ink },
+  unblockBtn: { borderWidth: 1, borderColor: colors.line2, backgroundColor: colors.surface2, borderRadius: 999, paddingVertical: 7, paddingHorizontal: 14, minWidth: 76, alignItems: 'center' },
+  unblockText: { fontSize: 12, fontWeight: '700', color: colors.accentInk },
   danger: { marginTop: 26, paddingTop: 18, borderTopWidth: 1, borderTopColor: colors.line },
   dangerToggle: { alignSelf: 'center', paddingVertical: 8, paddingHorizontal: 14 },
   dangerToggleText: { fontSize: 12, color: colors.ink3, textDecorationLine: 'underline' },

@@ -5,6 +5,7 @@ import BubbleButton from '../components/Button';
 import Icon from '../components/Icon';
 import { STARTER_PACKS } from '../data/starterTemplates';
 import { colors, radius } from '../theme';
+import { alertDialog } from '../utils/dialog';
 import { useApp } from '../context/AppContext';
 
 /**
@@ -47,6 +48,8 @@ export default function StarterSheet({
       const count = await bulkAddItems(chosen);
       onAdded(count);
       onClose();
+    } catch {
+      await alertDialog('담지 못했어요', '잠시 뒤 다시 시도해주세요.');
     } finally {
       setSaving(false);
     }

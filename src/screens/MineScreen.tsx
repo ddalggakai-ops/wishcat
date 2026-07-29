@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert, Animated, NativeScrollEvent, NativeSyntheticEvent, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
+  Animated, NativeScrollEvent, NativeSyntheticEvent, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import Avatar from '../components/Avatar';
 import BubbleButton from '../components/Button';
@@ -10,6 +10,7 @@ import { EmptyState, SectionHeader } from '../components/Basics';
 import ItemCard from '../components/ItemCard';
 import Icon from '../components/Icon';
 import { CATEGORIES, catColor, colors, radius, shadow } from '../theme';
+import { alertDialog, confirmDialog } from '../utils/dialog';
 import { useAuth } from '../context/AuthContext';
 import { useApp, useMyItems } from '../context/AppContext';
 import type { Item } from '../api/types';
@@ -103,9 +104,13 @@ export default function MineScreen({
   }, [user, togglingVisibility, updateMe, mineIds]);
 
   // 진행률/전체 통계는 필터와 무관하게 항상 전체 목록 기준으로 보여줍니다.
-  const pct = items.length ? Math.round((items.filter((i) => i.done).length / items.length) * 100) : 0;
-  const doneTotal = items.filter((i) => i.done).length;
-  const todoTotal = items.length - doneTotal;
+  // 단, '도와준 기록'(origin === 'helped')은 남의 꿈을 이뤄준 것이라 항상 done 상태예요.
+  // 이걸 내 달성률에 넣으면 남을 도울수록 내 달성률이 부풀려집니다. 내 꿈(직접 만든 것 + 함께하기)만 셉니다.
+  const dreamItems = useMemo(() => items.filter((i) => i.origin !== 'helped'), [items]);
+  const pct = dreamItems.length ? Math.round((dreamItems.filter((i) => i.done).length / dreamItems.length) * 100) : 0;
+  const doneTotal = dreamItems.filter((i) => i.done).length;
+  const todoTotal = dreamItems.length - doneTotal;
+  const dreamTotal = dreamItems.length;
 
   // 카테고리별 개수 상위 3개를 요약 카드의 미니 그래프로 보여줍니다.
   const topCategories = useMemo(() => {
@@ -119,17 +124,28 @@ export default function MineScreen({
   }, [items]);
 
   // "오늘 할 일" 같은 의미 없는 구획 대신, 전체 리스트 중 몇 개를 무작위로 뽑아 보여줍니다.
-  const randomPicks = useMemo(() => {
-    const pool = items.filter((i) => !i.done);
-    const shuffled = [...pool];
-    for (let i = shuffled.length - 1; i > 0; i--) {
+  // 섞는 '순서'는 개수가 바뀔 때만 새로 정하고(자주 흔들리지 않도록), 실제로 '무엇을 보여줄지'는
+  // 매번 지금 목록에서 다시 찾습니다 — 예전엔 개수만 보고 갱신해서, 완료·삭제된 꿈이 "아직 안 이룸"
+  // 상태 그대로 추천 카드에 계속 남아 있었어요.
+  const shuffledIds = useMemo(() => {
+    const ids = items.filter((i) => !i.done).map((i) => i.id);
+    for (let i = ids.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      [ids[i], ids[j]] = [ids[j], ids[i]];
     }
-    return shuffled.slice(0, RANDOM_PICK_COUNT);
-    // items 배열 자체가 바뀔 때만(새로고침/추가/완료 등) 다시 섞이도록 items.length를 키로 씁니다.
+    return ids;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items.length]);
+  const randomPicks = useMemo(() => {
+    const byId = new Map(items.map((i) => [i.id, i]));
+    const picks: Item[] = [];
+    for (const id of shuffledIds) {
+      const it = byId.get(id);
+      if (it && !it.done) picks.push(it);
+      if (picks.length >= RANDOM_PICK_COUNT) break;
+    }
+    return picks;
+  }, [shuffledIds, items]);
 
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -181,18 +197,18 @@ export default function MineScreen({
     setSelectedIds((prev) => (prev.size === all.length ? new Set() : new Set(all.map((i) => i.id))));
   }, [todo, done]);
 
-  const doDeleteSelected = useCallback(() => {
+  const doDeleteSelected = useCallback(async () => {
     const ids = [...selectedIds];
     if (!ids.length) return;
-    Alert.alert(`${ids.length}개를 삭제할까요?`, '삭제하면 되돌릴 수 없어요.', [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '삭제', style: 'destructive', onPress: async () => {
-          await deleteItems(ids);
-          exitSelectMode();
-        },
-      },
-    ]);
+    const ok = await confirmDialog({ title: `${ids.length}개를 삭제할까요?`, message: '삭제하면 되돌릴 수 없어요.', confirmLabel: '삭제', destructive: true });
+    if (!ok) return;
+    try {
+      await deleteItems(ids);
+      exitSelectMode();
+    } catch {
+      // 예전엔 실패해도 아무 말 없이 선택 모드가 그대로 멈춰 있었어요.
+      await alertDialog('삭제하지 못했어요', '잠시 뒤 다시 시도해주세요.');
+    }
   }, [selectedIds, deleteItems, exitSelectMode]);
 
   const moveInSection = useCallback((list: Item[], item: Item, dir: -1 | 1) => {
@@ -205,29 +221,37 @@ export default function MineScreen({
     reorderItems(next.map((it, i) => ({ id: it.id, order: (i + 1) * 10 })));
   }, [reorderItems]);
 
-  const onToggleDone = useCallback((item: Item) => {
+  const onToggleDone = useCallback(async (item: Item) => {
     if (item.origin === 'helped') { onMemory(item); return; }
-    if (!item.done) onMemory(item);
-    else reopenItem(item.id);
+    if (!item.done) { onMemory(item); return; }
+    // 이룬 꿈을 '다시 담기' 하면 사진과 글이 지워집니다. 기록이 남아 있으면 한 번 확인해요.
+    // (체크 표시가 작아서 스크롤 중에 잘못 눌러 기록이 통째로 날아가는 일이 있었어요.)
+    const hasRecord = !!(item.memory && (item.memory.text || (item.memory.photos?.length || item.memory.photo)));
+    if (hasRecord) {
+      const ok = await confirmDialog({
+        title: '다시 담을까요?',
+        message: '적어둔 기록(사진·글)은 지워지고 되돌릴 수 없어요.',
+        confirmLabel: '다시 담기',
+        destructive: true,
+      });
+      if (!ok) return;
+    }
+    reopenItem(item.id).catch(() => alertDialog('되돌리지 못했어요', '잠시 뒤 다시 시도해주세요.'));
   }, [onMemory, reopenItem]);
 
   const onStartProgress = useCallback((item: Item) => {
-    startItem(item.id).catch(() => Alert.alert('시작하지 못했어요', '잠시 뒤 다시 시도해주세요.'));
+    startItem(item.id).catch(() => alertDialog('시작하지 못했어요', '잠시 뒤 다시 시도해주세요.'));
   }, [startItem]);
 
-  const onStopProgress = useCallback((item: Item) => {
-    Alert.alert(
-      '진행을 중단할까요?',
-      `${item.emoji} ${item.title}\n정말로 중단하시겠어요?`,
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '중단하기', style: 'destructive', onPress: () => {
-            stopItem(item.id).catch(() => Alert.alert('중단하지 못했어요', '잠시 뒤 다시 시도해주세요.'));
-          },
-        },
-      ]
-    );
+  const onStopProgress = useCallback(async (item: Item) => {
+    const ok = await confirmDialog({
+      title: '진행을 중단할까요?',
+      message: `${item.emoji} ${item.title}\n정말로 중단하시겠어요?`,
+      confirmLabel: '중단하기',
+      destructive: true,
+    });
+    if (!ok) return;
+    stopItem(item.id).catch(() => alertDialog('중단하지 못했어요', '잠시 뒤 다시 시도해주세요.'));
   }, [stopItem]);
 
   const onCardPress = useCallback((item: Item) => {
@@ -255,7 +279,7 @@ export default function MineScreen({
           <View style={styles.pTop}>
             <Avatar name={user.name} photoUrl={user.photoUrl} size={74} />
             <View style={styles.stats}>
-              <Stat label="꿈" value={items.length} />
+              <Stat label="꿈" value={dreamTotal} />
               <Stat label="이룬 꿈" value={doneTotal} onPress={scrollToDone} />
             </View>
           </View>
@@ -282,7 +306,7 @@ export default function MineScreen({
               <View style={styles.summaryStats}>
                 <SummaryStat label="이룬 꿈" value={doneTotal} onPress={scrollToDone} />
                 <SummaryStat label="도전 중" value={todoTotal} />
-                <SummaryStat label="전체" value={items.length} />
+                <SummaryStat label="전체" value={dreamTotal} />
               </View>
             </View>
             {topCategories.length > 0 && (
@@ -349,12 +373,15 @@ export default function MineScreen({
               <Pressable
                 onPress={() => setSortByPriority((v) => !v)}
                 style={[styles.viewToggle, sortByPriority && styles.viewToggleOn]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: sortByPriority }}
+                accessibilityLabel="우선순위순 정렬"
               >
                 <Text style={{ fontSize: 12.5, fontWeight: '600', color: sortByPriority ? '#fff' : colors.ink2 }}>
                   {sortByPriority ? '✓ 우선순위순' : '우선순위순 정렬'}
                 </Text>
               </Pressable>
-              <Pressable onPress={() => setCompact(!compact)} style={styles.viewToggle}>
+              <Pressable onPress={() => setCompact(!compact)} style={styles.viewToggle} accessibilityRole="button" accessibilityLabel={compact ? '상세 보기로 전환' : '간단히 보기로 전환'}>
                 <Text style={{ fontSize: 12.5, fontWeight: '600', color: colors.ink2 }}>{compact ? '상세 보기' : '간단히 보기'}</Text>
               </Pressable>
             </View>
@@ -437,7 +464,7 @@ export default function MineScreen({
             <Icon name="close" size={16} color={colors.ink2} />
           </Pressable>
           <Text style={styles.selectBarCount}>{selectedIds.size}개 선택</Text>
-          <Pressable onPress={selectAllVisible} style={styles.selectBarAll}>
+          <Pressable onPress={selectAllVisible} style={styles.selectBarAll} accessibilityRole="button" accessibilityLabel="전체 선택 또는 해제">
             <Text style={styles.selectBarAllText}>전체 선택/해제</Text>
           </Pressable>
           <BubbleButton small variant="line" title="🗑 삭제" onPress={doDeleteSelected} disabled={!selectedIds.size} />
@@ -489,7 +516,13 @@ function PressScaleCard({ item, idx, onPress }: { item: Item; idx: number; onPre
 function FilterChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   const cc = catColor(label === '전체' ? null : label);
   return (
-    <Pressable onPress={onPress} style={[styles.chip, { backgroundColor: active ? colors.accent : cc.bg }]}>
+    <Pressable
+      onPress={onPress}
+      style={[styles.chip, { backgroundColor: active ? colors.accent : cc.bg }]}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={`${label} 필터`}
+    >
       <Text style={{ color: active ? '#fff' : cc.ink, fontSize: 12.5, fontWeight: '600' }}>{active && label !== '전체' ? '✓ ' : ''}{label}</Text>
     </Pressable>
   );

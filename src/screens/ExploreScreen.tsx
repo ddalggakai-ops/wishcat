@@ -22,16 +22,21 @@ export default function ExploreScreen({
   const [filter, setFilter] = useState<'all' | 'done'>('all');
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [toggleW, setToggleW] = useState(0);
   const toggleAnim = useRef(new Animated.Value(0)).current;
 
   const load = useCallback(async (opts?: { force?: boolean }) => {
     if (!user) return;
     setLoading(true);
+    setFailed(false);
     try {
       const res = await getExploreItems(user.id, filter, opts);
       setItems(res);
       mergeItems(res);
+    } catch {
+      // 예전엔 불러오기가 실패해도 그냥 "버킷이 없어요"라고만 떠서 다시 시도할 방법이 없었어요.
+      setFailed(true);
     } finally {
       setLoading(false);
     }
@@ -73,7 +78,18 @@ export default function ExploreScreen({
       </View>
 
       {items.length === 0 ? (
-        <EmptyState icon="compass-outline" title="해당하는 버킷이 없어요" subtitle="다른 필터를 눌러보세요" />
+        failed ? (
+          <View>
+            <EmptyState icon="alert-circle-outline" title="불러오지 못했어요" subtitle="네트워크 상태를 확인하고 다시 시도해주세요" />
+            {!loading ? (
+              <Pressable onPress={() => load({ force: true })} style={styles.retryBtn} accessibilityRole="button" accessibilityLabel="다시 시도">
+                <Text style={styles.retryText}>다시 시도</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : (
+          <EmptyState icon="compass-outline" title="해당하는 버킷이 없어요" subtitle="다른 필터를 눌러보세요" />
+        )
       ) : (
         <View style={styles.grid}>
           {items.map((raw, idx) => {
@@ -167,6 +183,8 @@ const styles = StyleSheet.create({
   toggleTrack: { flexDirection: 'row', backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.line, borderRadius: 13, padding: 3, alignSelf: 'flex-start', marginBottom: 6, position: 'relative' },
   toggleThumb: { position: 'absolute', top: 3, bottom: 3, left: 3, borderRadius: 10, backgroundColor: colors.surface, ...shadow.sm },
   toggleHalf: { paddingVertical: 8, paddingHorizontal: 18, borderRadius: 10 },
+  retryBtn: { alignSelf: 'center', marginTop: 14, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.line, borderRadius: 99, paddingVertical: 10, paddingHorizontal: 22 },
+  retryText: { fontSize: 13, fontWeight: '700', color: colors.accent },
   toggleText: { fontSize: 13, fontWeight: '600', color: colors.ink3, textAlign: 'center' },
   toggleTextOn: { color: colors.accent },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 11, marginTop: 8 },

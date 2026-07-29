@@ -42,6 +42,10 @@ export default function LocationMapPicker({
 
   const [center, setCenter] = useState(startPos);
   const dragStart = useRef(center);
+  // panResponder는 처음 한 번만 만들어지기 때문에 그 안의 콜백은 첫 렌더의 center만 붙들고 있었어요.
+  // 그래서 두 번째로 끌면 늘 '처음 시작 지점'으로 튀었습니다. 최신 center를 ref로 따로 들고 참조합니다.
+  const centerRef = useRef(center);
+  centerRef.current = center;
 
   // 시트를 새로 열 때마다(=visible이 true가 될 때마다) 시작 위치로 리셋합니다.
   useEffect(() => {
@@ -56,7 +60,7 @@ export default function LocationMapPicker({
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) > 2 || Math.abs(g.dy) > 2,
-      onPanResponderGrant: () => { dragStart.current = center; },
+      onPanResponderGrant: () => { dragStart.current = centerRef.current; },
       onPanResponderMove: (_e, g) => {
         setCenter({
           x: dragStart.current.x - g.dx / DISPLAY_TILE,

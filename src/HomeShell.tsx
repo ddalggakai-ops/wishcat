@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SkyBackground from './components/SkyBackground';
 import BottomNav, { TabKey } from './components/BottomNav';
@@ -22,6 +22,7 @@ import StarterSheet from './sheets/StarterSheet';
 import ItemDetailSheet from './sheets/ItemDetailSheet';
 import ReportSheet from './sheets/ReportSheet';
 import { useApp } from './context/AppContext';
+import { confirmDialog } from './utils/dialog';
 import type { Item } from './api/types';
 
 type PersonView = { id: string; name: string; isFriendTab: boolean } | null;
@@ -86,17 +87,16 @@ export default function HomeShell() {
     showToast(`${helpItemTarget.owner.name}님의 꿈을 도왔어요`);
   };
 
-  const confirmDelete = (item: Item) => {
-    Alert.alert('꿈을 삭제할까요?', item.title, [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '삭제', style: 'destructive', onPress: async () => {
-          setMenuItem(null);
-          await deleteItem(item.id);
-          showToast('꿈을 삭제했어요');
-        },
-      },
-    ]);
+  const confirmDelete = async (item: Item) => {
+    const ok = await confirmDialog({ title: '꿈을 삭제할까요?', message: item.title, confirmLabel: '삭제', destructive: true });
+    if (!ok) return;
+    setMenuItem(null);
+    try {
+      await deleteItem(item.id);
+      showToast('꿈을 삭제했어요');
+    } catch {
+      showToast('삭제하지 못했어요. 잠시 뒤 다시 시도해주세요');
+    }
   };
 
   let content: React.ReactNode;

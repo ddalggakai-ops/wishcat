@@ -5,8 +5,25 @@ rules_version = '2';
 // - 프로필 사진: avatars/{내 uid}/파일명
 service firebase.storage {
   match /b/{bucket}/o {
+
+    // 이 소유자(uid)의 콘텐츠를 지금 로그인한 사람이 볼 수 있는지 판단합니다.
+    // Firestore의 items 읽기 규칙과 같은 기준(본인 · 친구 · 공개 사용자)을 그대로 씁니다.
+    // 예전엔 로그인만 했으면 누구나 읽을 수 있어서, 목록을 비공개로 바꿔도 사진 주소를 아는
+    // 사람은 계속 볼 수 있었어요. 이제 비공개 사용자의 추억 사진은 본인과 친구만 볼 수 있습니다.
+    function ownerVisibleTo(uid) {
+      return request.auth != null && (
+        request.auth.uid == uid
+        || firestore.exists(/databases/(default)/documents/friendships/$(request.auth.uid + '_' + uid))
+        || (
+          firestore.exists(/databases/(default)/documents/users/$(uid))
+          && firestore.get(/databases/(default)/documents/users/$(uid)).data.get('listPublic', true) != false
+        )
+      );
+    }
+
     match /memories/{uid}/{fileName} {
-      allow read: if request.auth != null;
+      // 추억 사진은 소유자의 공개 여부를 따릅니다(본인/친구/공개일 때만 읽기).
+      allow read: if ownerVisibleTo(uid);
       allow write: if request.auth != null
         && request.auth.uid == uid
         && request.resource.size < 8 * 1024 * 1024
@@ -15,6 +32,9 @@ service firebase.storage {
     }
 
     match /avatars/{uid}/{fileName} {
+      // 프로필 사진은 이름이 보이는 모든 곳(친구 목록·참여자·둘러보기 소유자 줄 등)에 함께 뜨는
+      // 낮은 민감도 정보라, 매 이미지 로드마다 Firestore를 한 번씩 더 읽는 비용을 피하기 위해
+      // 로그인한 사용자면 읽을 수 있게 둡니다. 더 엄격히 막고 싶으면 위 ownerVisibleTo(uid)로 바꾸면 돼요.
       allow read: if request.auth != null;
       allow write: if request.auth != null
         && request.auth.uid == uid

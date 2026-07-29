@@ -8,6 +8,15 @@ import { getMyVisibility } from './visibility';
 import { MAX_MEMORY_PHOTOS } from '../api/types';
 import type { Item, Location, Priority } from '../api/types';
 
+// 완료/도움 기록에 찍는 날짜 도장 — 'YYYY.MM.DD'.
+// 예전엔 new Date().toISOString()(=UTC) 앞 10자리를 썼는데, 한국 시간 새벽 0~9시에 완료하면
+// 세계 표준시로는 아직 '어제'라 하루 전 날짜가 찍혔습니다. 기기(로컬) 시간 기준으로 바꿉니다.
+function localDateStamp(): string {
+  const d = new Date();
+  const p = (x: number) => String(x).padStart(2, '0');
+  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())}`;
+}
+
 export interface NewItemPayload {
   title: string;
   emoji: string;
@@ -221,15 +230,36 @@ export async function deleteItems(ids: string[]): Promise<void> {
 
 /** 수동 정렬 순서를 한 번에 반영 (위/아래로 옮기기) */
 export async function reorderItems(updates: { id: string; order: number }[]): Promise<void> {
-  const batch = writeBatch(db);
-  updates.forEach(({ id, order }) => batch.update(itemDoc(id), { order }));
-  await batch.commit();
+  // 배치 하나에는 최대 500개 쓰기만 담깁니다. 아직 이루지 않은 항목이 아주 많으면(500개↑)
+  // 순서 저장이 통째로 실패했어요. 다른 일괄 작업과 똑같이 400개씩 나눠 커밋합니다.
+  const CHUNK = 400;
+  for (let i = 0; i < updates.length; i += CHUNK) {
+    const batch = writeBatch(db);
+    updates.slice(i, i + CHUNK).forEach(({ id, order }) => batch.update(itemDoc(id), { order }));
+    await batch.commit();
+  }
 }
 
 export async function completeItem(id: string, uid: string, payload: { photos?: string[]; text?: string }): Promise<Item> {
-  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
   const photos = (payload.photos || []).slice(0, MAX_MEMORY_PHOTOS);
-  await updateDoc(itemDoc(id), { done: true, memory: { photo: photos[0] || null, photos, text: payload.text || '', date } });
+  const text = (payload.text || '').trim();
+  const hasNewRecord = photos.length > 0 || text.length > 0;
+
+  const patch: Record<string, any> = { done: true };
+  if (hasNewRecord) {
+    // 사진/글이 있으면 그대로 기록을 씁니다.
+    patch.memory = { photo: photos[0] || null, photos, text, date: localDateStamp() };
+  } else {
+    // 사진도 글도 없이 '완료만' 하는 경우: 이미 적어둔 기록이 있으면 절대 건드리지 않습니다.
+    // (예전엔 빈 값으로 덮어써서 사진·글·날짜가 통째로 사라졌고 되돌릴 방법이 없었어요.)
+    const cur = await getDoc(itemDoc(id));
+    const curMemory = cur.exists() ? (cur.data() as RawItem).memory : null;
+    patch.memory = curMemory && (curMemory.text || (curMemory.photos?.length || curMemory.photo))
+      ? curMemory
+      : { photo: null, photos: [], text: '', date: localDateStamp() };
+  }
+
+  await updateDoc(itemDoc(id), patch);
   const snap = await getDoc(itemDoc(id));
   return hydrateItem(id, snap.data() as RawItem, uid);
 }
@@ -264,13 +294,17 @@ export async function joinItem(targetId: string, uid: string): Promise<void> {
   const existing = await getDocs(query(itemsCol(), where('ownerId', '==', uid), where('origin', '==', 'joined'), where('sourceItemId', '==', targetId)));
   const alreadyParticipant = (target.participants || []).includes(uid);
 
+  // 함께하기가 원자적이지 않아서, 통신이 느릴 때 버튼을 두 번 누르면 두 번 다 "아직 안 담았다"고
+  // 판단해 같은 꿈이 두 개 담겼습니다. 사본 문서 id를 (사람+원본) 조합으로 고정하면, 동시에 두 번
+  // 눌러도 두 write 가 같은 문서를 가리켜 하나만 만들어집니다(두 번째는 덮어쓰기).
+  const copyRef = doc(db, 'items', `joined_${uid}_${targetId}`);
+
   const batch = writeBatch(db);
   if (!alreadyParticipant) {
     batch.update(itemDoc(targetId), { participants: arrayUnion(uid), savesCount: increment(existing.empty ? 1 : 0) });
   }
   if (existing.empty) {
-    const newRef = doc(itemsCol());
-    batch.set(newRef, {
+    batch.set(copyRef, {
       ownerId: uid, title: target.title, emoji: target.emoji, note: target.note, categories: rawCategories(target), location: target.location,
       targetDate: null, priority: null, order: 0, ownerPublic: getMyVisibility(),
       done: false, memory: null, participants: [target.ownerId], origin: 'joined',
@@ -300,7 +334,7 @@ export async function helpItem(targetId: string, uid: string, payload: { title: 
   const target = targetSnap.data() as RawItem;
   if (target.ownerId === uid) throw new Error('내 꿈은 도와줄 수 없어요');
 
-  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
+  const date = localDateStamp();
   const batch = writeBatch(db);
   batch.update(itemDoc(targetId), { done: true, helpedBy: arrayUnion(uid), participants: arrayUnion(uid) });
   const newRef = doc(itemsCol());
@@ -352,6 +386,39 @@ export async function backfillOwnerPublic(uid: string, isPublic: boolean, knownI
   return stale.length;
 }
 
+/**
+ * 예전에 만들어진 내 아이템에 나중에 추가된 필드(ownerPublic, order, participants, helpedBy, categories)가
+ * 빠져 있으면 채워 넣습니다. 안 채우면 둘러보기에 안 뜨거나, 순서가 뒤죽박죽이거나, 함께하기/도움
+ * 업데이트가 보안 규칙(없는 배열 필드를 참조)에서 거부될 수 있어요. 로그인 직후 한 번 돌립니다.
+ * 이미 다 채워진 새 계정은 고칠 게 없어 쓰기가 0건이라 사실상 공짜예요.
+ */
+export async function migrateLegacyItems(uid: string, isPublic: boolean): Promise<number> {
+  const snap = await getDocs(query(itemsCol(), where('ownerId', '==', uid)));
+  const CHUNK = 400;
+  const stale = snap.docs.filter((d) => {
+    const r = d.data() as RawItem;
+    return r.ownerPublic !== isPublic
+      || typeof r.order !== 'number'
+      || !Array.isArray(r.participants)
+      || !Array.isArray(r.helpedBy)
+      || !Array.isArray((r as any).categories) && !(r as any).category;
+  });
+  for (let i = 0; i < stale.length; i += CHUNK) {
+    const batch = writeBatch(db);
+    stale.slice(i, i + CHUNK).forEach((d) => {
+      const r = d.data() as RawItem;
+      const patch: Record<string, any> = { ownerPublic: isPublic };
+      if (typeof r.order !== 'number') patch.order = 0;
+      if (!Array.isArray(r.participants)) patch.participants = [];
+      if (!Array.isArray(r.helpedBy)) patch.helpedBy = [];
+      if (!Array.isArray((r as any).categories) && !(r as any).category) patch.categories = [];
+      batch.update(d.ref, patch);
+    });
+    await batch.commit();
+  }
+  return stale.length;
+}
+
 /** 계정 삭제용 — 내가 만든 아이템을 전부 지웁니다. */
 export async function deleteAllMyItems(uid: string): Promise<number> {
   const snap = await getDocs(query(itemsCol(), where('ownerId', '==', uid)));
@@ -362,6 +429,25 @@ export async function deleteAllMyItems(uid: string): Promise<number> {
     await batch.commit();
   }
   return snap.docs.length;
+}
+
+/**
+ * 계정 삭제용 — 내가 남의 꿈에 눌러 둔 좋아요(items/{any}/likes/{내uid})를 전부 지웁니다.
+ * 컬렉션 그룹 색인이 아직 없으면 조용히 건너뜁니다(계정 삭제 흐름을 막지 않기 위해 best-effort).
+ */
+export async function deleteMyLikes(uid: string): Promise<number> {
+  try {
+    const snap = await getDocs(query(collectionGroup(db, 'likes'), where('userId', '==', uid)));
+    const CHUNK = 400;
+    for (let i = 0; i < snap.docs.length; i += CHUNK) {
+      const batch = writeBatch(db);
+      snap.docs.slice(i, i + CHUNK).forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    }
+    return snap.docs.length;
+  } catch {
+    return 0;
+  }
 }
 
 export async function toggleLike(itemId: string, uid: string): Promise<{ likedByMe: boolean }> {

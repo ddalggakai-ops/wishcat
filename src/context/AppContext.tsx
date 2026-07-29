@@ -119,7 +119,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const bulkAddItems: AppState['bulkAddItems'] = useCallback(async (payloads) => {
     const count = await itemsService.bulkAddItems(requireUid(), payloads);
-    await refreshMine(); // 여러 개를 한 번에 만들었으니 개별 병합 대신 통째로 다시 불러옵니다.
+    // 여러 개를 한 번에 만들었으니 통째로 다시 불러옵니다. 반드시 force —
+    // 방금(15초 캐시 안에) 목록을 불러온 상태면 캐시에 걸려 새로 담은 게 안 보였고,
+    // 사용자가 실패한 줄 알고 한 번 더 담아 중복이 생겼어요.
+    await refreshMine({ force: true });
     return count;
   }, [refreshMine]);
 
@@ -190,14 +193,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await itemsService.joinItem(id, requireUid());
     const item = await itemsService.getItemById(id, uidRef.current || undefined);
     if (item) mergeItems([item]);
-    await refreshMine();
+    // force: 방금 담은 사본이 15초 캐시에 걸려 내 목록에 안 나타나던 문제를 막습니다.
+    await refreshMine({ force: true });
   }, [mergeItems, refreshMine]);
 
   const leaveItem = useCallback(async (id: string) => {
     await itemsService.leaveItem(id, requireUid());
     const item = await itemsService.getItemById(id, uidRef.current || undefined);
     if (item) mergeItems([item]);
-    await refreshMine();
+    await refreshMine({ force: true });
   }, [mergeItems, refreshMine]);
 
   const helpItem: AppState['helpItem'] = useCallback(async (id, payload) => {
@@ -210,19 +214,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const toggleLike = useCallback(async (id: string) => {
     const uid = requireUid();
-    // optimistic update
+    const prevItem = cacheRef.current[id];
+    // 낙관적 업데이트 — 화면을 먼저 바꾸고 서버에 보냅니다. 좋아요 수가 음수로 내려가지 않게 막습니다.
     setItemsById((prev) => {
       const cur = prev[id];
       if (!cur) return prev;
       const likedByMe = !cur.likedByMe;
-      return { ...prev, [id]: { ...cur, likedByMe, likesCount: cur.likesCount + (likedByMe ? 1 : -1) } };
+      return { ...prev, [id]: { ...cur, likedByMe, likesCount: Math.max(0, cur.likesCount + (likedByMe ? 1 : -1)) } };
     });
     try {
       await itemsService.toggleLike(id, uid);
       const item = await itemsService.getItemById(id, uid);
       if (item) mergeItems([item]);
-    } catch (e) {
-      throw e;
+    } catch {
+      // 서버가 실패하면 하트가 켜진(또는 꺼진) 채 남지 않도록 누르기 전 상태로 되돌립니다.
+      if (prevItem) setItemsById((prev) => ({ ...prev, [id]: prevItem }));
     }
   }, [mergeItems]);
 
@@ -249,5 +255,7 @@ export function useApp() {
 
 export function useMyItems() {
   const { itemsById, mineIds } = useApp();
-  return mineIds.map((id) => itemsById[id]).filter(Boolean);
+  // 매 렌더마다 새 배열을 만들면(참조가 매번 달라지면) 이 배열을 의존성으로 쓰는 화면의 모든
+  // useMemo가 무력화돼 목록이 길수록 눈에 띄게 느려졌어요. 입력이 그대로면 같은 배열을 재사용합니다.
+  return useMemo(() => mineIds.map((id) => itemsById[id]).filter(Boolean), [itemsById, mineIds]);
 }

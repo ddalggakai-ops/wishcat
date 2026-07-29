@@ -34,7 +34,7 @@ export function elapsedDaysLabel(startedAt: string | null | undefined, today = n
   return Math.max(0, Math.round((now - startUTC) / 86400000));
 }
 
-export default function ItemCard({
+function ItemCard({
   item, ctx, compact, viewerId, onToggleDone, onMemory, onShare, onJoin, onLeave, onHelp, onMenu, onReport,
   onCardPress, selectable, selected, onToggleSelect, onLongPress, canMoveUp, canMoveDown, onMoveUp, onMoveDown,
   onStartProgress, onStopProgress,
@@ -84,12 +84,26 @@ export default function ItemCard({
 
   const catBg = catColor(item.categories?.[0]).bg;
   const selectBox = ctx === 'mine' && selectable ? (
-    <Pressable onPress={() => onToggleSelect?.(item)} style={[styles.selectBox, selected && styles.selectBoxOn]} hitSlop={6}>
+    <Pressable
+      onPress={() => onToggleSelect?.(item)}
+      style={[styles.selectBox, selected && styles.selectBoxOn]}
+      hitSlop={10}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: !!selected }}
+      accessibilityLabel={item.title}
+    >
       {selected ? <Icon name="checkmark" size={14} color="#fff" /> : null}
     </Pressable>
   ) : null;
   const lead = selectBox || (ctx === 'mine' ? (
-    <Pressable onPress={() => onToggleDone?.(item)} style={[styles.check, item.done && styles.checkDone]}>
+    <Pressable
+      onPress={() => onToggleDone?.(item)}
+      style={[styles.check, item.done && styles.checkDone]}
+      hitSlop={10}
+      accessibilityRole="button"
+      accessibilityState={{ checked: item.done }}
+      accessibilityLabel={item.done ? `${item.title} 다시 담기` : `${item.title} 완료하기`}
+    >
       {item.done ? <Icon name="checkmark" size={14} color="#fff" /> : null}
     </Pressable>
   ) : (
@@ -260,6 +274,10 @@ export default function ItemCard({
     </Pressable>
   );
 }
+
+// 목록이 길 때(120개↑) 카드 하나가 바뀔 때마다 전부 다시 그리지 않도록 메모합니다.
+// 넘겨받는 콜백들이 호출부에서 useCallback으로 안정적으로 유지될 때 효과가 큽니다.
+export default React.memo(ItemCard);
 
 const styles = StyleSheet.create({
   card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: radius.lg, padding: 15, marginBottom: 10, ...shadow.sm },

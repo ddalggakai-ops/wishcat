@@ -20,11 +20,16 @@ export default function InviteModal({
   const { user } = useAuth();
   const [code, setCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    if (!visible) { setCode(null); return; }
+    if (!visible) { setCode(null); setFailed(false); return; }
     setLoading(true);
-    createInvite(item?.id).then(setCode).finally(() => setLoading(false));
+    setFailed(false);
+    createInvite(item?.id)
+      .then(setCode)
+      .catch(() => setFailed(true))
+      .finally(() => setLoading(false));
   }, [visible, item, createInvite]);
 
   // 앱이 없는 친구도 누를 수 있도록 웹 링크를 보냅니다.
@@ -34,8 +39,14 @@ export default function InviteModal({
     ? `${user.name}님이 위시캣에 초대했어요${item ? ` · "${item.title}" 함께해요` : ''} ✦\n${link}`
     : link;
 
-  const doShare = () => { Share.share({ message }).catch(() => {}); };
-  const doCopy = async () => { await Clipboard.setStringAsync(link); onToast('초대 링크를 복사했어요'); };
+  // 링크를 못 만들었는데도 복사/공유가 되면 빈 문자열을 복사한 뒤 "복사했어요"라고 잘못 알렸어요.
+  const canUseLink = !loading && !failed && !!link;
+  const doShare = () => { if (!canUseLink) return; Share.share({ message }).catch(() => {}); };
+  const doCopy = async () => {
+    if (!canUseLink) return;
+    await Clipboard.setStringAsync(link);
+    onToast('초대 링크를 복사했어요');
+  };
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -51,12 +62,18 @@ export default function InviteModal({
           </Text>
           <Text style={styles.sub}>앱이 없는 친구도 열 수 있어요 · 설치 후에도 초대가 이어집니다</Text>
           <View style={styles.linkRow}>
-            <Text numberOfLines={1} style={styles.linkText}>{loading ? '링크 만드는 중…' : link}</Text>
-            <Pressable style={styles.copyBtn} onPress={doCopy} disabled={loading}>
+            <Text numberOfLines={1} style={styles.linkText}>
+              {loading ? '링크 만드는 중…' : failed ? '링크를 만들지 못했어요' : link}
+            </Text>
+            <Pressable style={[styles.copyBtn, !canUseLink && styles.copyBtnOff]} onPress={doCopy} disabled={!canUseLink} accessibilityRole="button" accessibilityLabel="초대 링크 복사">
               <Text style={styles.copyText}>복사</Text>
             </Pressable>
           </View>
-          <BubbleButton title="친구에게 초대 보내기" onPress={doShare} disabled={loading} full style={{ marginTop: 16 }} />
+          {failed ? (
+            <BubbleButton title="다시 시도" onPress={() => { setFailed(false); setLoading(true); createInvite(item?.id).then(setCode).catch(() => setFailed(true)).finally(() => setLoading(false)); }} full style={{ marginTop: 16 }} />
+          ) : (
+            <BubbleButton title="친구에게 초대 보내기" onPress={doShare} disabled={!canUseLink} full style={{ marginTop: 16 }} />
+          )}
           <BubbleButton title="닫기" onPress={onClose} variant="ghost" full style={{ marginTop: 10 }} />
         </View>
       </View>
@@ -75,5 +92,6 @@ const styles = StyleSheet.create({
   linkRow: { flexDirection: 'row', gap: 8, backgroundColor: colors.surface2, borderRadius: 12, padding: 4, alignItems: 'center' },
   linkText: { flex: 1, fontSize: 12.5, color: colors.ink2, paddingLeft: 10 },
   copyBtn: { backgroundColor: colors.accent, borderRadius: 9, paddingVertical: 10, paddingHorizontal: 14 },
+  copyBtnOff: { opacity: 0.45 },
   copyText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 });

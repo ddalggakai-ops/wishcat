@@ -7,6 +7,7 @@ import Icon from '../components/Icon';
 import LocationMapPicker, { PickedLocation } from '../components/LocationMapPicker';
 import { LocationPreview } from '../components/Chips';
 import { CATEGORIES, EMOJIS, colors, radius } from '../theme';
+import { alertDialog } from '../utils/dialog';
 import type { Item, Location, Priority, Region } from '../api/types';
 
 export interface AddEditPayload {
@@ -21,8 +22,13 @@ export interface AddEditPayload {
 
 /** 오늘로부터 n개월 뒤를 'YYYY-MM-DD' 로 */
 function monthsAhead(n: number): string {
-  const d = new Date();
-  d.setMonth(d.getMonth() + n);
+  const now = new Date();
+  const day = now.getDate();
+  // 그냥 setMonth(+n)만 하면 달 길이를 고려하지 않아 1월 31일 → 3월 3일처럼 튀었어요.
+  // 일단 1일로 옮겨 달만 바꾼 뒤, 그 달의 마지막 날을 넘지 않도록 날짜를 맞춰줍니다.
+  const d = new Date(now.getFullYear(), now.getMonth() + n, 1);
+  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(day, lastDay));
   const p = (x: number) => String(x).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
@@ -93,13 +99,17 @@ export default function AddEditSheet({
     try {
       await onSubmit({
         title: title.trim(), emoji, note: note.trim(), categories,
-        location: locName.trim()
+        // 지도에서 좌표를 찍어 놓고 이름만 비우면 좌표까지 함께 버려졌어요.
+        // 이름이나 좌표 중 하나라도 있으면 위치를 저장합니다(이름은 비어 있어도 좌표는 지켜요).
+        location: (locName.trim() || pickedLoc)
           ? { name: locName.trim(), region, ...(pickedLoc ? { lat: pickedLoc.lat, lng: pickedLoc.lng } : {}) }
           : null,
         targetDate: isValidDate(targetDate.trim()) ? targetDate.trim() : null,
         priority,
       });
       onClose();
+    } catch {
+      await alertDialog('저장하지 못했어요', '잠시 뒤 다시 시도해주세요.');
     } finally {
       setSaving(false);
     }
@@ -184,7 +194,7 @@ export default function AddEditSheet({
 
 function Preset({ label, onPress }: { label: string; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={styles.preset}>
+    <Pressable onPress={onPress} style={styles.preset} accessibilityRole="button" accessibilityLabel={label}>
       <Text style={styles.presetText}>{label}</Text>
     </Pressable>
   );

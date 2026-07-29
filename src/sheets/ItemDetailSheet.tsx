@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Sheet from '../components/Sheet';
 import BubbleButton from '../components/Button';
@@ -9,6 +9,7 @@ import { CategoryChips, LocationChip, PriorityBadge } from '../components/Chips'
 import { dDayLabel } from '../components/ItemCard';
 import MemoryPhotoCarousel from '../components/MemoryPhotos';
 import { colors, catRole, gradients, radius } from '../theme';
+import { alertDialog } from '../utils/dialog';
 import { resolveImageUrl } from '../api/client';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
@@ -50,7 +51,7 @@ export default function ItemDetailSheet({
       await joinItem(live.id);
       onToast('내 목록에 담았어요 ✦');
     } catch {
-      Alert.alert('담지 못했어요', '잠시 뒤 다시 시도해주세요.');
+      await alertDialog('담지 못했어요', '잠시 뒤 다시 시도해주세요.');
     } finally {
       setBusy(false);
     }
@@ -62,7 +63,7 @@ export default function ItemDetailSheet({
       await leaveItem(live.id);
       onToast('함께하기를 취소했어요');
     } catch {
-      Alert.alert('취소하지 못했어요', '잠시 뒤 다시 시도해주세요.');
+      await alertDialog('취소하지 못했어요', '잠시 뒤 다시 시도해주세요.');
     } finally {
       setBusy(false);
     }

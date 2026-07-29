@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Sheet from '../components/Sheet';
 import { Field, FieldLabel } from '../components/FormBits';
 import BubbleButton from '../components/Button';
 import { colors, radius } from '../theme';
 import { blockUser, submitReport } from '../services/moderationService';
+import { clearExploreCache } from '../services/exploreService';
+import { alertDialog } from '../utils/dialog';
 import { useAuth } from '../context/AuthContext';
 import type { Item } from '../api/types';
 
@@ -54,11 +56,16 @@ export default function ReportSheet({
         targetOwnerId: item.owner.id,
         reason: detail.trim() ? `${reason} — ${detail.trim()}` : reason,
       });
-      if (alsoBlock) await blockUser(user.id, item.owner.id);
+      if (alsoBlock) {
+        await blockUser(user.id, item.owner.id);
+        // 둘러보기는 방금 받아온 결과를 20초 동안 그대로 쓰기 때문에, 캐시를 비우지 않으면
+        // 방금 차단한 사람의 글이 계속 보였어요. 차단 직후 그 캐시를 버립니다.
+        clearExploreCache();
+      }
       onDone(alsoBlock ? `신고했고 ${item.owner.name}님을 차단했어요` : '신고를 접수했어요');
       onClose();
     } catch {
-      Alert.alert('신고하지 못했어요', '잠시 뒤 다시 시도해주세요.');
+      alertDialog('신고하지 못했어요', '잠시 뒤 다시 시도해주세요.');
     } finally {
       setBusy(false);
     }

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Sheet from '../components/Sheet';
 import { Field, FieldLabel } from '../components/FormBits';
 import BubbleButton from '../components/Button';
 import Icon from '../components/Icon';
 import { colors } from '../theme';
+import { alertDialog } from '../utils/dialog';
 import { resolveImageUrl } from '../api/client';
 import { uploadPhoto } from '../services/uploadService';
 import { useAuth } from '../context/AuthContext';
@@ -39,7 +40,7 @@ export default function MemorySheet({
     if (remaining <= 0) return;
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('사진 접근 권한이 필요해요', '설정에서 사진 라이브러리 접근을 허용해주세요.');
+      await alertDialog('사진 접근 권한이 필요해요', '설정에서 사진 라이브러리 접근을 허용해주세요.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -56,7 +57,7 @@ export default function MemorySheet({
       const uploaded = await Promise.all(assets.map((a) => uploadPhoto(a.uri, user.id)));
       setPhotos((prev) => [...prev, ...uploaded.map((r) => r.url)].slice(0, MAX_MEMORY_PHOTOS));
     } catch (e) {
-      Alert.alert('업로드 실패', '사진을 업로드하지 못했어요. 다시 시도해주세요.');
+      await alertDialog('업로드 실패', '사진을 업로드하지 못했어요. 다시 시도해주세요.');
     } finally {
       setUploading(false);
     }
@@ -69,6 +70,8 @@ export default function MemorySheet({
     try {
       await onSubmit({ photoUrls: photos, text: text.trim() });
       onClose();
+    } catch {
+      await alertDialog('저장하지 못했어요', '잠시 뒤 다시 시도해주세요.');
     } finally {
       setSaving(false);
     }

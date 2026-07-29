@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, StyleSheet, Text, View } from 'react-native';
 import Avatar from '../components/Avatar';
 import BubbleButton from '../components/Button';
 import { absoluteFill, colors } from '../theme';
@@ -42,7 +42,9 @@ export default function AcceptInviteModal({
 
   return (
     <Modal visible={!!code} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} />
+      {/* 초대 수락 화면은 한 번 닫으면 다시 열 수 없어서, 바깥 어두운 부분을 실수로 눌러도
+          닫히지 않게 했습니다. 아래 '닫기' 버튼으로만 닫혀요. */}
+      <View style={styles.backdrop} />
       <View style={styles.center} pointerEvents="box-none">
         <View style={styles.card}>
           <Text style={styles.brand}>✦ 위시캣 초대</Text>
