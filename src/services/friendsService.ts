@@ -87,6 +87,14 @@ export async function acceptInvite(code: string, uid: string) {
 }
 
 export async function areFriends(uidA: string, uidB: string): Promise<boolean> {
-  const snap = await getDoc(doc(db, 'friendships', friendshipId(uidA, uidB)));
-  return snap.exists();
+  try {
+    const snap = await getDoc(doc(db, 'friendships', friendshipId(uidA, uidB)));
+    return snap.exists();
+  } catch {
+    // 아직 친구가 아닌 사이엔 friendships/{uidA_uidB} 문서 자체가 없는데, 보안 규칙이
+    // resource.data를 참조하다 보니 "존재하지 않는 문서 읽기"가 permission-denied로 거부될 수 있어요.
+    // (친구 사이면 문서가 있으니 정상적으로 위에서 답이 나오고, 여기로 안 옵니다.)
+    // 이 경우는 그냥 "친구 아님"으로 취급하면 되는 정상 상황이라 조용히 false를 돌려줍니다.
+    return false;
+  }
 }

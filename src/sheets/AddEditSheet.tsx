@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Sheet from '../components/Sheet';
 import { CategoryPicker, EmojiPicker, Field, FieldLabel, PriorityPicker, RegionToggle } from '../components/FormBits';
 import BubbleButton from '../components/Button';
+import Icon from '../components/Icon';
 import LocationMapPicker, { PickedLocation } from '../components/LocationMapPicker';
 import { LocationPreview } from '../components/Chips';
 import { CATEGORIES, EMOJIS, colors, radius } from '../theme';
@@ -40,12 +41,14 @@ export function isValidDate(s: string): boolean {
 }
 
 export default function AddEditSheet({
-  visible, onClose, editingItem, onSubmit,
+  visible, onClose, editingItem, onSubmit, onBulkImport,
 }: {
   visible: boolean;
   onClose: () => void;
   editingItem: Item | null;
   onSubmit: (payload: AddEditPayload) => Promise<void>;
+  /** 엑셀로 여러 개를 한 번에 담고 싶을 때 — 새로 추가할 때만 보여줘요(수정 중엔 의미가 없어서). */
+  onBulkImport?: () => void;
 }) {
   const [title, setTitle] = useState('');
   const [note, setNote] = useState('');
@@ -104,6 +107,11 @@ export default function AddEditSheet({
 
   return (
     <Sheet visible={visible} onClose={onClose} title={editingItem ? '꿈 수정' : '새로운 꿈'} subtitle="이루고 싶은 걸 적어보세요. 친구도 함께 이룰 수 있어요.">
+      {!editingItem && onBulkImport ? (
+        <Pressable onPress={onBulkImport} style={styles.bulkImportBtn} hitSlop={4}>
+          <Text style={styles.bulkImportText}>📊 엑셀로 여러 개 한 번에 추가</Text>
+        </Pressable>
+      ) : null}
       <FieldLabel>카테고리 (여러 개 선택 가능)</FieldLabel>
       <CategoryPicker value={categories} onChange={setCategories} />
       <FieldLabel>우선순위 (선택)</FieldLabel>
@@ -126,8 +134,8 @@ export default function AddEditSheet({
         {pickedLoc ? (
           <>
             <LocationPreview lat={pickedLoc.lat} lng={pickedLoc.lng} size={44} />
-            <Pressable onPress={() => setPickedLoc(null)} hitSlop={8}>
-              <Text style={styles.mapClear}>✕</Text>
+            <Pressable onPress={() => setPickedLoc(null)} hitSlop={8} accessibilityRole="button" accessibilityLabel="선택한 위치 지우기">
+              <Icon name="close" size={14} color={colors.ink2} />
             </Pressable>
           </>
         ) : null}
@@ -183,6 +191,11 @@ function Preset({ label, onPress }: { label: string; onPress: () => void }) {
 }
 
 const styles = StyleSheet.create({
+  bulkImportBtn: {
+    alignSelf: 'flex-start', borderWidth: 1, borderColor: colors.line2, backgroundColor: colors.surface2,
+    borderRadius: radius.pill, paddingVertical: 6, paddingHorizontal: 12, marginBottom: 14,
+  },
+  bulkImportText: { fontSize: 11.5, fontWeight: '600', color: colors.ink2 },
   presetRow: { flexDirection: 'row', gap: 7, flexWrap: 'wrap' },
   preset: { borderWidth: 1, borderColor: colors.line2, backgroundColor: colors.surface, borderRadius: radius.pill, paddingVertical: 7, paddingHorizontal: 13 },
   presetText: { fontSize: 12.5, fontWeight: '600', color: colors.ink2 },

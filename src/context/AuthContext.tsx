@@ -23,7 +23,7 @@ interface AuthState {
   register: (email: string, password: string, name: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  updateMe: (patch: Partial<Pick<MeUser, 'name' | 'bio' | 'listPublic' | 'photoUrl'>>) => Promise<void>;
+  updateMe: (patch: Partial<Pick<MeUser, 'name' | 'bio' | 'listPublic' | 'photoUrl'>>, opts?: { knownItemIds?: string[] }) => Promise<void>;
   /** 비밀번호 재설정 메일 보내기 */
   resetPassword: (email: string) => Promise<void>;
   /** 계정과 데이터 완전 삭제. 재인증을 위해 현재 비밀번호가 필요합니다. */
@@ -174,22 +174,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const updateMe = useCallback(async (patch: Partial<Pick<MeUser, 'name' | 'bio' | 'listPublic' | 'photoUrl'>>) => {
+  const updateMe = useCallback(async (patch: Partial<Pick<MeUser, 'name' | 'bio' | 'listPublic' | 'photoUrl'>>, opts?: { knownItemIds?: string[] }) => {
     const current = userRef.current;
     if (!current) return;
     const visibilityChanged = patch.listPublic !== undefined && patch.listPublic !== current.listPublic;
 
     // 비공개로 바꿀 때는 아이템 먼저 잠그고 프로필을 바꿉니다(공개로 남는 순간이 없도록).
     // 공개로 바꿀 때는 반대 순서 — 어느 쪽이든 "새는 방향"으로는 틈이 생기지 않게.
+    // knownItemIds(화면이 이미 갖고 있는 내 아이템 id 목록)를 넘겨주면 backfillOwnerPublic이
+    // 문서를 통째로 다시 읽지 않고 바로 써서 훨씬 빨라요.
     if (visibilityChanged && patch.listPublic === false) {
       setMyVisibility(false);
-      await backfillOwnerPublic(current.id, false);
+      await backfillOwnerPublic(current.id, false, opts?.knownItemIds);
     }
     await updateMyProfile(current.id, patch);
     setUser((prev) => (prev ? { ...prev, ...patch } : prev));
     if (visibilityChanged && patch.listPublic === true) {
       setMyVisibility(true);
-      await backfillOwnerPublic(current.id, true);
+      await backfillOwnerPublic(current.id, true, opts?.knownItemIds);
     }
   }, []);
 

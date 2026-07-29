@@ -4,6 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import Sheet from '../components/Sheet';
 import { Field, FieldLabel } from '../components/FormBits';
 import BubbleButton from '../components/Button';
+import Icon from '../components/Icon';
 import { colors } from '../theme';
 import { resolveImageUrl } from '../api/client';
 import { uploadPhoto } from '../services/uploadService';
@@ -84,8 +85,8 @@ export default function MemorySheet({
           return (
             <View key={uri} style={styles.thumbWrap}>
               <Image source={{ uri: previewUri }} style={styles.thumb} />
-              <Pressable style={styles.rm} onPress={() => removePhoto(uri)} hitSlop={4}>
-                <Text style={{ color: '#fff', fontSize: 13 }}>✕</Text>
+              <Pressable style={styles.rm} onPress={() => removePhoto(uri)} hitSlop={4} accessibilityRole="button" accessibilityLabel="사진 삭제">
+                <Icon name="close" size={13} color="#fff" />
               </Pressable>
             </View>
           );
@@ -94,7 +95,7 @@ export default function MemorySheet({
           <Pressable onPress={pickPhotos} style={styles.drop} disabled={uploading}>
             {uploading ? <ActivityIndicator color={colors.accent} /> : (
               <>
-                <Text style={{ fontSize: 20 }}>📷</Text>
+                <Icon name="camera-outline" size={22} color={colors.ink2} />
                 <Text style={styles.dropText}>사진 추가</Text>
               </>
             )}
@@ -112,7 +113,8 @@ const styles = StyleSheet.create({
   photoHeadRow: { flexDirection: 'row', alignItems: 'center' },
   photoRow: { flexDirection: 'row', gap: 10, paddingVertical: 4 },
   drop: {
-    width: 96, height: 96, borderWidth: 1.5, borderColor: colors.line2, borderStyle: 'dashed', borderRadius: 13,
+    width: 96, height: 96, borderWidth: 1.5, borderColor: colors.line2, borderRadius: 13,
+    backgroundColor: colors.surface2,
     alignItems: 'center', justifyContent: 'center', gap: 6,
   },
   dropText: { fontSize: 11.5, color: colors.ink2, fontWeight: '500' },

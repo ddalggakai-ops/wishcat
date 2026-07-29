@@ -78,8 +78,14 @@ service cloud.firestore {
 
     // ── friendships/{ownerUid_friendUid} ────────────────────────
     match /friendships/{friendshipId} {
+      // 친구가 아직 아닌 사이엔 friendships/{나_상대} 문서가 아예 없을 수 있어요(정상).
+      // 존재하지 않는 문서를 get()으로 읽을 때 resource가 null이 되는데, 그 상태에서
+      // resource.data를 바로 참조하면 규칙 평가 자체가 오류로 취급돼 거부(permission-denied)돼요.
+      // resource == null인 경우를 먼저 허용해서 "없다"는 답을 정상적으로 받을 수 있게 합니다
+      // (문서가 없으니 어차피 새어나갈 데이터도 없어요).
       allow read: if request.auth != null && (
-        resource.data.owner == request.auth.uid || resource.data.friend == request.auth.uid
+        resource == null
+        || resource.data.owner == request.auth.uid || resource.data.friend == request.auth.uid
       );
       allow create: if request.auth != null
         && (request.resource.data.owner == request.auth.uid || request.resource.data.friend == request.auth.uid)

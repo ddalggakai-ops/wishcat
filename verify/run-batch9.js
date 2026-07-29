@@ -221,7 +221,7 @@ const login = async (page) => {
     const types = await page.evaluate(() =>
       Array.from(document.querySelectorAll('input')).map((i) => `${i.type}:${i.getAttribute('inputmode') || '-'}:${i.getAttribute('autocomplete') || '-'}`));
     // 눈 아이콘을 눌러 마스킹 해제가 되는지
-    await page.getByText('👁', { exact: false }).first().click().catch(() => {});
+    await page.locator('[aria-label="비밀번호 보기"]').first().click().catch(() => {});
     await page.waitForTimeout(400);
     const typesAfter = await page.evaluate(() => Array.from(document.querySelectorAll('input')).map((i) => i.type));
     return { types, typesAfter };
@@ -259,7 +259,7 @@ const login = async (page) => {
   // ⑥ 목표일 입력 UI
   const target = await scenario(browser, '05-targetdate', async (page) => {
     await login(page);
-    await page.getByText('＋', { exact: true }).first().click();
+    await page.locator('[aria-label="새 꿈 추가"]').first().click();
     await page.waitForTimeout(800);
     await page.getByText('3개월 뒤', { exact: true }).first().click();
     await page.waitForTimeout(400);
@@ -329,7 +329,7 @@ const login = async (page) => {
   const checks = [
     ['[②] 비밀번호 칸이 마스킹(type=password)된다', auth.types.some((t) => t.startsWith('password')), auth.types.join(' | ')],
     ['[②] 이메일 칸에 email 자동완성/키보드 힌트가 붙는다', auth.types.some((t) => t.includes('email')), auth.types.join(' | ')],
-    ['[②] 👁 를 누르면 비밀번호가 보인다(text로 바뀜)', auth.typesAfter.every((t) => t !== 'password'), auth.typesAfter.join(' | ')],
+    ['[②] 눈 아이콘을 누르면 비밀번호가 보인다(text로 바뀜)', auth.typesAfter.every((t) => t !== 'password'), auth.typesAfter.join(' | ')],
     ['[②] 로그인 화면에 "비밀번호를 잊으셨나요?"가 있다', /비밀번호를 잊으셨나요/.test(auth.text), ''],
     ['[②] 재설정 화면이 열린다', /재설정 메일 보내기/.test(reset.text), reset.text.slice(0, 200)],
     ['[②] 재설정 메일 요청이 실제로 나간다(sendOobCode)', reset.seen.some((s) => s.includes('sendOobCode')), reset.seen.join(' | ')],

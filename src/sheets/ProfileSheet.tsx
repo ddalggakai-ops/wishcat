@@ -5,6 +5,7 @@ import Sheet from '../components/Sheet';
 import { Field, FieldLabel } from '../components/FormBits';
 import BubbleButton from '../components/Button';
 import Avatar from '../components/Avatar';
+import Icon from '../components/Icon';
 import { colors } from '../theme';
 import { uploadPhoto } from '../services/uploadService';
 import { useAuth } from '../context/AuthContext';
@@ -90,9 +91,9 @@ export default function ProfileSheet({ visible, onClose, onReplayOnboarding }: {
     <Sheet visible={visible} onClose={onClose} title="프로필 편집" subtitle="나를 표현하는 이름과 한 줄 소개를 적어보세요.">
       <View style={styles.photoRow}>
         <Pressable onPress={pickPhoto} disabled={uploadingPhoto}>
-          <Avatar name={name || user?.name || '나'} photoUrl={photoUrl} size={84} dashed />
+          <Avatar name={name || user?.name || '나'} photoUrl={photoUrl} size={84} />
           <View style={styles.photoBadge}>
-            {uploadingPhoto ? <ActivityIndicator size="small" color="#fff" /> : <Text style={{ fontSize: 14 }}>📷</Text>}
+            {uploadingPhoto ? <ActivityIndicator size="small" color="#fff" /> : <Icon name="camera" size={14} color="#fff" />}
           </View>
         </Pressable>
         <Pressable onPress={pickPhoto} disabled={uploadingPhoto}>

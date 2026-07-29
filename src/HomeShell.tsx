@@ -118,7 +118,6 @@ export default function HomeShell() {
         onMemory={setMemoryItem}
         onShare={setViewerItem}
         onMenu={setMenuItem}
-        onBulkImport={() => setBulkImportOpen(true)}
         onStarter={() => setStarterOpen(true)}
         onEdit={openEdit}
         onDetail={setDetailItem}
@@ -142,7 +141,13 @@ export default function HomeShell() {
 
       <Toast message={toast} />
 
-      <AddEditSheet visible={addEditOpen} onClose={() => setAddEditOpen(false)} editingItem={editingItem} onSubmit={submitAddEdit} />
+      <AddEditSheet
+        visible={addEditOpen}
+        onClose={() => setAddEditOpen(false)}
+        editingItem={editingItem}
+        onSubmit={submitAddEdit}
+        onBulkImport={() => { setAddEditOpen(false); setBulkImportOpen(true); }}
+      />
       <MemorySheet visible={!!memoryItem} onClose={() => setMemoryItem(null)} item={memoryItem} onSubmit={submitMemory} />
       <HelpSheet visible={!!helpItemTarget} onClose={() => setHelpItemTarget(null)} item={helpItemTarget} onSubmit={submitHelp} />
       <ProfileSheet visible={profileOpen} onClose={() => setProfileOpen(false)} onReplayOnboarding={() => setShowOnboardReplay(true)} />

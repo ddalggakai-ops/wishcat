@@ -320,11 +320,30 @@ export async function helpItem(targetId: string, uid: string, payload: { title: 
  * 공개/비공개를 토글하면 내 아이템들의 ownerPublic을 전부 맞춰 줍니다.
  * (둘러보기 쿼리와 보안 규칙이 이 값을 보기 때문에 반드시 따라와야 합니다)
  * 기존에 만들어진, ownerPublic이 아예 없는 문서도 여기서 채워집니다.
+ *
+ * knownIds를 주면(화면이 이미 내 목록을 불러온 상태라 id를 알고 있으면) 문서를 통째로 다시
+ * 읽어서 뭐가 바뀌어야 하는지 알아내는 단계 없이 바로 씁니다 — 이 "매번 전체 재읽기" 단계가
+ * "전체공개/비공개 전환이 느리다"는 문제의 진짜 원인이었어요. 같은 값을 한 번 더 써도 안전하니
+ * (그냥 같은 값을 한 번 더 쓰는 것뿐) "달라진 것만" 가려낼 필요도 없습니다.
+ * knownIds가 없거나(예: 로그인 직후, 아직 내 목록을 안 불러온 상태) 그 목록으로 쓰다가 실패하면
+ * (예: 다른 기기에서 방금 삭제해서 이제 없는 문서) 예전처럼 제대로 읽고 쓰는 경로로 다시 시도합니다.
  */
-export async function backfillOwnerPublic(uid: string, isPublic: boolean): Promise<number> {
+export async function backfillOwnerPublic(uid: string, isPublic: boolean, knownIds?: string[]): Promise<number> {
+  const CHUNK = 400;
+  if (knownIds && knownIds.length) {
+    try {
+      for (let i = 0; i < knownIds.length; i += CHUNK) {
+        const batch = writeBatch(db);
+        knownIds.slice(i, i + CHUNK).forEach((id) => batch.update(itemDoc(id), { ownerPublic: isPublic }));
+        await batch.commit();
+      }
+      return knownIds.length;
+    } catch {
+      // 아래의 읽고-쓰기 경로로 안전하게 다시 시도
+    }
+  }
   const snap = await getDocs(query(itemsCol(), where('ownerId', '==', uid)));
   const stale = snap.docs.filter((d) => (d.data() as RawItem).ownerPublic !== isPublic);
-  const CHUNK = 400;
   for (let i = 0; i < stale.length; i += CHUNK) {
     const batch = writeBatch(db);
     stale.slice(i, i + CHUNK).forEach((d) => batch.update(d.ref, { ownerPublic: isPublic }));

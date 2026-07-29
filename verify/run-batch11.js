@@ -184,7 +184,7 @@ function fieldsOf(write) {
   // disabled 상태입니다. 그 텍스트 색과 배경색의 명도 대비가 충분한지 계산합니다.
   const disabledBtn = await scenario(browser, '01-disabled-button-contrast', async (page) => {
     await login(page);
-    await page.getByText('＋', { exact: true }).first().click();
+    await page.locator('[aria-label="새 꿈 추가"]').first().click();
     await page.waitForTimeout(700);
     const result = await page.evaluate(() => {
       const nodes = Array.from(document.querySelectorAll('*'));
@@ -207,7 +207,7 @@ function fieldsOf(write) {
   // 실제 commit payload 에 배열/필드로 나가는지 확인합니다.
   const multiCat = await scenario(browser, '02-multicategory-priority', async (page) => {
     await login(page);
-    await page.getByText('＋', { exact: true }).first().click();
+    await page.locator('[aria-label="새 꿈 추가"]').first().click();
     await page.waitForTimeout(900);
     // Modal(시트)은 페이지 마지막에 렌더되므로 .last() 로 배경 목록의 같은 텍스트와 구분합니다.
     // 시트 안 ScrollView가 자동 스크롤 판정과 충돌하는 경우가 있어 force 클릭을 씁니다.
@@ -253,7 +253,7 @@ function fieldsOf(write) {
 
     // ▼ 버튼으로 첫 카드를 한 칸 내려서 순서가 바뀌는지 확인
     seen.length = 0; commits.length = 0;
-    const downArrows = page.locator('text=▼');
+    const downArrows = page.locator('[aria-label="아래로 이동"]');
     const downCount = await downArrows.count();
     console.log(`[디버그] ▼ 버튼 개수: ${downCount}`);
     let orderCommit = null;
@@ -269,9 +269,9 @@ function fieldsOf(write) {
     const afterSelectAll = (await page.evaluate(() => document.body.innerText)).replace(/\s+/g, ' ').trim();
 
     // 선택모드 닫기
-    const closeCount = await page.getByText('✕', { exact: true }).count();
+    const closeCount = await page.locator('[aria-label="선택 모드 닫기"]').count();
     console.log(`[디버그] ✕ 개수: ${closeCount}`);
-    await page.getByText('✕', { exact: true }).first().click({ force: true });
+    await page.locator('[aria-label="선택 모드 닫기"]').first().click({ force: true });
     await page.waitForTimeout(300);
     const afterExit = (await page.evaluate(() => document.body.innerText)).replace(/\s+/g, ' ').trim();
     console.log(`[디버그] afterExit 전체: ${afterExit}`);

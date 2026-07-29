@@ -26,14 +26,20 @@ export default function PersonScreen({
   const { user: viewer } = useAuth();
   const [data, setData] = useState<PersonResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
 
   const load = useCallback(async () => {
     if (!viewer) return;
     setLoading(true);
+    setFailed(false);
     try {
       const res = await getPerson(userId, viewer.id);
       setData(res);
       if (res.items) mergeItems(res.items);
+    } catch {
+      // 예전엔 여기서 에러가 나면 data가 계속 null로 남아서 뒤로가기 버튼 말고는
+      // 아무것도 안 뜨는 채로 멈춰버렸어요. 실패했다는 걸 알 수 있게 상태로 남깁니다.
+      setFailed(true);
     } finally {
       setLoading(false);
     }
@@ -45,6 +51,18 @@ export default function PersonScreen({
     return (
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }}>
         <BackBtn label={isFriendTab ? '친구' : '둘러보기'} onPress={onBack} />
+        {failed ? (
+          <EmptyState
+            icon="alert-circle-outline"
+            title="불러오지 못했어요"
+            subtitle="네트워크 상태를 확인하고 다시 시도해주세요"
+          />
+        ) : null}
+        {failed && !loading ? (
+          <Pressable onPress={load} style={styles.retryBtn}>
+            <Text style={styles.retryText}>다시 시도</Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
     );
   }
@@ -69,7 +87,7 @@ export default function PersonScreen({
       </View>
 
       {data.items === null ? (
-        <EmptyState icon="🔒" title="비공개 목록이에요" subtitle="이 사람이 목록을 공개하면 볼 수 있어요" />
+        <EmptyState icon="lock-closed-outline" title="비공개 목록이에요" subtitle="이 사람이 목록을 공개하면 볼 수 있어요" />
       ) : (
         <>
           {todo.length > 0 && (
@@ -113,7 +131,7 @@ export default function PersonScreen({
               </View>
             </>
           )}
-          {items.length === 0 && <EmptyState icon="✦" title="아직 등록한 꿈이 없어요" subtitle="곧 새로운 꿈이 올라올 거예요" />}
+          {items.length === 0 && <EmptyState icon="sparkles-outline" title="아직 등록한 꿈이 없어요" subtitle="곧 새로운 꿈이 올라올 거예요" />}
         </>
       )}
     </ScrollView>
@@ -131,6 +149,8 @@ function BackBtn({ label, onPress }: { label: string; onPress: () => void }) {
 const styles = StyleSheet.create({
   backBtn: { paddingVertical: 20, paddingBottom: 10 },
   backText: { fontSize: 14, fontWeight: '600', color: colors.ink },
+  retryBtn: { alignSelf: 'center', marginTop: 14, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.line, borderRadius: 99, paddingVertical: 10, paddingHorizontal: 22 },
+  retryText: { fontSize: 13, fontWeight: '700', color: colors.accent },
   head: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 4 },
   name: { fontSize: 21, fontWeight: '700', color: colors.ink },
   bio: { fontSize: 12.5, color: colors.ink2, marginTop: 2 },

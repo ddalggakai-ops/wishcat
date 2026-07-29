@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Avatar from '../components/Avatar';
 import GradientCard from '../components/GradientCard';
+import Icon from '../components/Icon';
 import { EmptyState, ScreenHeader } from '../components/Basics';
 import { colors, radius, shadow } from '../theme';
 import { resolveImageUrl } from '../api/client';
@@ -21,6 +22,8 @@ export default function ExploreScreen({
   const [filter, setFilter] = useState<'all' | 'done'>('all');
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
+  const [toggleW, setToggleW] = useState(0);
+  const toggleAnim = useRef(new Animated.Value(0)).current;
 
   const load = useCallback(async (opts?: { force?: boolean }) => {
     if (!user) return;
@@ -37,20 +40,40 @@ export default function ExploreScreen({
   useEffect(() => { load(); }, [load]);
   const onRefresh = useCallback(() => load({ force: true }), [load]);
 
+  useEffect(() => {
+    Animated.spring(toggleAnim, {
+      toValue: filter === 'done' ? 1 : 0,
+      useNativeDriver: true,
+      friction: 9,
+      tension: 70,
+    }).start();
+  }, [filter, toggleAnim]);
+
+  // 트랙 안쪽 여백(3px)을 뺀 절반 너비만큼 슬라이드 알약을 밀어줍니다.
+  const half = toggleW > 0 ? (toggleW - 6) / 2 : 0;
+
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor="#fff" />}>
       <ScreenHeader title="둘러보기" subtitle="전체공개된 사람들의 버킷을 구경해요. 타일을 누르면 자세히 보고 내 목록에 담을 수 있어요." />
-      <View style={styles.filterBar}>
-        <Pressable onPress={() => setFilter('all')} style={[styles.filterBtn, filter === 'all' && styles.filterBtnOn]}>
-          <Text style={[styles.filterText, filter === 'all' && styles.filterTextOn]}>전체 버킷</Text>
+      <View style={styles.toggleTrack} onLayout={(e) => setToggleW(e.nativeEvent.layout.width)}>
+        {toggleW > 0 ? (
+          <Animated.View
+            style={[
+              styles.toggleThumb,
+              { width: half, transform: [{ translateX: toggleAnim.interpolate({ inputRange: [0, 1], outputRange: [0, half] }) }] },
+            ]}
+          />
+        ) : null}
+        <Pressable onPress={() => setFilter('all')} style={styles.toggleHalf} hitSlop={4} accessibilityRole="button" accessibilityState={{ selected: filter === 'all' }}>
+          <Text style={[styles.toggleText, filter === 'all' && styles.toggleTextOn]}>전체 버킷</Text>
         </Pressable>
-        <Pressable onPress={() => setFilter('done')} style={[styles.filterBtn, filter === 'done' && styles.filterBtnOn]}>
-          <Text style={[styles.filterText, filter === 'done' && styles.filterTextOn]}>이룬 꿈</Text>
+        <Pressable onPress={() => setFilter('done')} style={styles.toggleHalf} hitSlop={4} accessibilityRole="button" accessibilityState={{ selected: filter === 'done' }}>
+          <Text style={[styles.toggleText, filter === 'done' && styles.toggleTextOn]}>이룬 꿈</Text>
         </Pressable>
       </View>
 
       {items.length === 0 ? (
-        <EmptyState icon="🧭" title="해당하는 버킷이 없어요" subtitle="다른 필터를 눌러보세요" />
+        <EmptyState icon="compass-outline" title="해당하는 버킷이 없어요" subtitle="다른 필터를 눌러보세요" />
       ) : (
         <View style={styles.grid}>
           {items.map((raw, idx) => {
@@ -76,7 +99,7 @@ export default function ExploreScreen({
                 accessibilityRole="button"
                 accessibilityLabel={joined ? '이미 담음' : '내 목록에 담기'}
               >
-                <Text style={{ color: onWhite ? (joined ? colors.accent : colors.ink3) : '#fff' }}>🔖</Text>
+                <Icon name={joined ? 'bookmark' : 'bookmark-outline'} size={14} color={onWhite ? (joined ? colors.accent : colors.ink3) : '#fff'} />
                 <Text style={[styles.countText, onWhite && joined && { color: colors.accent }, !onWhite && styles.countTextOnDark]}>
                   {joined ? '담음' : i.savesCount}
                 </Text>
@@ -85,7 +108,7 @@ export default function ExploreScreen({
 
             const likeBtn = (
               <Pressable onPress={() => toggleLike(i.id)} style={styles.likeBtn}>
-                <Text style={{ color: onWhite ? (i.likedByMe ? colors.like : colors.ink3) : '#fff' }}>{i.likedByMe ? '♥' : '♡'}</Text>
+                <Icon name={i.likedByMe ? 'heart' : 'heart-outline'} size={14} color={onWhite ? (i.likedByMe ? colors.like : colors.ink3) : '#fff'} />
                 <Text style={[styles.countText, !onWhite && styles.countTextOnDark]}>{i.likesCount}</Text>
               </Pressable>
             );
@@ -96,7 +119,7 @@ export default function ExploreScreen({
                   <View style={styles.thumbWrap}>
                     <Image source={{ uri: photo }} style={styles.thumb} />
                     {i.hot ? <View style={styles.badge}><Text style={styles.badgeText}>인기</Text></View> : null}
-                    {i.done ? <View style={styles.doneBadge}><Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>✓</Text></View> : null}
+                    {i.done ? <View style={styles.doneBadge}><Icon name="checkmark" size={14} color="#fff" /></View> : null}
                   </View>
                   <View style={styles.tileMeta}>
                     <Text numberOfLines={2} style={styles.tileTitle}>{i.title}</Text>
@@ -141,11 +164,11 @@ export default function ExploreScreen({
 }
 
 const styles = StyleSheet.create({
-  filterBar: { flexDirection: 'row', backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.line, borderRadius: 11, padding: 3, gap: 2, alignSelf: 'flex-start', marginBottom: 6 },
-  filterBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8 },
-  filterBtnOn: { backgroundColor: colors.surface, ...shadow.sm },
-  filterText: { fontSize: 13, fontWeight: '600', color: colors.ink3 },
-  filterTextOn: { color: colors.accent },
+  toggleTrack: { flexDirection: 'row', backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.line, borderRadius: 13, padding: 3, alignSelf: 'flex-start', marginBottom: 6, position: 'relative' },
+  toggleThumb: { position: 'absolute', top: 3, bottom: 3, left: 3, borderRadius: 10, backgroundColor: colors.surface, ...shadow.sm },
+  toggleHalf: { paddingVertical: 8, paddingHorizontal: 18, borderRadius: 10 },
+  toggleText: { fontSize: 13, fontWeight: '600', color: colors.ink3, textAlign: 'center' },
+  toggleTextOn: { color: colors.accent },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 11, marginTop: 8 },
   tile: { width: '47.6%', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 19, overflow: 'hidden', ...shadow.sm },
   tileGradientWrap: { width: '47.6%', minHeight: 190 },

@@ -1,8 +1,10 @@
 import React from 'react';
-import { Image, Modal, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import Avatar from '../components/Avatar';
+import Icon from '../components/Icon';
 import { CategoryChips, LocationChip } from '../components/Chips';
-import { absoluteFill, colors, radius, shadow } from '../theme';
+import MemoryPhotoCarousel from '../components/MemoryPhotos';
+import { absoluteFill, catRole, colors, radius, shadow } from '../theme';
 import { resolveImageUrl } from '../api/client';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
@@ -12,7 +14,10 @@ export default function ViewerModal({ visible, item, onClose }: { visible: boole
   const { toggleLike } = useApp();
   const { user } = useAuth();
   if (!item) return null;
-  const photo = resolveImageUrl(item.memory?.photo);
+  // 예전엔 첫 번째 사진 한 장만 보여줬어요 — 여러 장을 올렸으면 나머지가 아예 안 보였습니다.
+  const photos = (item.memory?.photos?.length ? item.memory.photos : (item.memory?.photo ? [item.memory.photo] : []))
+    .map(resolveImageUrl)
+    .filter((u): u is string => !!u);
   const isMe = item.owner.id === user?.id;
 
   const share = () => {
@@ -27,10 +32,8 @@ export default function ViewerModal({ visible, item, onClose }: { visible: boole
       <View style={styles.center} pointerEvents="box-none">
         <View style={styles.card}>
           <View style={{ position: 'relative' }}>
-            {photo ? <Image source={{ uri: photo }} style={styles.hero} /> : (
-              <View style={[styles.hero, styles.heroPh]}><Text style={{ fontSize: 70 }}>{item.emoji}</Text></View>
-            )}
-            <Pressable style={styles.close} onPress={onClose}><Text style={{ color: '#fff', fontSize: 16 }}>✕</Text></Pressable>
+            <MemoryPhotoCarousel photos={photos} height={340} emoji={item.emoji} role={catRole(item.categories?.[0])} />
+            <Pressable style={styles.close} onPress={onClose} accessibilityRole="button" accessibilityLabel="닫기"><Icon name="close" size={16} color="#fff" /></Pressable>
           </View>
           <View style={styles.body}>
             <View style={styles.headRow}>
@@ -50,12 +53,16 @@ export default function ViewerModal({ visible, item, onClose }: { visible: boole
             ) : null}
             <View style={styles.actions}>
               <Pressable onPress={() => toggleLike(item.id)} style={styles.likeBtn}>
-                <Text style={{ color: item.likedByMe ? colors.like : colors.ink3, fontSize: 18 }}>{item.likedByMe ? '♥' : '♡'}</Text>
+                <Icon name={item.likedByMe ? 'heart' : 'heart-outline'} size={18} color={item.likedByMe ? colors.like : colors.ink3} />
                 <Text style={styles.likeCount}>{item.likesCount}</Text>
               </Pressable>
-              <Text style={styles.saveCount}>🔖 {item.savesCount}</Text>
+              <View style={styles.likeBtn}>
+                <Icon name="bookmark-outline" size={15} color={colors.ink3} />
+                <Text style={styles.saveCount}>{item.savesCount}</Text>
+              </View>
               <Pressable style={styles.shareBtn} onPress={share}>
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13.5 }}>↑ 공유</Text>
+                <Icon name="share-outline" size={14} color="#fff" />
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13.5 }}>공유</Text>
               </Pressable>
             </View>
           </View>
@@ -69,8 +76,6 @@ const styles = StyleSheet.create({
   backdrop: { ...absoluteFill, backgroundColor: 'rgba(20,30,48,.62)' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 22 },
   card: { width: '100%', maxWidth: 420, backgroundColor: colors.surface, borderRadius: 20, overflow: 'hidden', maxHeight: '88%' },
-  hero: { width: '100%', aspectRatio: 1 },
-  heroPh: { backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
   close: { position: 'absolute', top: 12, right: 12, width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(20,30,48,.5)', alignItems: 'center', justifyContent: 'center' },
   body: { padding: 18 },
   headRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
@@ -83,5 +88,5 @@ const styles = StyleSheet.create({
   likeBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   likeCount: { fontSize: 14, color: colors.ink2, fontWeight: '600' },
   saveCount: { fontSize: 13, color: colors.ink2 },
-  shareBtn: { marginLeft: 'auto', backgroundColor: colors.accent, borderRadius: 10, paddingVertical: 9, paddingHorizontal: 15 },
+  shareBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 'auto', backgroundColor: colors.accent, borderRadius: 10, paddingVertical: 9, paddingHorizontal: 15 },
 });

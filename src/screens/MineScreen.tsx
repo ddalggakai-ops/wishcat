@@ -8,6 +8,7 @@ import GradientCard from '../components/GradientCard';
 import ProgressRing from '../components/ProgressRing';
 import { EmptyState, SectionHeader } from '../components/Basics';
 import ItemCard from '../components/ItemCard';
+import Icon from '../components/Icon';
 import { CATEGORIES, catColor, colors, radius, shadow } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import { useApp, useMyItems } from '../context/AppContext';
@@ -17,13 +18,12 @@ const RANDOM_PICK_COUNT = 6;
 const PRIORITY_RANK: Record<string, number> = { high: 0, mid: 1, low: 2 };
 
 export default function MineScreen({
-  onEditProfile, onMemory, onShare, onMenu, onBulkImport, onStarter, onEdit, onDetail,
+  onEditProfile, onMemory, onShare, onMenu, onStarter, onEdit, onDetail,
 }: {
   onEditProfile: () => void;
   onMemory: (item: Item) => void;
   onShare: (item: Item) => void;
   onMenu: (item: Item) => void;
-  onBulkImport: () => void;
   onStarter: () => void;
   /** 카드(빈 곳)를 눌렀을 때 — 자세히 보기에서는 곧장 수정으로 */
   onEdit: (item: Item) => void;
@@ -31,12 +31,13 @@ export default function MineScreen({
   onDetail: (item: Item) => void;
 }) {
   const { user, updateMe } = useAuth();
-  const { refreshMine, loadingMine, completeItem, reopenItem, deleteItems, reorderItems, startItem, stopItem } = useApp();
+  const { refreshMine, loadingMine, completeItem, reopenItem, deleteItems, reorderItems, startItem, stopItem, mineIds } = useApp();
   const items = useMyItems();
   const [compact, setCompact] = useState(false);
   const [search, setSearch] = useState('');
   const [categoryFilters, setCategoryFilters] = useState<string[]>([]);
   const [sortByPriority, setSortByPriority] = useState(false);
+  const [togglingVisibility, setTogglingVisibility] = useState(false);
 
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -46,6 +47,7 @@ export default function MineScreen({
   const [atBottom, setAtBottom] = useState(false);
   const [scrollable, setScrollable] = useState(false);
   const scrollDims = useRef({ contentHeight: 0, viewportHeight: 0 });
+  const doneSectionY = useRef(0);
 
   useEffect(() => { refreshMine(); }, [refreshMine]);
   const onRefresh = useCallback(() => refreshMine({ force: true }), [refreshMine]);
@@ -74,6 +76,31 @@ export default function MineScreen({
   }, []);
   const scrollToTop = useCallback(() => scrollRef.current?.scrollTo({ y: 0, animated: true }), []);
   const scrollToBottom = useCallback(() => scrollRef.current?.scrollToEnd({ animated: true }), []);
+
+  // 상단 "이룬 꿈" 통계를 누르면 아래 "이룬 꿈" 구획으로 스크롤합니다.
+  // 검색/카테고리 필터가 걸려 있으면 그 구획이 아예 안 보일 수 있어서 먼저 필터를 지운 뒤,
+  // 레이아웃이 다시 잡힐 시간을 살짝 주고 나서 이동합니다.
+  const scrollToDone = useCallback(() => {
+    if (!items.some((i) => i.done)) return;
+    const jump = () => scrollRef.current?.scrollTo({ y: Math.max(0, doneSectionY.current - 12), animated: true });
+    if (search.trim() || categoryFilters.length) {
+      setSearch('');
+      setCategoryFilters([]);
+      setTimeout(jump, 250);
+    } else {
+      jump();
+    }
+  }, [items, search, categoryFilters]);
+
+  const onToggleVisibility = useCallback(async () => {
+    if (!user || togglingVisibility) return;
+    setTogglingVisibility(true);
+    try {
+      await updateMe({ listPublic: !user.listPublic }, { knownItemIds: mineIds });
+    } finally {
+      setTogglingVisibility(false);
+    }
+  }, [user, togglingVisibility, updateMe, mineIds]);
 
   // 진행률/전체 통계는 필터와 무관하게 항상 전체 목록 기준으로 보여줍니다.
   const pct = items.length ? Math.round((items.filter((i) => i.done).length / items.length) * 100) : 0;
@@ -225,12 +252,11 @@ export default function MineScreen({
         onContentSizeChange={(_w, h) => updateScrollState(h, scrollDims.current.viewportHeight)}
       >
         <View style={styles.profile}>
-          <Text style={styles.sticker}>✦</Text>
           <View style={styles.pTop}>
-            <Avatar name={user.name} photoUrl={user.photoUrl} size={74} dashed />
+            <Avatar name={user.name} photoUrl={user.photoUrl} size={74} />
             <View style={styles.stats}>
               <Stat label="꿈" value={items.length} />
-              <Stat label="이룬 꿈" value={doneTotal} />
+              <Stat label="이룬 꿈" value={doneTotal} onPress={scrollToDone} />
             </View>
           </View>
           <Text style={styles.pName}>{user.name}</Text>
@@ -241,7 +267,9 @@ export default function MineScreen({
               small
               variant={user.listPublic ? 'ghost' : 'primary'}
               title={user.listPublic ? '전체공개' : '비공개'}
-              onPress={() => updateMe({ listPublic: !user.listPublic })}
+              onPress={onToggleVisibility}
+              disabled={togglingVisibility}
+              loading={togglingVisibility}
               style={{ flex: 1 }}
             />
           </View>
@@ -252,7 +280,7 @@ export default function MineScreen({
             <View style={styles.summaryTop}>
               <ProgressRing size={80} pct={pct} label="달성" />
               <View style={styles.summaryStats}>
-                <SummaryStat label="이룬 꿈" value={doneTotal} />
+                <SummaryStat label="이룬 꿈" value={doneTotal} onPress={scrollToDone} />
                 <SummaryStat label="도전 중" value={todoTotal} />
                 <SummaryStat label="전체" value={items.length} />
               </View>
@@ -275,15 +303,14 @@ export default function MineScreen({
 
         {items.length === 0 ? (
           <>
-            <EmptyState icon="🚩" title="아직 꿈이 없어요" subtitle="뭘 적을지 막막하다면 아래에서 골라 담아보세요" />
+            <EmptyState icon="flag-outline" title="아직 꿈이 없어요" subtitle="뭘 적을지 막막하다면 아래에서 골라 담아보세요" />
             <BubbleButton title="✦ 시작 템플릿에서 골라 담기" onPress={onStarter} full style={{ marginTop: 2 }} />
-            <BubbleButton small variant="line" title="📊 엑셀로 여러 개 한 번에 추가" onPress={onBulkImport} style={{ alignSelf: 'center', marginTop: 10 }} />
-            <Text style={styles.emptyHint}>직접 쓰고 싶다면 아래 + 버튼을 눌러주세요</Text>
+            <Text style={styles.emptyHint}>직접 쓰고 싶다면 아래 + 버튼을 눌러주세요. 엑셀로 한 번에 담고 싶다면 + 화면 안에도 작은 버튼이 있어요.</Text>
           </>
         ) : (
           <>
             <View style={styles.searchBox}>
-              <Text style={styles.searchIcon}>🔍</Text>
+              <Icon name="search-outline" size={16} color={colors.ink3} />
               <TextInput
                 value={search}
                 onChangeText={setSearch}
@@ -292,8 +319,8 @@ export default function MineScreen({
                 style={styles.searchInput}
               />
               {search ? (
-                <Pressable onPress={() => setSearch('')} hitSlop={8}>
-                  <Text style={styles.searchClear}>✕</Text>
+                <Pressable onPress={() => setSearch('')} hitSlop={8} accessibilityRole="button" accessibilityLabel="검색어 지우기">
+                  <Icon name="close-circle" size={16} color={colors.ink3} />
                 </Pressable>
               ) : null}
             </View>
@@ -327,9 +354,6 @@ export default function MineScreen({
                   {sortByPriority ? '✓ 우선순위순' : '우선순위순 정렬'}
                 </Text>
               </Pressable>
-              <Pressable onPress={onBulkImport} style={styles.viewToggle}>
-                <Text style={{ fontSize: 12.5, fontWeight: '600', color: colors.ink2 }}>📊 엑셀로 추가</Text>
-              </Pressable>
               <Pressable onPress={() => setCompact(!compact)} style={styles.viewToggle}>
                 <Text style={{ fontSize: 12.5, fontWeight: '600', color: colors.ink2 }}>{compact ? '상세 보기' : '간단히 보기'}</Text>
               </Pressable>
@@ -340,7 +364,7 @@ export default function MineScreen({
             </Text>
 
             {isFiltering && filteredItems.length === 0 ? (
-              <EmptyState icon="🔍" title="검색 결과가 없어요" subtitle="다른 검색어나 카테고리를 눌러보세요" />
+              <EmptyState icon="search-outline" title="검색 결과가 없어요" subtitle="다른 검색어나 카테고리를 눌러보세요" />
             ) : (
               <>
                 {todo.length > 0 && (
@@ -373,7 +397,9 @@ export default function MineScreen({
                 )}
                 {done.length > 0 && (
                   <>
-                    <SectionHeader title="이룬 꿈" count={done.length} />
+                    <View onLayout={(e) => { doneSectionY.current = e.nativeEvent.layout.y; }}>
+                      <SectionHeader title="이룬 꿈" count={done.length} />
+                    </View>
                     {done.map((i, idx) => (
                       <ItemCard
                         key={i.id}
@@ -407,8 +433,8 @@ export default function MineScreen({
 
       {selectMode ? (
         <View style={styles.selectBar}>
-          <Pressable onPress={exitSelectMode} hitSlop={8} style={styles.selectBarClose}>
-            <Text style={styles.selectBarCloseText}>✕</Text>
+          <Pressable onPress={exitSelectMode} hitSlop={8} style={styles.selectBarClose} accessibilityRole="button" accessibilityLabel="선택 모드 닫기">
+            <Icon name="close" size={16} color={colors.ink2} />
           </Pressable>
           <Text style={styles.selectBarCount}>{selectedIds.size}개 선택</Text>
           <Pressable onPress={selectAllVisible} style={styles.selectBarAll}>
@@ -421,13 +447,13 @@ export default function MineScreen({
       {showScrollBtns ? (
         <View style={styles.scrollFabCol} pointerEvents="box-none">
           {!atTop ? (
-            <Pressable onPress={scrollToTop} style={styles.scrollFab} hitSlop={6}>
-              <Text style={styles.scrollFabText}>↑</Text>
+            <Pressable onPress={scrollToTop} style={styles.scrollFab} hitSlop={6} accessibilityRole="button" accessibilityLabel="위로 스크롤">
+              <Icon name="chevron-up" size={18} color={colors.ink2} />
             </Pressable>
           ) : null}
           {!atBottom ? (
-            <Pressable onPress={scrollToBottom} style={styles.scrollFab} hitSlop={6}>
-              <Text style={styles.scrollFabText}>↓</Text>
+            <Pressable onPress={scrollToBottom} style={styles.scrollFab} hitSlop={6} accessibilityRole="button" accessibilityLabel="아래로 스크롤">
+              <Icon name="chevron-down" size={18} color={colors.ink2} />
             </Pressable>
           ) : null}
         </View>
@@ -469,21 +495,33 @@ function FilterChip({ label, active, onPress }: { label: string; active: boolean
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <View style={styles.stat}>
+function Stat({ label, value, onPress }: { label: string; value: number; onPress?: () => void }) {
+  const body = (
+    <>
       <Text style={styles.statVal}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
-    </View>
+    </>
+  );
+  if (!onPress) return <View style={styles.stat}>{body}</View>;
+  return (
+    <Pressable onPress={onPress} style={styles.stat} hitSlop={6}>
+      {body}
+    </Pressable>
   );
 }
 
-function SummaryStat({ label, value }: { label: string; value: number }) {
-  return (
-    <View style={styles.summaryStat}>
+function SummaryStat({ label, value, onPress }: { label: string; value: number; onPress?: () => void }) {
+  const body = (
+    <>
       <Text style={styles.summaryStatVal}>{value}</Text>
       <Text style={styles.summaryStatLabel}>{label}</Text>
-    </View>
+    </>
+  );
+  if (!onPress) return <View style={styles.summaryStat}>{body}</View>;
+  return (
+    <Pressable onPress={onPress} style={styles.summaryStat} hitSlop={6}>
+      {body}
+    </Pressable>
   );
 }
 

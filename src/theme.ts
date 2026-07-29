@@ -27,22 +27,26 @@ export const shadowColors: Record<Role, string> = {
 };
 
 // ── 기본 톤 ─────────────────────────────────────────────────────────
+// 인스타그램 참고 — 배경/테두리/글자는 무채색(그레이스케일)으로 정리하고,
+// 포인트 컬러(accent 등 role 그라디언트)는 버튼·좋아요·카테고리 색깔처럼
+// "의미가 있는 곳"에만 남겨서 화면 전체가 파스텔로 물들어 보이지 않게 했어요.
 export const colors = {
   // 배경/표면
-  bg: '#F8F7FC',
-  bgTop: '#F8F7FC',
-  bgBottom: '#F8F7FC',
+  bg: '#FAFAFA',
+  bgTop: '#FAFAFA',
+  bgBottom: '#FAFAFA',
   surface: '#FFFFFF',
-  surface2: '#FBFAFF',
-  surface3: '#EAE6F5',
-  neutral: '#EAE6F5',
+  surface2: '#F5F5F5',
+  surface3: '#EFEFEF',
+  neutral: '#EFEFEF',
   // 텍스트
-  ink: '#2E2A3D',
-  ink2: '#8B87A0',
-  ink3: '#C7C3DC',
-  // 테두리
-  line: '#EAE6F5',
-  line2: '#EAE6F5',
+  ink: '#262626',
+  ink2: '#8E8E8E',
+  ink3: '#C7C7C7',
+  // 테두리 — 예전엔 surface3와 같은 색이라 실선으로는 거의 안 보여서 점선에 기댔던 것 같아요.
+  // 또렷한 무채색 회색으로 바꿔서 실선 하나로도 깔끔하게 보이게 했습니다.
+  line: '#DBDBDB',
+  line2: '#DBDBDB',
   // 메인(=Primary) — 기존 accent 자리를 대체
   accent: roleColors.primary[1],
   accentInk: roleColors.primary.ink,
@@ -115,11 +119,12 @@ export const absoluteFill = { position: 'absolute' as const, left: 0, right: 0, 
 
 export const radius = { sm: 12, md: 16, lg: 22, xl: 28, pill: 999 };
 
-// 중립(회색 계열) 그림자 — 리스트 카드, 시트 등 일반 요소용
+// 중립(회색 계열) 그림자 — 리스트 카드, 시트 등 일반 요소용.
+// 인스타그램은 그림자보다 얇은 테두리로 구분을 주는 편이라 예전보다 살짝 옅게 낮췄어요.
 export const shadow = {
-  sm: { shadowColor: '#2E2A3D', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
-  md: { shadowColor: '#2E2A3D', shadowOpacity: 0.16, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 5 },
-  lg: { shadowColor: '#2E2A3D', shadowOpacity: 0.22, shadowRadius: 28, shadowOffset: { width: 0, height: 14 }, elevation: 8 },
+  sm: { shadowColor: '#000000', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
+  md: { shadowColor: '#000000', shadowOpacity: 0.1, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 3 },
+  lg: { shadowColor: '#000000', shadowOpacity: 0.14, shadowRadius: 22, shadowOffset: { width: 0, height: 10 }, elevation: 6 },
 };
 
 // 역할별 컬러 그림자 — GradientCard 등 메인 포인트 카드용

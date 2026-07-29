@@ -352,7 +352,7 @@ function fieldsOf(write) {
     await page.waitForTimeout(500);
     const countBefore = (await page.evaluate(() => document.body.innerText)).includes('사진 (3/10장)');
     // 첫 번째 ✕(사진 삭제) 버튼을 누릅니다.
-    await page.getByText('✕', { exact: true }).first().click();
+    await page.locator('[aria-label="사진 삭제"]').first().click();
     await page.waitForTimeout(300);
     const countAfter = (await page.evaluate(() => document.body.innerText)).includes('사진 (2/10장)');
     await page.getByText('저장하기', { exact: true }).last().click();

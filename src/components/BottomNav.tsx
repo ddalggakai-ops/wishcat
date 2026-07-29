@@ -2,15 +2,16 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import Icon from './Icon';
 import { colors, gradients, shadowColors, radius } from '../theme';
 
 export type TabKey = 'mine' | 'friends' | 'explore' | 'memories';
 
-const TABS: { key: TabKey; label: string; icon: string }[] = [
-  { key: 'mine', label: '나', icon: '👤' },
-  { key: 'friends', label: '친구', icon: '👥' },
-  { key: 'explore', label: '둘러보기', icon: '🧭' },
-  { key: 'memories', label: '추억', icon: '✨' },
+const TABS: { key: TabKey; label: string; icon: React.ComponentProps<typeof Icon>['name']; iconOn: React.ComponentProps<typeof Icon>['name'] }[] = [
+  { key: 'mine', label: '나', icon: 'person-outline', iconOn: 'person' },
+  { key: 'friends', label: '친구', icon: 'people-outline', iconOn: 'people' },
+  { key: 'explore', label: '둘러보기', icon: 'compass-outline', iconOn: 'compass' },
+  { key: 'memories', label: '추억', icon: 'sparkles-outline', iconOn: 'sparkles' },
 ];
 
 export default function BottomNav({ active, onChange, onAdd }: { active: TabKey; onChange: (t: TabKey) => void; onAdd: () => void }) {
@@ -20,9 +21,9 @@ export default function BottomNav({ active, onChange, onAdd }: { active: TabKey;
   return (
     <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 9) }]}>
       {left.map((t) => <NavBtn key={t.key} tab={t} active={active === t.key} onPress={() => onChange(t.key)} />)}
-      <Pressable onPress={onAdd} style={styles.addBtnWrap}>
+      <Pressable onPress={onAdd} style={styles.addBtnWrap} accessibilityRole="button" accessibilityLabel="새 꿈 추가">
         <LinearGradient colors={gradients.primary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.addBtn}>
-          <Text style={styles.addIcon}>＋</Text>
+          <Icon name="add" size={26} color="#fff" />
         </LinearGradient>
       </Pressable>
       {right.map((t) => <NavBtn key={t.key} tab={t} active={active === t.key} onPress={() => onChange(t.key)} />)}
@@ -30,11 +31,15 @@ export default function BottomNav({ active, onChange, onAdd }: { active: TabKey;
   );
 }
 
-function NavBtn({ tab, active, onPress }: { tab: { key: TabKey; label: string; icon: string }; active: boolean; onPress: () => void }) {
+function NavBtn({ tab, active, onPress }: {
+  tab: { key: TabKey; label: string; icon: React.ComponentProps<typeof Icon>['name']; iconOn: React.ComponentProps<typeof Icon>['name'] };
+  active: boolean;
+  onPress: () => void;
+}) {
   return (
     <Pressable onPress={onPress} style={styles.navBtn}>
       {active ? <View style={styles.activeDot} /> : null}
-      <Text style={{ fontSize: 20 }}>{tab.icon}</Text>
+      <Icon name={active ? tab.iconOn : tab.icon} size={20} color={active ? colors.accentInk : colors.ink3} />
       <Text style={[styles.navLabel, active && { color: colors.accentInk, fontWeight: '700' }]}>{tab.label}</Text>
     </Pressable>
   );
@@ -55,5 +60,4 @@ const styles = StyleSheet.create({
   addBtn: {
     width: 52, height: 52, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
   },
-  addIcon: { color: '#fff', fontSize: 26, fontWeight: '700', marginTop: -2 },
 });

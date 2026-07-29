@@ -292,7 +292,10 @@ const loginAs = async (page) => {
 const openBulkImportAs = async (page) => {
   await loginAs(page);
   await page.waitForTimeout(500);
-  await page.getByText('📊 엑셀로 추가', { exact: false }).first().click();
+  // 엑셀로 추가 버튼은 "새로운 꿈" 추가 시트 안으로 옮겨졌어요 — 먼저 + 버튼으로 시트를 엽니다.
+  await page.locator('[aria-label="새 꿈 추가"]').first().click();
+  await page.waitForTimeout(500);
+  await page.getByText('엑셀로 여러 개 한 번에 추가', { exact: false }).first().click();
 };
 
 const probe = {};
@@ -375,12 +378,14 @@ const registerAs = async (page) => {
     ],
     ['[로그인] 콘솔 치명적 오류 없음', a.errors.length === 0, a.errors.join(' | ').slice(0, 200)],
 
-    ['[가입] 프로그레스바에서 멈추지 않는다', !/준비하고 있어요/.test(b.text) && b.nodes > 30, `노드 ${b.nodes}`],
+    // 아이콘/테두리를 정리한 뒤로 이 화면의 DOM 노드 수가 자연스럽게 줄었어요(장식용 별 스티커 제거 등) —
+    // 완전히 빈 화면(수 노드 이하)과 구분되는 정도로 기준을 낮췄습니다.
+    ['[가입] 프로그레스바에서 멈추지 않는다', !/준비하고 있어요/.test(b.text) && b.nodes > 15, `노드 ${b.nodes}`],
     ['[가입] users 문서를 새로 만든다(commit)', b.seen.includes('FS commit'), b.seen.join(' | ')],
     ['[가입] 가입 직후 온보딩/홈으로 넘어간다', !/회원가입 이름 이메일 비밀번호/.test(b.text), b.text.slice(0, 200)],
     ['[가입] 콘솔 치명적 오류 없음', b.errors.length === 0, b.errors.join(' | ').slice(0, 200)],
 
-    ['[403] 빈 화면이 아니다', c.nodes > 30, `노드 ${c.nodes}`],
+    ['[403] 빈 화면이 아니다', c.nodes > 15, `노드 ${c.nodes}`],
     ['[403] 로딩에서 멈추지 않는다', !/준비하고 있어요/.test(c.text), ''],
     [
       '[403] 원인을 보여주는 오류 화면이 뜬다',
@@ -389,7 +394,7 @@ const registerAs = async (page) => {
     ],
     ['[403] 다시 시도 버튼이 있다', /다시 시도/.test(c.text), ''],
 
-    ['[DB없음] 빈 화면이 아니고 로딩에서 안 멈춘다', d.nodes > 30 && !/준비하고 있어요/.test(d.text), `노드 ${d.nodes}`],
+    ['[DB없음] 빈 화면이 아니고 로딩에서 안 멈춘다', d.nodes > 15 && !/준비하고 있어요/.test(d.text), `노드 ${d.nodes}`],
     [
       '[DB없음] "데이터베이스가 아직 만들어지지 않았어요" 안내가 뜬다',
       /데이터베이스가 아직 만들어지지 않았어요/.test(d.text),

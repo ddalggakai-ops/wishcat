@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Sheet from '../components/Sheet';
 import BubbleButton from '../components/Button';
+import Icon from '../components/Icon';
 import { STARTER_PACKS } from '../data/starterTemplates';
 import { colors, radius } from '../theme';
 import { useApp } from '../context/AppContext';
@@ -96,7 +97,7 @@ export default function StarterSheet({
             style={[styles.row, on && styles.rowOn]}
           >
             <View style={[styles.check, on && styles.checkOn]}>
-              {on ? <Text style={styles.checkMark}>✓</Text> : null}
+              {on ? <Icon name="checkmark" size={13} color="#fff" /> : null}
             </View>
             <Text style={{ fontSize: 17 }}>{it.emoji}</Text>
             <Text style={[styles.rowTitle, on && styles.rowTitleOn]} numberOfLines={2}>{it.title}</Text>

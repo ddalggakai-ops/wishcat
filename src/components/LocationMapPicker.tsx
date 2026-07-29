@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Image, Modal, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
+import Icon from './Icon';
 import { colors, radius, shadow } from '../theme';
 import { REGION_DEFAULT_CENTER, lonLatToTile, tileToLonLat, tileUrl } from '../utils/geo';
 import type { Region } from '../api/types';
@@ -113,17 +114,17 @@ export default function LocationMapPicker({
               />
             ))}
             <View style={styles.pinWrap} pointerEvents="none">
-              <Text style={styles.pin}>📍</Text>
+              <Icon name="location" size={30} color={colors.accent} />
             </View>
           </View>
 
           <View style={styles.zoomRow}>
             <Pressable onPress={() => rezoom(-1)} style={styles.zoomBtn} disabled={center.zoom <= MIN_ZOOM}>
-              <Text style={styles.zoomText}>−</Text>
+              <Icon name="remove" size={16} color={colors.ink2} />
             </Pressable>
             <Text style={styles.zoomLabel}>확대 · {center.zoom}</Text>
             <Pressable onPress={() => rezoom(1)} style={styles.zoomBtn} disabled={center.zoom >= MAX_ZOOM}>
-              <Text style={styles.zoomText}>＋</Text>
+              <Icon name="add" size={16} color={colors.ink2} />
             </Pressable>
           </View>
 

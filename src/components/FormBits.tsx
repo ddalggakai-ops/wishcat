@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 import { CATEGORIES, catColor, colors, radius } from '../theme';
+import Icon from './Icon';
 
 export function FieldLabel({ children }: { children: string }) {
   return <Text style={styles.label}>{children}</Text>;
@@ -55,7 +56,7 @@ export function Field({
         accessibilityRole="button"
         accessibilityLabel={reveal ? '비밀번호 가리기' : '비밀번호 보기'}
       >
-        <Text style={styles.revealBtn}>{reveal ? '🙈' : '👁'}</Text>
+        <Icon name={reveal ? 'eye-off-outline' : 'eye-outline'} size={18} color={colors.ink3} />
       </Pressable>
     </View>
   );

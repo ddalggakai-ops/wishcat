@@ -4,12 +4,11 @@ import { colorFor } from '../theme';
 import { resolveImageUrl } from '../api/client';
 
 export default function Avatar({
-  name, photoUrl, size = 40, dashed, style,
+  name, photoUrl, size = 40, style,
 }: {
   name: string;
   photoUrl?: string | null;
   size?: number;
-  dashed?: boolean;
   style?: ViewStyle;
 }) {
   const initial = (name || '?').trim().charAt(0).toUpperCase();
@@ -21,9 +20,8 @@ export default function Avatar({
           width: size, height: size, borderRadius: size / 2,
           backgroundColor: colorFor(name || ''),
           alignItems: 'center', justifyContent: 'center',
-          borderWidth: dashed ? 3 : 0,
-          borderColor: '#B49CF2',
-          borderStyle: dashed ? 'dashed' : 'solid',
+          borderWidth: 1,
+          borderColor: '#0000000F',
           overflow: 'hidden',
         },
         style,

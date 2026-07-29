@@ -28,7 +28,6 @@ export default function OnboardingScreen({ onFinish }: { onFinish: () => void })
         <View style={styles.main}>
           <View style={styles.iconWrap}>
             <Text style={{ fontSize: 46 }}>{s.icon}</Text>
-            <Text style={styles.iconSticker}>✦</Text>
           </View>
           <Text style={styles.title}>{s.title}</Text>
           <Text style={styles.desc}>{s.desc}</Text>
@@ -56,11 +55,10 @@ const styles = StyleSheet.create({
   main: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   iconWrap: {
     width: 118, height: 118, borderRadius: 36, backgroundColor: colors.accentWash,
-    borderWidth: 2, borderColor: colors.line, borderStyle: 'dashed',
+    borderWidth: 1, borderColor: colors.line,
     alignItems: 'center', justifyContent: 'center', marginBottom: 36,
     shadowColor: shadowColors.primary, shadowOpacity: 0.6, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 3,
   },
-  iconSticker: { position: 'absolute', top: -12, right: -10, fontSize: 24, color: colors.candyYellow },
   title: { fontSize: 26, fontWeight: '700', color: colors.ink, textAlign: 'center', marginBottom: 14 },
   desc: { fontSize: 15.5, color: colors.ink2, textAlign: 'center', lineHeight: 24, maxWidth: 300 },
   foot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

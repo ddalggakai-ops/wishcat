@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { catColor, catRole, colors, radius, shadow } from '../theme';
 import type { Item } from '../api/types';
 import Avatar from './Avatar';
+import Icon from './Icon';
 import { CategoryChips, LocationChip, PriorityBadge, Tag } from './Chips';
 import BubbleButton from './Button';
 import MemoryPhotoCarousel from './MemoryPhotos';
@@ -84,12 +85,12 @@ export default function ItemCard({
   const catBg = catColor(item.categories?.[0]).bg;
   const selectBox = ctx === 'mine' && selectable ? (
     <Pressable onPress={() => onToggleSelect?.(item)} style={[styles.selectBox, selected && styles.selectBoxOn]} hitSlop={6}>
-      {selected ? <Text style={styles.selectMark}>✓</Text> : null}
+      {selected ? <Icon name="checkmark" size={14} color="#fff" /> : null}
     </Pressable>
   ) : null;
   const lead = selectBox || (ctx === 'mine' ? (
     <Pressable onPress={() => onToggleDone?.(item)} style={[styles.check, item.done && styles.checkDone]}>
-      {item.done ? <Text style={styles.checkMark}>✓</Text> : null}
+      {item.done ? <Icon name="checkmark" size={14} color="#fff" /> : null}
     </Pressable>
   ) : (
     <View style={[styles.catIcon, { backgroundColor: catBg }]}><Text style={{ fontSize: 19 }}>{item.emoji}</Text></View>
@@ -97,11 +98,11 @@ export default function ItemCard({
 
   const reorderCol = ctx === 'mine' && selectable ? (
     <View style={styles.reorderCol}>
-      <Pressable onPress={() => onMoveUp?.(item)} disabled={!canMoveUp} hitSlop={4} style={[styles.reorderBtn, !canMoveUp && styles.reorderBtnOff]}>
-        <Text style={[styles.reorderText, !canMoveUp && styles.reorderTextOff]}>▲</Text>
+      <Pressable onPress={() => onMoveUp?.(item)} disabled={!canMoveUp} hitSlop={4} style={[styles.reorderBtn, !canMoveUp && styles.reorderBtnOff]} accessibilityRole="button" accessibilityLabel="위로 이동">
+        <Icon name="chevron-up" size={14} color={canMoveUp ? colors.ink2 : colors.ink3} />
       </Pressable>
-      <Pressable onPress={() => onMoveDown?.(item)} disabled={!canMoveDown} hitSlop={4} style={[styles.reorderBtn, !canMoveDown && styles.reorderBtnOff]}>
-        <Text style={[styles.reorderText, !canMoveDown && styles.reorderTextOff]}>▼</Text>
+      <Pressable onPress={() => onMoveDown?.(item)} disabled={!canMoveDown} hitSlop={4} style={[styles.reorderBtn, !canMoveDown && styles.reorderBtnOff]} accessibilityRole="button" accessibilityLabel="아래로 이동">
+        <Icon name="chevron-down" size={14} color={canMoveDown ? colors.ink2 : colors.ink3} />
       </Pressable>
     </View>
   ) : null;
@@ -149,7 +150,7 @@ export default function ItemCard({
     >
       {ctx === 'mine' && onMenu && !selectable ? (
         <Pressable style={styles.more} onPress={() => onMenu(item)}>
-          <Text style={{ fontSize: 16, color: colors.ink3 }}>⋯</Text>
+          <Icon name="ellipsis-horizontal" size={18} color={colors.ink3} />
         </Pressable>
       ) : null}
       <View style={styles.row}>
@@ -266,12 +267,10 @@ const styles = StyleSheet.create({
   compactCard: { paddingVertical: 12, paddingHorizontal: 14 },
   more: { position: 'absolute', top: 9, right: 9, width: 28, height: 28, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   row: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  check: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: colors.line2, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', marginTop: 1 },
-  checkDone: { backgroundColor: colors.done, borderColor: colors.done, borderStyle: 'solid' },
-  checkMark: { color: '#fff', fontSize: 13, fontWeight: '800' },
-  selectBox: { width: 24, height: 24, borderRadius: 7, borderWidth: 2, borderColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginTop: 1, backgroundColor: colors.surface },
+  check: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, borderColor: colors.line2, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  checkDone: { backgroundColor: colors.done, borderColor: colors.done },
+  selectBox: { width: 24, height: 24, borderRadius: 7, borderWidth: 1.5, borderColor: colors.accent, alignItems: 'center', justifyContent: 'center', marginTop: 1, backgroundColor: colors.surface },
   selectBoxOn: { backgroundColor: colors.accent },
-  selectMark: { color: '#fff', fontSize: 13, fontWeight: '800' },
   catIcon: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.line },
   titleRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
   title: { fontSize: 15.5, fontWeight: '600', color: colors.ink, letterSpacing: -0.2, flexShrink: 1 },

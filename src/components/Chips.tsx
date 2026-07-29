@@ -1,5 +1,6 @@
 import React from 'react';
 import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import Icon from './Icon';
 import { catColor, colors, PRIORITY_META, radius } from '../theme';
 import { lonLatToTile, tileUrl } from '../utils/geo';
 import type { Location, Priority } from '../api/types';
@@ -57,7 +58,7 @@ export function LocationChip({ location }: { location: Location }) {
       {hasPin ? (
         <LocationPreview lat={location.lat as number} lng={location.lng as number} size={20} />
       ) : (
-        <Text style={styles.locChipIcon}>📍</Text>
+        <Icon name="location-outline" size={14} color={colors.ink3} />
       )}
       <Text style={styles.locChipText}>{location.name}</Text>
       <View style={styles.mapKind}>

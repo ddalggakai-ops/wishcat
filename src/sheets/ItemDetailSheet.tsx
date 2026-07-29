@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Sheet from '../components/Sheet';
 import BubbleButton from '../components/Button';
 import Avatar from '../components/Avatar';
+import Icon from '../components/Icon';
 import { CategoryChips, LocationChip, PriorityBadge } from '../components/Chips';
 import { dDayLabel } from '../components/ItemCard';
 import MemoryPhotoCarousel from '../components/MemoryPhotos';
@@ -39,7 +40,6 @@ export default function ItemDetailSheet({
   const isMine = !!user && live.owner.id === user.id;
   const joined = !!user && live.participants.some((p) => p.id === user.id);
   const dday = !live.done ? dDayLabel(live.targetDate) : null;
-  const photo = resolveImageUrl(live.memory?.photo);
   const memoryPhotos = (live.memory?.photos?.length ? live.memory.photos : (live.memory?.photo ? [live.memory.photo] : []))
     .map(resolveImageUrl)
     .filter((u): u is string => !!u);
@@ -69,15 +69,12 @@ export default function ItemDetailSheet({
   };
 
   return (
-    <Sheet visible={visible} onClose={onClose} title={photo ? '' : `${live.emoji} ${live.title}`}>
-      {photo ? (
-        <Image source={{ uri: photo }} style={styles.hero} />
-      ) : (
-        <LinearGradient colors={gradients[catRole(live.categories?.[0])]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
-          <Text style={styles.heroEmoji}>{live.emoji}</Text>
-        </LinearGradient>
-      )}
-      {photo ? <Text style={styles.heroTitle}>{live.emoji} {live.title}</Text> : null}
+    <Sheet visible={visible} onClose={onClose} title={`${live.emoji} ${live.title}`}>
+      {/* 이룬 꿈은 여기서 사진 1장짜리 hero를 따로 보여주지 않아요 — 실제 사진(여러 장이면 캐러셀)은
+          아래 memWrap에서 한 번만 보여줍니다. 예전엔 첫 번째 사진이 위/아래 두 번 중복으로 보였어요. */}
+      <LinearGradient colors={gradients[catRole(live.categories?.[0])]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+        <Text style={styles.heroEmoji}>{live.emoji}</Text>
+      </LinearGradient>
 
       <Pressable style={styles.ownerRow} onPress={() => { onClose(); onOpenPerson(live.owner.id, live.owner.name); }}>
         <Avatar name={live.owner.name} photoUrl={live.owner.photoUrl} size={34} />
@@ -124,11 +121,11 @@ export default function ItemDetailSheet({
 
       <View style={styles.countRow}>
         <Pressable onPress={() => toggleLike(live.id).catch(() => {})} style={styles.countBtn}>
-          <Text style={{ fontSize: 16, color: live.likedByMe ? colors.like : colors.ink3 }}>{live.likedByMe ? '♥' : '♡'}</Text>
+          <Icon name={live.likedByMe ? 'heart' : 'heart-outline'} size={17} color={live.likedByMe ? colors.like : colors.ink3} />
           <Text style={styles.countText}>{live.likesCount}</Text>
         </Pressable>
         <View style={styles.countBtn}>
-          <Text style={{ fontSize: 14 }}>🔖</Text>
+          <Icon name="bookmark-outline" size={15} color={colors.ink3} />
           <Text style={styles.countText}>{live.savesCount}명이 담았어요</Text>
         </View>
       </View>
@@ -159,7 +156,6 @@ export default function ItemDetailSheet({
 const styles = StyleSheet.create({
   hero: { width: '100%', height: 190, borderRadius: radius.lg, marginBottom: 14, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   heroEmoji: { fontSize: 52 },
-  heroTitle: { fontSize: 19, fontWeight: '700', color: colors.ink, marginBottom: 12 },
   ownerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4, marginBottom: 14 },
   ownerName: { fontSize: 13.5, fontWeight: '700', color: colors.ink },
   ownerSub: { fontSize: 11.5, color: colors.accent, marginTop: 2 },

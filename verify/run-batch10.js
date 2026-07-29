@@ -200,36 +200,36 @@ const login = async (page) => {
 
   // ① 스크롤 버튼: 아이템이 적으면 버튼이 없고, 많으면 뜨고, 누르면 실제로 스크롤됨
   const fewScroll = await scenario(browser, '02-scroll-few', async (page) => {
-    const hasFab = await page.evaluate(() => !!Array.from(document.querySelectorAll('*')).find((el) => el.textContent === '↓' || el.textContent === '↑'));
+    const hasFab = await page.evaluate(() => !!document.querySelector('[aria-label="위로 스크롤"], [aria-label="아래로 스크롤"]'));
     return { hasFab };
   }, { many: false, skipLogin: true });
 
   const manyScroll = await scenario(browser, '03-scroll-many', async (page) => {
     await login(page);
     await page.waitForTimeout(500);
-    const hasFabBefore = await page.locator('text=↓').count();
+    const hasFabBefore = await page.locator('[aria-label="아래로 스크롤"]').count();
     // 실제 스크롤 컨테이너의 scrollTop 을 클릭 전/후로 비교
     const scrollTopBefore = await page.evaluate(() => {
       const nodes = Array.from(document.querySelectorAll('div'));
       const el = nodes.find((n) => n.scrollHeight - n.clientHeight > 100);
       return el ? el.scrollTop : null;
     });
-    await page.locator('text=↓').first().click();
+    await page.locator('[aria-label="아래로 스크롤"]').first().click();
     await page.waitForTimeout(700);
     const scrollTopAfter = await page.evaluate(() => {
       const nodes = Array.from(document.querySelectorAll('div'));
       const el = nodes.find((n) => n.scrollHeight - n.clientHeight > 100);
       return el ? el.scrollTop : null;
     });
-    const hasUpArrowAfter = await page.locator('text=↑').count();
-    const hasDownArrowAfter = await page.locator('text=↓').count();
+    const hasUpArrowAfter = await page.locator('[aria-label="위로 스크롤"]').count();
+    const hasDownArrowAfter = await page.locator('[aria-label="아래로 스크롤"]').count();
     return { hasFabBefore, scrollTopBefore, scrollTopAfter, hasUpArrowAfter, hasDownArrowAfter };
   }, { many: true });
 
   // ② 지도에서 위치 선택 + 작은 미리보기
   const mapPick = await scenario(browser, '04-map-pick', async (page) => {
     await login(page);
-    await page.getByText('＋', { exact: true }).first().click();
+    await page.locator('[aria-label="새 꿈 추가"]').first().click();
     await page.waitForTimeout(800);
     await page.getByText('지도에서 고르기', { exact: false }).first().click();
     await page.waitForTimeout(600);
