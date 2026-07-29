@@ -46,3 +46,6 @@ dist-web/
 dist-boom/
 dist-and/
 verify/*.png
+
+# 가라데이터 시딩 결과(테스트 계정 비밀번호·uid 포함)
+scripts/.seed-output.json

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { catColor, colors, radius, shadow } from '../theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import { catColor, catRole, colors, gradients, radius, shadow } from '../theme';
 import type { Item } from '../api/types';
 import Avatar from './Avatar';
 import { CategoryChips, LocationChip, PriorityBadge, Tag } from './Chips';
@@ -175,12 +176,27 @@ export default function ItemCard({
 
           {showMemory ? (
             <View style={styles.memWrap}>
-              <View style={styles.tape} />
-              {photoUri ? <Image source={{ uri: photoUri }} style={styles.memImg} /> : null}
-              <View style={styles.memCap}>
-                {item.memory?.text ? <Text style={styles.memText}>{item.memory.text}</Text> : null}
-                <Text style={styles.memDate}>📷 {item.memory?.date}</Text>
+              <View style={styles.memHead}>
+                <Text style={styles.memBadge}>✓ 이룬 꿈</Text>
+                {item.memory?.date ? <Text style={styles.memHeadDate}>📷 {item.memory.date}</Text> : null}
               </View>
+              {photoUri ? (
+                <Image source={{ uri: photoUri }} style={styles.memImg} />
+              ) : (
+                <LinearGradient
+                  colors={gradients[catRole(item.categories?.[0])]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={[styles.memImg, styles.memImgPh]}
+                >
+                  <Text style={styles.memPhEmoji}>{item.emoji}</Text>
+                </LinearGradient>
+              )}
+              {item.memory?.text ? (
+                <View style={styles.memCap}>
+                  <Text style={styles.memText}>{item.memory.text}</Text>
+                </View>
+              ) : null}
             </View>
           ) : null}
 
@@ -249,12 +265,15 @@ const styles = StyleSheet.create({
   srcT: { fontSize: 12.5, color: colors.ink2, flexShrink: 1 },
   who: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
   whoLabel: { fontSize: 12, color: colors.ink2 },
-  memWrap: { marginTop: 20, marginHorizontal: 4, borderWidth: 1, borderColor: colors.line, borderRadius: 13, backgroundColor: colors.surface, transform: [{ rotate: '-1.3deg' }], ...shadow.sm },
-  tape: { position: 'absolute', top: -11, alignSelf: 'center', width: 64, height: 20, backgroundColor: 'rgba(255,202,74,.75)', borderRadius: 2, transform: [{ rotate: '-4deg' }] },
-  memImg: { width: '100%', height: 180, borderRadius: 12, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
-  memCap: { padding: 11 },
+  memWrap: { marginTop: 14, borderWidth: 1, borderColor: colors.line, borderRadius: 16, backgroundColor: colors.surface, overflow: 'hidden', ...shadow.sm },
+  memHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingTop: 11, paddingBottom: 9 },
+  memBadge: { fontSize: 12.5, fontWeight: '700', color: colors.done },
+  memHeadDate: { fontSize: 11, color: colors.ink3 },
+  memImg: { width: '100%', height: 190 },
+  memImgPh: { alignItems: 'center', justifyContent: 'center' },
+  memPhEmoji: { fontSize: 46 },
+  memCap: { padding: 12 },
   memText: { fontSize: 13.5, color: colors.ink, lineHeight: 19 },
-  memDate: { fontSize: 11.5, color: colors.ink3, marginTop: 6 },
   actions: { flexDirection: 'row', gap: 7, marginTop: 12, flexWrap: 'wrap' },
   mutedPill: { backgroundColor: colors.surface2, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 13 },
   mutedPillText: { fontSize: 13, color: colors.ink3, fontWeight: '600' },
