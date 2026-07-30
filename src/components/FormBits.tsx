@@ -101,7 +101,7 @@ export function PriorityPicker({ value, onChange }: { value: 'high' | 'mid' | 'l
           <Pressable
             key={o.key}
             onPress={() => onChange(sel ? null : o.key)}
-            style={[styles.catPickBtn, { backgroundColor: sel ? colors.accent : colors.surface2, borderWidth: sel ? 0 : 1, borderColor: colors.line2 }]}
+            style={[styles.catPickBtn, { backgroundColor: sel ? colors.accent : colors.surface2 }]}
           >
             <Text style={{ color: sel ? '#fff' : colors.ink2, fontSize: 13, fontWeight: '600' }}>{o.label}</Text>
           </Pressable>
@@ -141,25 +141,26 @@ export function RegionToggle({ value, onChange }: { value: 'domestic' | 'oversea
 
 const styles = StyleSheet.create({
   label: { fontSize: 12.5, fontWeight: '600', color: colors.ink2, marginTop: 16, marginBottom: 8 },
+  // 미니멀: 입력 필드는 윤곽선 없이 옅은 채움색으로 구분합니다.
   input: {
-    borderWidth: 1, borderColor: colors.line2, borderRadius: radius.sm, paddingVertical: 13, paddingHorizontal: 14,
-    fontSize: 15, color: colors.ink, backgroundColor: colors.surface,
+    borderRadius: radius.sm, paddingVertical: 13, paddingHorizontal: 14,
+    fontSize: 15, color: colors.ink, backgroundColor: colors.surface2,
   },
   textarea: { minHeight: 80, textAlignVertical: 'top' },
   inputBare: { flex: 1, fontSize: 15, color: colors.ink, padding: 0 },
   secureRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    borderWidth: 1, borderColor: colors.line2, borderRadius: radius.sm,
-    paddingVertical: 13, paddingHorizontal: 14, backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    paddingVertical: 13, paddingHorizontal: 14, backgroundColor: colors.surface2,
   },
   revealBtn: { fontSize: 16 },
   wrapRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   catPickBtn: { borderRadius: radius.pill, paddingVertical: 8, paddingHorizontal: 13 },
-  emojiBtn: { width: 44, height: 44, borderRadius: 11, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
-  emojiBtnSel: { borderColor: colors.accent, backgroundColor: colors.accentWash },
+  emojiBtn: { width: 44, height: 44, borderRadius: 11, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
+  emojiBtnSel: { backgroundColor: colors.accentWash },
   seg2: { flexDirection: 'row', gap: 8 },
-  segBtn: { flex: 1, borderWidth: 1, borderColor: colors.line2, backgroundColor: colors.surface, borderRadius: 11, paddingVertical: 11, alignItems: 'center' },
-  segBtnOn: { borderColor: 'transparent', backgroundColor: colors.accentWash },
+  segBtn: { flex: 1, backgroundColor: colors.surface2, borderRadius: 11, paddingVertical: 11, alignItems: 'center' },
+  segBtnOn: { backgroundColor: colors.accentWash },
   segText: { fontSize: 13, fontWeight: '600', color: colors.ink2 },
   segTextOn: { color: colors.accentInk },
 });

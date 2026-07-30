@@ -21,6 +21,7 @@ interface AppState {
   editItem: (id: string, patch: Partial<{ title: string; emoji: string; note: string; categories: string[]; location: Location | null; targetDate: string | null; priority: Priority | null }>) => Promise<Item>;
   deleteItem: (id: string) => Promise<void>;
   deleteItems: (ids: string[]) => Promise<void>;
+  completeItems: (ids: string[]) => Promise<void>;
   reorderItems: (updates: { id: string; order: number }[]) => Promise<void>;
   completeItem: (id: string, payload: { photos?: string[]; text?: string }) => Promise<Item>;
   reopenItem: (id: string) => Promise<Item>;
@@ -153,6 +154,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setMineIds((prev) => prev.filter((x) => !idSet.has(x)));
   }, []);
 
+  const completeItems = useCallback(async (ids: string[]) => {
+    if (!ids.length) return;
+    await itemsService.completeItems(ids);
+    ids.forEach(cancelReminder); // 이룬 꿈은 더 이상 재촉하지 않아요
+    // 완료 상태·기록이 목록에 바로 반영되도록 통째로 다시 불러옵니다.
+    await refreshMine({ force: true });
+  }, [refreshMine]);
+
   const reorderItems = useCallback(async (updates: { id: string; order: number }[]) => {
     if (!updates.length) return;
     await itemsService.reorderItems(updates);
@@ -239,10 +248,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<AppState>(() => ({
     itemsById, mineIds, friends, loadingMine, loadingFriends,
     getItem, mergeItems, refreshMine, refreshFriends,
-    addItem, bulkAddItems, editItem, deleteItem, deleteItems, reorderItems, completeItem, reopenItem,
+    addItem, bulkAddItems, editItem, deleteItem, deleteItems, completeItems, reorderItems, completeItem, reopenItem,
     startItem, stopItem,
     joinItem, leaveItem, helpItem, toggleLike, createInvite,
-  }), [itemsById, mineIds, friends, loadingMine, loadingFriends, getItem, mergeItems, refreshMine, refreshFriends, addItem, bulkAddItems, editItem, deleteItem, deleteItems, reorderItems, completeItem, reopenItem, startItem, stopItem, joinItem, leaveItem, helpItem, toggleLike, createInvite]);
+  }), [itemsById, mineIds, friends, loadingMine, loadingFriends, getItem, mergeItems, refreshMine, refreshFriends, addItem, bulkAddItems, editItem, deleteItem, deleteItems, completeItems, reorderItems, completeItem, reopenItem, startItem, stopItem, joinItem, leaveItem, helpItem, toggleLike, createInvite]);
 
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;
 }

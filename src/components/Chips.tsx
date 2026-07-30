@@ -23,7 +23,7 @@ export function LocationPreview({ lat, lng, size = 22 }: { lat: number; lng: num
 export function CategoryChip({ category }: { category: string }) {
   const c = catColor(category);
   return (
-    <View style={[styles.catChip, { backgroundColor: c.bg, borderColor: c.ink + '55' }]}>
+    <View style={[styles.catChip, { backgroundColor: c.bg }]}>
       <Text style={[styles.catChipText, { color: c.ink }]}>{category}</Text>
     </View>
   );
@@ -102,8 +102,7 @@ export function Tag({ label, tone }: { label: string; tone: 'shared' | 'joined' 
 
 const styles = StyleSheet.create({
   catChip: {
-    borderWidth: 1, borderRadius: radius.pill, paddingVertical: 3, paddingHorizontal: 10,
-    transform: [{ rotate: '-2.5deg' }],
+    borderRadius: radius.pill, paddingVertical: 3, paddingHorizontal: 10,
   },
   catChipText: { fontSize: 11, fontWeight: '700' },
   locChip: {
@@ -114,7 +113,7 @@ const styles = StyleSheet.create({
   locChipText: { fontSize: 11.5, fontWeight: '600', color: colors.accentInk },
   mapKind: { backgroundColor: colors.accent, borderRadius: radius.pill, paddingHorizontal: 6, paddingVertical: 1, marginLeft: 2 },
   mapKindText: { fontSize: 9.5, fontWeight: '700', color: '#fff' },
-  tag: { borderRadius: 7, paddingVertical: 2.5, paddingHorizontal: 8, transform: [{ rotate: '-2deg' }] },
+  tag: { borderRadius: 7, paddingVertical: 2.5, paddingHorizontal: 8 },
   tagText: { fontSize: 11, fontWeight: '700' },
   prioChip: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: radius.pill, paddingVertical: 3, paddingHorizontal: 10 },
   prioDot: { width: 7, height: 7, borderRadius: 4 },

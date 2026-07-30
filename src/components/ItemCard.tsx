@@ -177,7 +177,7 @@ function ItemCard({
           {tags.length ? <View style={styles.tagRow}>{tags}</View> : null}
           {item.note ? <Text style={styles.note}>{item.note}</Text> : null}
 
-          {(item.categories?.length || item.location || dday || item.priority || (ctx === 'mine' && !item.done)) ? (
+          {(item.categories?.length || item.location || dday || item.priority) ? (
             <View style={styles.metaRow}>
               <CategoryChips categories={item.categories} />
               {item.location ? <LocationChip location={item.location} /> : null}
@@ -186,17 +186,6 @@ function ItemCard({
                 <View style={[styles.dday, dday.endsWith('지남') && styles.ddayPast]}>
                   <Text style={[styles.ddayText, dday.endsWith('지남') && styles.ddayTextPast]}>🗓 {dday}</Text>
                 </View>
-              ) : null}
-              {ctx === 'mine' && !item.done ? (
-                inProgress ? (
-                  <Pressable onPress={() => onStopProgress?.(item)} style={styles.progressPill} hitSlop={4}>
-                    <Text style={styles.progressPillText}>🏃 진행중 D+{progressDays}일째</Text>
-                  </Pressable>
-                ) : (
-                  <Pressable onPress={() => onStartProgress?.(item)} style={styles.startPill} hitSlop={4}>
-                    <Text style={styles.startPillText}>▶ 진행 시작</Text>
-                  </Pressable>
-                )
               ) : null}
             </View>
           ) : null}
@@ -243,7 +232,18 @@ function ItemCard({
                 </>
               )}
               {ctx === 'mine' && !item.done && (
-                <BubbleButton small variant="line" title="완료하기" onPress={() => onMemory?.(item)} />
+                <>
+                  {inProgress ? (
+                    <Pressable onPress={() => onStopProgress?.(item)} style={styles.progressPill} hitSlop={4} accessibilityRole="button" accessibilityLabel="진행 중단">
+                      <Text style={styles.progressPillText}>🏃 진행중 D+{progressDays}일째</Text>
+                    </Pressable>
+                  ) : (
+                    <Pressable onPress={() => onStartProgress?.(item)} style={styles.startPill} hitSlop={4} accessibilityRole="button" accessibilityLabel="진행 시작">
+                      <Text style={styles.startPillText}>▶ 진행 시작</Text>
+                    </Pressable>
+                  )}
+                  <BubbleButton small variant="line" title="완료하기" onPress={() => onMemory?.(item)} />
+                </>
               )}
               {ctx !== 'mine' && item.done && (
                 <View style={styles.mutedPill}><Text style={styles.mutedPillText}>{(item.helpedBy || []).length ? '✓ 이미 이룬 꿈' : '✓ 이미 이룬 꿈'}</Text></View>
@@ -280,9 +280,10 @@ function ItemCard({
 export default React.memo(ItemCard);
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: radius.lg, padding: 15, marginBottom: 10, ...shadow.sm },
-  cardSelected: { borderColor: colors.accent, backgroundColor: colors.accentWash },
-  compactCard: { paddingVertical: 12, paddingHorizontal: 14 },
+  // 인스타그램식 미니멀: 테두리·라운드 없이 아래쪽 얇은 실선(구분선) + 은은한 음영만.
+  card: { backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.line, paddingHorizontal: 16, paddingVertical: 16, marginBottom: 0, ...shadow.xs },
+  cardSelected: { backgroundColor: colors.accentWash },
+  compactCard: { paddingVertical: 13, paddingHorizontal: 16 },
   more: { position: 'absolute', top: 9, right: 9, width: 28, height: 28, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   row: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   check: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, borderColor: colors.line2, alignItems: 'center', justifyContent: 'center', marginTop: 1 },

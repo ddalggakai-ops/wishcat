@@ -32,7 +32,7 @@ export default function MineScreen({
   onDetail: (item: Item) => void;
 }) {
   const { user, updateMe } = useAuth();
-  const { refreshMine, loadingMine, completeItem, reopenItem, deleteItems, reorderItems, startItem, stopItem, mineIds } = useApp();
+  const { refreshMine, loadingMine, reopenItem, deleteItems, completeItems, reorderItems, startItem, stopItem, mineIds } = useApp();
   const items = useMyItems();
   const [compact, setCompact] = useState(false);
   const [search, setSearch] = useState('');
@@ -210,6 +210,36 @@ export default function MineScreen({
       await alertDialog('삭제하지 못했어요', '잠시 뒤 다시 시도해주세요.');
     }
   }, [selectedIds, deleteItems, exitSelectMode]);
+
+  // 선택한 것 중 '아직 이루지 않은 내 꿈'만 완료 대상입니다.
+  // (이미 이룬 꿈이나 도와준 기록을 다시 완료 처리해 기록을 덮어쓰는 일이 없도록.)
+  const completableSelectedIds = useMemo(() => {
+    const byId = new Map(items.map((i) => [i.id, i]));
+    return [...selectedIds].filter((id) => {
+      const it = byId.get(id);
+      return !!it && !it.done && it.origin !== 'helped';
+    });
+  }, [selectedIds, items]);
+
+  const doCompleteSelected = useCallback(async () => {
+    const ids = completableSelectedIds;
+    if (!ids.length) {
+      await alertDialog('완료할 항목이 없어요', '이미 이룬 꿈은 완료 처리할 수 없어요.');
+      return;
+    }
+    const ok = await confirmDialog({
+      title: `${ids.length}개를 완료 처리할까요?`,
+      message: '선택한 도전 중인 꿈을 이룬 것으로 표시해요. 사진·글은 나중에 각 꿈에서 추가할 수 있어요.',
+      confirmLabel: '완료하기',
+    });
+    if (!ok) return;
+    try {
+      await completeItems(ids);
+      exitSelectMode();
+    } catch {
+      await alertDialog('완료하지 못했어요', '잠시 뒤 다시 시도해주세요.');
+    }
+  }, [completableSelectedIds, completeItems, exitSelectMode]);
 
   const moveInSection = useCallback((list: Item[], item: Item, dir: -1 | 1) => {
     const idx = list.findIndex((i) => i.id === item.id);
@@ -465,8 +495,9 @@ export default function MineScreen({
           </Pressable>
           <Text style={styles.selectBarCount}>{selectedIds.size}개 선택</Text>
           <Pressable onPress={selectAllVisible} style={styles.selectBarAll} accessibilityRole="button" accessibilityLabel="전체 선택 또는 해제">
-            <Text style={styles.selectBarAllText}>전체 선택/해제</Text>
+            <Text style={styles.selectBarAllText} numberOfLines={1}>전체</Text>
           </Pressable>
+          <BubbleButton small variant="primary" title="✓ 완료" onPress={doCompleteSelected} disabled={!completableSelectedIds.length} />
           <BubbleButton small variant="line" title="🗑 삭제" onPress={doDeleteSelected} disabled={!selectedIds.size} />
         </View>
       ) : null}
@@ -559,7 +590,7 @@ function SummaryStat({ label, value, onPress }: { label: string; value: number; 
 }
 
 const styles = StyleSheet.create({
-  profile: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 26, padding: 20, marginTop: 8, ...shadow.sm },
+  profile: { backgroundColor: colors.surface, borderRadius: 26, padding: 20, marginTop: 8, ...shadow.sm },
   sticker: { position: 'absolute', top: -15, right: 24, fontSize: 30, color: colors.candyYellow, transform: [{ rotate: '14deg' }] },
   pTop: { flexDirection: 'row', alignItems: 'center', gap: 18 },
   stats: { flex: 1, flexDirection: 'row', justifyContent: 'space-around' },
@@ -594,8 +625,8 @@ const styles = StyleSheet.create({
 
   emptyHint: { fontSize: 12, color: colors.ink2, textAlign: 'center', marginTop: 12, fontWeight: '600' },
   searchBox: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surface, borderWidth: 1,
-    borderColor: colors.line2, borderRadius: radius.sm, paddingHorizontal: 13, paddingVertical: 10, marginTop: 18,
+    flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surface2,
+    borderRadius: radius.sm, paddingHorizontal: 13, paddingVertical: 11, marginTop: 18,
   },
   searchIcon: { fontSize: 13 },
   searchInput: { flex: 1, fontSize: 14, color: colors.ink, padding: 0 },
@@ -603,13 +634,13 @@ const styles = StyleSheet.create({
   chipRow: { flexDirection: 'row', gap: 7, marginTop: 10 },
   chip: { borderRadius: radius.pill, paddingVertical: 7, paddingHorizontal: 13 },
   listBar: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12, marginBottom: -4 },
-  viewToggle: { borderWidth: 1, borderColor: colors.line2, backgroundColor: colors.surface, borderRadius: radius.sm, paddingVertical: 7, paddingHorizontal: 12 },
-  viewToggleOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  viewToggle: { backgroundColor: colors.surface2, borderRadius: radius.sm, paddingVertical: 8, paddingHorizontal: 12 },
+  viewToggleOn: { backgroundColor: colors.accent },
   hintText: { fontSize: 11.5, color: colors.ink3, marginTop: 14, marginBottom: -2 },
 
   selectBar: {
-    position: 'absolute', left: 12, right: 12, bottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.line,
+    position: 'absolute', left: 12, right: 12, bottom: 14, flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: colors.surface, borderRadius: radius.lg,
     paddingVertical: 10, paddingHorizontal: 12, ...shadow.lg,
   },
   selectBarClose: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },

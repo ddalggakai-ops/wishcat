@@ -108,11 +108,12 @@ const styles = StyleSheet.create({
   gradientFill: { borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   regular: { paddingVertical: 13, paddingHorizontal: 20 },
   small: { paddingVertical: 9, paddingHorizontal: 15 },
-  ghost: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
-  line: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.accentWash, alignItems: 'center', justifyContent: 'center' },
+  // 미니멀: 윤곽선 없이 채움색만으로 구분합니다.
+  ghost: { backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
+  line: { backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
   // 예전엔 opacity까지 곱해져서 글자색(ink3)이 배경(surface3)에 거의 묻혀 안 보이는 문제가 있었어요.
   // opacity 감쇠 없이 배경만 중립톤으로 바꿔서 "비활성 상태"는 알아보되 글자는 또렷하게 남깁니다.
-  disabled: { backgroundColor: colors.surface3, borderWidth: 1, borderColor: colors.line },
+  disabled: { backgroundColor: colors.surface3 },
   inner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   text: { fontSize: 14.5, fontWeight: '700' },
   textSmall: { fontSize: 13 },

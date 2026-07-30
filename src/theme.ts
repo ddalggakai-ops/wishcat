@@ -125,6 +125,7 @@ export const radius = { sm: 12, md: 16, lg: 22, xl: 28, pill: 999 };
 // 중립(회색 계열) 그림자 — 리스트 카드, 시트 등 일반 요소용.
 // 인스타그램은 그림자보다 얇은 테두리로 구분을 주는 편이라 예전보다 살짝 옅게 낮췄어요.
 export const shadow = {
+  xs: { shadowColor: '#000000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 0 },
   sm: { shadowColor: '#000000', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
   md: { shadowColor: '#000000', shadowOpacity: 0.1, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 3 },
   lg: { shadowColor: '#000000', shadowOpacity: 0.14, shadowRadius: 22, shadowOffset: { width: 0, height: 10 }, elevation: 6 },

@@ -218,6 +218,23 @@ export async function deleteItem(id: string): Promise<void> {
   await deleteDoc(itemDoc(id));
 }
 
+/**
+ * 여러 개를 한 번에 완료 처리 (다중선택 완료용).
+ * 호출부에서 '아직 이루지 않은' 항목만 넘겨줍니다. 아직 기록이 없는 항목을 완료하는 것이라
+ * 빈 기록(날짜만)으로 done 처리합니다 — 이미 기록이 있는 이룬 꿈을 덮어쓸 일은 없습니다.
+ */
+export async function completeItems(ids: string[]): Promise<void> {
+  const CHUNK = 400;
+  const date = localDateStamp();
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const batch = writeBatch(db);
+    ids.slice(i, i + CHUNK).forEach((id) =>
+      batch.update(itemDoc(id), { done: true, memory: { photo: null, photos: [], text: '', date } }),
+    );
+    await batch.commit();
+  }
+}
+
 /** 여러 개를 한 번에 삭제 (다중선택 삭제용) */
 export async function deleteItems(ids: string[]): Promise<void> {
   const CHUNK = 400;

@@ -180,7 +180,7 @@ export default function ExploreScreen({
 }
 
 const styles = StyleSheet.create({
-  toggleTrack: { flexDirection: 'row', backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.line, borderRadius: 13, padding: 3, alignSelf: 'flex-start', marginBottom: 6, position: 'relative' },
+  toggleTrack: { flexDirection: 'row', backgroundColor: colors.surface2, borderRadius: 13, padding: 3, alignSelf: 'flex-start', marginBottom: 6, position: 'relative' },
   toggleThumb: { position: 'absolute', top: 3, bottom: 3, left: 3, borderRadius: 10, backgroundColor: colors.surface, ...shadow.sm },
   toggleHalf: { paddingVertical: 8, paddingHorizontal: 18, borderRadius: 10 },
   retryBtn: { alignSelf: 'center', marginTop: 14, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.line, borderRadius: 99, paddingVertical: 10, paddingHorizontal: 22 },
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   toggleText: { fontSize: 13, fontWeight: '600', color: colors.ink3, textAlign: 'center' },
   toggleTextOn: { color: colors.accent },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 11, marginTop: 8 },
-  tile: { width: '47.6%', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, borderRadius: 19, overflow: 'hidden', ...shadow.sm },
+  tile: { width: '47.6%', backgroundColor: colors.surface, borderRadius: 19, overflow: 'hidden', ...shadow.sm },
   tileGradientWrap: { width: '47.6%', minHeight: 190 },
   tileGradientInner: { flex: 1, padding: 14, justifyContent: 'space-between' },
   tileGradientTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
