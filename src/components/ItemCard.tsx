@@ -37,7 +37,7 @@ export function elapsedDaysLabel(startedAt: string | null | undefined, today = n
 function ItemCard({
   item, ctx, compact, viewerId, onToggleDone, onMemory, onShare, onJoin, onLeave, onHelp, onMenu, onReport,
   onCardPress, selectable, selected, onToggleSelect, onLongPress, canMoveUp, canMoveDown, onMoveUp, onMoveDown,
-  onStartProgress, onStopProgress,
+  onStartProgress, onStopProgress, dragHandle,
 }: {
   item: Item;
   ctx: ItemCtx;
@@ -67,6 +67,8 @@ function ItemCard({
   canMoveDown?: boolean;
   onMoveUp?: (item: Item) => void;
   onMoveDown?: (item: Item) => void;
+  /** 드래그 순서 변경 핸들 — 있으면 위/아래 버튼 대신 이걸 씁니다 */
+  dragHandle?: React.ReactNode;
 }) {
   // 예전에는 '함께하기' 버튼이 좋아요(likedByMe) 상태를 보고 색만 바뀌었습니다.
   // 이미 함께하고 있어도 버튼이 그대로 남아 있어서 몇 번이고 다시 누르게 됐어요.
@@ -111,14 +113,18 @@ function ItemCard({
   ));
 
   const reorderCol = ctx === 'mine' && selectable ? (
-    <View style={styles.reorderCol}>
-      <Pressable onPress={() => onMoveUp?.(item)} disabled={!canMoveUp} hitSlop={4} style={[styles.reorderBtn, !canMoveUp && styles.reorderBtnOff]} accessibilityRole="button" accessibilityLabel="위로 이동">
-        <Icon name="chevron-up" size={14} color={canMoveUp ? colors.ink2 : colors.ink3} />
-      </Pressable>
-      <Pressable onPress={() => onMoveDown?.(item)} disabled={!canMoveDown} hitSlop={4} style={[styles.reorderBtn, !canMoveDown && styles.reorderBtnOff]} accessibilityRole="button" accessibilityLabel="아래로 이동">
-        <Icon name="chevron-down" size={14} color={canMoveDown ? colors.ink2 : colors.ink3} />
-      </Pressable>
-    </View>
+    dragHandle ? (
+      <View style={styles.reorderCol}>{dragHandle}</View>
+    ) : (
+      <View style={styles.reorderCol}>
+        <Pressable onPress={() => onMoveUp?.(item)} disabled={!canMoveUp} hitSlop={4} style={[styles.reorderBtn, !canMoveUp && styles.reorderBtnOff]} accessibilityRole="button" accessibilityLabel="위로 이동">
+          <Icon name="chevron-up" size={14} color={canMoveUp ? colors.ink2 : colors.ink3} />
+        </Pressable>
+        <Pressable onPress={() => onMoveDown?.(item)} disabled={!canMoveDown} hitSlop={4} style={[styles.reorderBtn, !canMoveDown && styles.reorderBtnOff]} accessibilityRole="button" accessibilityLabel="아래로 이동">
+          <Icon name="chevron-down" size={14} color={canMoveDown ? colors.ink2 : colors.ink3} />
+        </Pressable>
+      </View>
+    )
   ) : null;
 
   const handlePress = () => {

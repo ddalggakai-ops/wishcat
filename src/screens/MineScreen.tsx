@@ -8,6 +8,7 @@ import GradientCard from '../components/GradientCard';
 import ProgressRing from '../components/ProgressRing';
 import { EmptyState, SectionHeader } from '../components/Basics';
 import ItemCard from '../components/ItemCard';
+import DragHandle from '../components/DragHandle';
 import Icon from '../components/Icon';
 import { CATEGORIES, catColor, colors, radius, shadow } from '../theme';
 import { alertDialog, confirmDialog } from '../utils/dialog';
@@ -42,6 +43,15 @@ export default function MineScreen({
 
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // 드래그 순서 변경 (선택 모드 · 필터 없을 때). 새 라이브러리 없이 PanResponder로 구현.
+  // 잡은 카드는 손가락을 따라 떠오르고(다른 카드는 그대로), 놓는 순간 위치를 계산해 한 번에 재정렬합니다.
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const draggingIdRef = useRef<string | null>(null);
+  draggingIdRef.current = draggingId;
+  const dragTranslate = useRef(new Animated.Value(0)).current;
+  const rowLayout = useRef<Record<string, { y: number; h: number }>>({});
+  const dragOrderRef = useRef<string[]>([]);
 
   const scrollRef = useRef<ScrollView>(null);
   const [atTop, setAtTop] = useState(true);
@@ -241,6 +251,43 @@ export default function MineScreen({
     }
   }, [completableSelectedIds, completeItems, exitSelectMode]);
 
+  const startDrag = useCallback((id: string, orderIds: string[]) => {
+    dragTranslate.setValue(0);
+    dragOrderRef.current = orderIds;
+    setDraggingId(id);
+  }, [dragTranslate]);
+
+  const moveDrag = useCallback((dy: number) => {
+    dragTranslate.setValue(dy);
+  }, [dragTranslate]);
+
+  const endDrag = useCallback((dy: number) => {
+    const id = draggingIdRef.current;
+    const ids = dragOrderRef.current;
+    setDraggingId(null);
+    dragTranslate.setValue(0);
+    if (!id) return;
+    const layout = rowLayout.current;
+    const me = layout[id];
+    if (!me) return;
+    // 잡은 카드의 (드롭 시점) 세로 중심이 어느 슬롯에 들어가는지로 목표 위치를 정합니다.
+    const draggedCenter = me.y + dy + me.h / 2;
+    let target = 0;
+    ids.forEach((other) => {
+      if (other === id) return;
+      const r = layout[other];
+      if (r && r.y + r.h / 2 < draggedCenter) target += 1;
+    });
+    const without = ids.filter((x) => x !== id);
+    without.splice(target, 0, id);
+    const changed = without.some((x, i) => x !== ids[i]);
+    if (changed) {
+      reorderItems(without.map((x, i) => ({ id: x, order: (i + 1) * 10 }))).catch(
+        () => alertDialog('순서를 저장하지 못했어요', '잠시 뒤 다시 시도해주세요.'),
+      );
+    }
+  }, [dragTranslate, reorderItems]);
+
   const moveInSection = useCallback((list: Item[], item: Item, dir: -1 | 1) => {
     const idx = list.findIndex((i) => i.id === item.id);
     if (idx < 0) return;
@@ -299,6 +346,7 @@ export default function MineScreen({
         ref={scrollRef}
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 20 }}
+        scrollEnabled={!draggingId}
         refreshControl={<RefreshControl refreshing={loadingMine} onRefresh={onRefresh} tintColor={colors.accent} />}
         onScroll={onScroll}
         scrollEventThrottle={100}
@@ -427,29 +475,45 @@ export default function MineScreen({
                 {todo.length > 0 && (
                   <>
                     <SectionHeader title="도전 중" count={todo.length} />
-                    {todo.map((i, idx) => (
-                      <ItemCard
-                        key={i.id}
-                        item={i}
-                        ctx="mine"
-                        compact={compact}
-                        onToggleDone={onToggleDone}
-                        onMemory={onMemory}
-                        onShare={onShare}
-                        onMenu={onMenu}
-                        onCardPress={onCardPress}
-                        onStartProgress={onStartProgress}
-                        onStopProgress={onStopProgress}
-                        selectable={selectMode}
-                        selected={selectedIds.has(i.id)}
-                        onToggleSelect={toggleSelect}
-                        onLongPress={enterSelectMode}
-                        canMoveUp={!isFiltering && idx > 0}
-                        canMoveDown={!isFiltering && idx < todo.length - 1}
-                        onMoveUp={!isFiltering ? (it) => moveInSection(todo, it, -1) : undefined}
-                        onMoveDown={!isFiltering ? (it) => moveInSection(todo, it, 1) : undefined}
-                      />
-                    ))}
+                    <View>
+                      {todo.map((i, idx) => {
+                        const isDragging = draggingId === i.id;
+                        return (
+                          <Animated.View
+                            key={i.id}
+                            onLayout={(e) => {
+                              const { y, height } = e.nativeEvent.layout;
+                              rowLayout.current[i.id] = { y, h: height };
+                            }}
+                            style={isDragging ? [styles.dragging, { transform: [{ translateY: dragTranslate }] }] : undefined}
+                          >
+                            <ItemCard
+                              item={i}
+                              ctx="mine"
+                              compact={compact}
+                              onToggleDone={onToggleDone}
+                              onMemory={onMemory}
+                              onShare={onShare}
+                              onMenu={onMenu}
+                              onCardPress={onCardPress}
+                              onStartProgress={onStartProgress}
+                              onStopProgress={onStopProgress}
+                              selectable={selectMode}
+                              selected={selectedIds.has(i.id)}
+                              onToggleSelect={toggleSelect}
+                              onLongPress={enterSelectMode}
+                              dragHandle={selectMode && !isFiltering ? (
+                                <DragHandle
+                                  onStart={() => startDrag(i.id, todo.map((t) => t.id))}
+                                  onMove={moveDrag}
+                                  onEnd={endDrag}
+                                />
+                              ) : undefined}
+                            />
+                          </Animated.View>
+                        );
+                      })}
+                    </View>
                   </>
                 )}
                 {done.length > 0 && (
@@ -637,6 +701,7 @@ const styles = StyleSheet.create({
   viewToggle: { backgroundColor: colors.surface2, borderRadius: radius.sm, paddingVertical: 8, paddingHorizontal: 12 },
   viewToggleOn: { backgroundColor: colors.accent },
   hintText: { fontSize: 11.5, color: colors.ink3, marginTop: 14, marginBottom: -2 },
+  dragging: { zIndex: 30, backgroundColor: colors.surface, ...shadow.lg },
 
   selectBar: {
     position: 'absolute', left: 12, right: 12, bottom: 14, flexDirection: 'row', alignItems: 'center', gap: 8,
