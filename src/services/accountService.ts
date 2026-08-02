@@ -45,6 +45,13 @@ export async function purgeMyData(uid: string): Promise<PurgeResult> {
   const invites = await getDocs(query(collection(db, 'invites'), where('fromUserId', '==', uid)));
   await deleteAll(invites.docs);
 
+  // 내가 보내거나 받은 친구 신청도 정리합니다.
+  const [reqFrom, reqTo] = await Promise.all([
+    getDocs(query(collection(db, 'friendRequests'), where('from', '==', uid))),
+    getDocs(query(collection(db, 'friendRequests'), where('to', '==', uid))),
+  ]);
+  await deleteAll([...reqFrom.docs, ...reqTo.docs]);
+
   const blocked = await getDocs(collection(db, 'blocks', uid, 'blocked')).catch(() => null);
   if (blocked) await deleteAll(blocked.docs);
 

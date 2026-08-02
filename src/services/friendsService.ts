@@ -1,10 +1,11 @@
-import { collection, doc, getCount, getDoc, getDocs, query, serverTimestamp, setDoc, where, writeBatch } from 'firebase/firestore/lite';
+import { collection, deleteDoc, doc, getCount, getDoc, getDocs, query, serverTimestamp, setDoc, where, writeBatch } from 'firebase/firestore/lite';
 import { db } from '../firebase/config';
 import { getUserPublicCached } from './usersService';
 import { joinItem } from './itemsService';
-import type { FriendEntry } from '../api/types';
+import type { FriendEntry, PublicUser } from '../api/types';
 
 function friendshipId(owner: string, friend: string) { return `${owner}_${friend}`; }
+function requestId(from: string, to: string) { return `${from}_${to}`; }
 
 // 친구 화면을 열 때마다(탭을 왔다갔다 하면 화면이 통째로 다시 마운트돼요) 매번 새로 읽지
 // 않도록 최근 결과를 잠깐 기억해 둡니다. 새로고침(pull-to-refresh)은 force로 건너뜁니다.
@@ -99,6 +100,62 @@ export async function acceptInvite(code: string, uid: string) {
     await joinItem(preview.itemId, uid).catch(() => {}); // 이미 함께하는 중이면 무시
   }
   return preview.fromUser;
+}
+
+// ── 친구 신청 (초대 링크 없이 사용자끼리 직접 친구 맺기) ─────────────────────────
+// 신청은 friendRequests/{보낸사람}_{받는사람} 문서로 표현합니다.
+// 받는 사람이 수락하면 양방향 friendships 문서를 만들고 신청 문서를 지웁니다.
+// 보안 규칙: 친구 문서 생성은 '상대가 나에게 보낸 신청이 있을 때'만 허용돼, 동의 없는 친구 자칭을 막아요.
+
+export type FriendState = 'self' | 'friends' | 'incoming' | 'sent' | 'none';
+
+export interface IncomingRequest { from: PublicUser; }
+
+/** 나(from)가 상대(to)에게 친구 신청을 보냅니다. */
+export async function sendFriendRequest(fromUid: string, toUid: string): Promise<void> {
+  if (fromUid === toUid) throw new Error('자기 자신에게는 신청할 수 없어요');
+  await setDoc(doc(db, 'friendRequests', requestId(fromUid, toUid)), {
+    from: fromUid, to: toUid, createdAt: serverTimestamp(),
+  });
+}
+
+/** 보낸 신청 취소 */
+export async function cancelFriendRequest(fromUid: string, toUid: string): Promise<void> {
+  await deleteDoc(doc(db, 'friendRequests', requestId(fromUid, toUid))).catch(() => {});
+}
+
+/** 나에게 온 친구 신청 목록 */
+export async function getIncomingRequests(uid: string): Promise<IncomingRequest[]> {
+  const snap = await getDocs(query(collection(db, 'friendRequests'), where('to', '==', uid)));
+  const froms = snap.docs.map((d) => (d.data() as any).from as string);
+  const users = await Promise.all(froms.map((f) => getUserPublicCached(f)));
+  return users.map((from) => ({ from }));
+}
+
+/** 상대(fromUid)가 나(uid)에게 보낸 신청을 수락 → 양방향 친구 + 신청 문서 삭제 */
+export async function acceptFriendRequest(fromUid: string, uid: string): Promise<void> {
+  const batch = writeBatch(db);
+  batch.set(doc(db, 'friendships', friendshipId(uid, fromUid)), { owner: uid, friend: fromUid, createdAt: serverTimestamp() });
+  batch.set(doc(db, 'friendships', friendshipId(fromUid, uid)), { owner: fromUid, friend: uid, createdAt: serverTimestamp() });
+  batch.delete(doc(db, 'friendRequests', requestId(fromUid, uid)));
+  await batch.commit();
+  friendsCache = null;
+}
+
+/** 나(uid)에게 온 신청(fromUid) 거절 */
+export async function declineFriendRequest(fromUid: string, uid: string): Promise<void> {
+  await deleteDoc(doc(db, 'friendRequests', requestId(fromUid, uid))).catch(() => {});
+}
+
+/** 뷰어와 대상 사이의 친구 상태를 판정 (사람 페이지 버튼용) */
+export async function getFriendState(viewerUid: string, targetUid: string): Promise<FriendState> {
+  if (viewerUid === targetUid) return 'self';
+  if (await areFriends(viewerUid, targetUid)) return 'friends';
+  const [incoming, sent] = await Promise.all([
+    getDoc(doc(db, 'friendRequests', requestId(targetUid, viewerUid))).then((s) => s.exists()).catch(() => false),
+    getDoc(doc(db, 'friendRequests', requestId(viewerUid, targetUid))).then((s) => s.exists()).catch(() => false),
+  ]);
+  return incoming ? 'incoming' : sent ? 'sent' : 'none';
 }
 
 export async function areFriends(uidA: string, uidB: string): Promise<boolean> {

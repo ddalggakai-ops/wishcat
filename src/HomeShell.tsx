@@ -1,5 +1,5 @@
-import React, { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { BackHandler, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SkyBackground from './components/SkyBackground';
 import BottomNav, { TabKey } from './components/BottomNav';
@@ -53,6 +53,31 @@ export default function HomeShell() {
     setToast(msg);
     setTimeout(() => setToast((cur) => (cur === msg ? null : cur)), 2200);
   }, []);
+
+  // 안드로이드 하드웨어 뒤로가기: 열려 있는 시트/오버레이를 먼저 닫고, 사람 페이지 → 목록,
+  // 다른 탭 → 내 목록 순으로 되돌아갑니다. 최상위(내 목록)에서만 기본 동작(앱 종료)을 허용해요.
+  // 예전엔 아무것도 안 잡아서 어디서 눌러도 앱이 바로 꺼졌습니다.
+  useEffect(() => {
+    const onBack = () => {
+      if (reportItem) { setReportItem(null); return true; }
+      if (detailItem) { setDetailItem(null); return true; }
+      if (viewerItem) { setViewerItem(null); return true; }
+      if (inviteItem) { setInviteItem(null); return true; }
+      if (bulkImportOpen) { setBulkImportOpen(false); return true; }
+      if (starterOpen) { setStarterOpen(false); return true; }
+      if (menuItem) { setMenuItem(null); return true; }
+      if (profileOpen) { setProfileOpen(false); return true; }
+      if (helpItemTarget) { setHelpItemTarget(null); return true; }
+      if (memoryItem) { setMemoryItem(null); return true; }
+      if (addEditOpen) { setAddEditOpen(false); return true; }
+      if (showOnboardReplay) { setShowOnboardReplay(false); return true; }
+      if (person) { setPerson(null); return true; }
+      if (tab !== 'mine') { setTab('mine'); return true; }
+      return false; // 내 목록 최상위 → 앱 종료 허용
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
+    return () => sub.remove();
+  }, [reportItem, detailItem, viewerItem, inviteItem, bulkImportOpen, starterOpen, menuItem, profileOpen, helpItemTarget, memoryItem, addEditOpen, showOnboardReplay, person, tab]);
 
   const openPerson = useCallback((id: string, name: string, isFriendTab: boolean) => {
     setPerson({ id, name, isFriendTab });

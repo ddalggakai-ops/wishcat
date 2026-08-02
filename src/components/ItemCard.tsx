@@ -247,15 +247,11 @@ function ItemCard({
               {ctx === 'mine' && !item.done && (
                 <>
                   {inProgress ? (
-                    <Pressable onPress={() => onStopProgress?.(item)} style={styles.progressPill} hitSlop={4} accessibilityRole="button" accessibilityLabel="진행 중단">
-                      <Text style={styles.progressPillText}>🏃 진행중 D+{progressDays}일째</Text>
-                    </Pressable>
+                    <BubbleButton small variant="line" title={`🏃 진행중 D+${progressDays}일째`} onPress={() => onStopProgress?.(item)} />
                   ) : (
-                    <Pressable onPress={() => onStartProgress?.(item)} style={styles.startPill} hitSlop={4} accessibilityRole="button" accessibilityLabel="진행 시작">
-                      <Text style={styles.startPillText}>▶ 진행 시작</Text>
-                    </Pressable>
+                    <BubbleButton small variant="ghost" title="▶ 진행 시작" onPress={() => onStartProgress?.(item)} />
                   )}
-                  <BubbleButton small variant="line" title="완료하기" onPress={() => onMemory?.(item)} />
+                  <BubbleButton small variant="primary" title="완료하기" onPress={() => onMemory?.(item)} />
                 </>
               )}
               {ctx !== 'mine' && item.done && (
@@ -274,11 +270,7 @@ function ItemCard({
                   {ctx === 'friend' && <BubbleButton small variant="gift" title="도와줬어요" onPress={() => onHelp?.(item)} />}
                 </>
               )}
-              {ctx !== 'mine' && onReport ? (
-                <Pressable onPress={() => onReport(item)} hitSlop={8} style={styles.reportBtn} accessibilityRole="button" accessibilityLabel="신고하기">
-                  <Text style={styles.reportText}>신고</Text>
-                </Pressable>
-              ) : null}
+              {/* 신고 버튼은 카드에서 빼고, 버킷 상세보기 하단의 작은 링크로만 노출합니다. */}
             </View>
           )}
         </View>

@@ -1,11 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Avatar from '../components/Avatar';
+import BubbleButton from '../components/Button';
 import { EmptyState, SectionHeader } from '../components/Basics';
 import ItemCard from '../components/ItemCard';
 import { colors, radius, shadow } from '../theme';
 import { resolveImageUrl } from '../api/client';
 import { getPerson, type PersonResult } from '../services/personService';
+import { sendFriendRequest, acceptFriendRequest } from '../services/friendsService';
+import { alertDialog } from '../utils/dialog';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import type { Item } from '../api/types';
@@ -22,11 +25,12 @@ export default function PersonScreen({
   onHelp: (item: Item) => void;
   onReport: (item: Item) => void;
 }) {
-  const { mergeItems, joinItem, leaveItem, itemsById } = useApp();
+  const { mergeItems, joinItem, leaveItem, itemsById, refreshFriends } = useApp();
   const { user: viewer } = useAuth();
   const [data, setData] = useState<PersonResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  const [friendBusy, setFriendBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!viewer) return;
@@ -46,6 +50,24 @@ export default function PersonScreen({
   }, [userId, mergeItems, viewer]);
 
   useEffect(() => { load(); }, [load]);
+
+  const onFriendAction = useCallback(async () => {
+    if (!viewer || !data) return;
+    setFriendBusy(true);
+    try {
+      if (data.friendState === 'none') {
+        await sendFriendRequest(viewer.id, userId);
+      } else if (data.friendState === 'incoming') {
+        await acceptFriendRequest(userId, viewer.id);
+        refreshFriends({ force: true });
+      }
+      await load();
+    } catch {
+      await alertDialog('처리하지 못했어요', '잠시 뒤 다시 시도해주세요.');
+    } finally {
+      setFriendBusy(false);
+    }
+  }, [viewer, data, userId, load, refreshFriends]);
 
   if (!data) {
     return (
@@ -84,6 +106,15 @@ export default function PersonScreen({
           <Text style={styles.bio}>{ctx === 'friend' ? '함께 꿈꾸는 친구' : data.user.bio}</Text>
           <Text style={styles.stats}>꿈 {items.length} · 이룬 꿈 {done.length}{data.withMeCount ? ` · 함께 ${data.withMeCount}` : ''}</Text>
         </View>
+        {data.friendState === 'none' ? (
+          <BubbleButton small variant="primary" title="＋ 친구 신청" onPress={onFriendAction} loading={friendBusy} />
+        ) : data.friendState === 'incoming' ? (
+          <BubbleButton small variant="primary" title="친구 수락" onPress={onFriendAction} loading={friendBusy} />
+        ) : data.friendState === 'sent' ? (
+          <View style={styles.friendTag}><Text style={styles.friendTagText}>신청함</Text></View>
+        ) : data.friendState === 'friends' ? (
+          <View style={styles.friendTag}><Text style={styles.friendTagText}>✓ 친구</Text></View>
+        ) : null}
       </View>
 
       {data.items === null ? (
@@ -152,6 +183,8 @@ const styles = StyleSheet.create({
   retryBtn: { alignSelf: 'center', marginTop: 14, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.line, borderRadius: 99, paddingVertical: 10, paddingHorizontal: 22 },
   retryText: { fontSize: 13, fontWeight: '700', color: colors.accent },
   head: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 4 },
+  friendTag: { backgroundColor: colors.surface2, borderRadius: radius.pill, paddingVertical: 7, paddingHorizontal: 12 },
+  friendTagText: { fontSize: 12, fontWeight: '700', color: colors.ink2 },
   name: { fontSize: 21, fontWeight: '700', color: colors.ink },
   bio: { fontSize: 12.5, color: colors.ink2, marginTop: 2 },
   stats: { fontSize: 12.5, color: colors.ink2, marginTop: 6, fontWeight: '600' },

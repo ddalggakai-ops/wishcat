@@ -103,17 +103,44 @@ service cloud.firestore {
       allow create: if request.auth != null
         && friendshipId == request.resource.data.owner + '_' + request.resource.data.friend
         && (request.resource.data.owner == request.auth.uid || request.resource.data.friend == request.auth.uid)
-        && request.resource.data.via is string
-        && exists(/databases/$(database)/documents/invites/$(request.resource.data.via))
-        && get(/databases/$(database)/documents/invites/$(request.resource.data.via)).data.fromUserId ==
-             (request.resource.data.owner == request.auth.uid
-               ? request.resource.data.friend
-               : request.resource.data.owner);
+        && (
+          // (1) 초대 코드 경로 — 이 초대의 발신자가 '상대(내가 아닌 쪽)'여야 함
+          (
+            request.resource.data.via is string
+            && exists(/databases/$(database)/documents/invites/$(request.resource.data.via))
+            && get(/databases/$(database)/documents/invites/$(request.resource.data.via)).data.fromUserId ==
+                 (request.resource.data.owner == request.auth.uid
+                   ? request.resource.data.friend
+                   : request.resource.data.owner)
+          )
+          // (2) 친구 신청 수락 경로 — '상대가 나에게 보낸 신청'이 있어야 함(수락하는 사람만 생성 가능)
+          || exists(/databases/$(database)/documents/friendRequests/$(
+               (request.resource.data.owner == request.auth.uid
+                 ? request.resource.data.friend
+                 : request.resource.data.owner) + '_' + request.auth.uid
+             ))
+        );
       allow update: if false;
       // 계정 삭제/친구 끊기 시 양방향 문서를 정리할 수 있어야 합니다.
       allow delete: if request.auth != null && (
         resource.data.owner == request.auth.uid || resource.data.friend == request.auth.uid
       );
+    }
+
+    // ── friendRequests/{fromUid_toUid} ───────────────────────────
+    // 초대 링크 없이 사용자끼리 직접 친구를 맺기 위한 '친구 신청'.
+    // 보내는 사람만 자기 신청을 만들 수 있고, 당사자(보낸/받은 사람)만 읽고 지웁니다.
+    // 받는 사람이 수락하면 friendships 두 개를 만들고(위 create 경로 2) 이 문서를 지웁니다.
+    match /friendRequests/{reqId} {
+      allow read: if request.auth != null
+        && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+      allow create: if request.auth != null
+        && reqId == request.resource.data.from + '_' + request.resource.data.to
+        && request.resource.data.from == request.auth.uid
+        && request.resource.data.from != request.resource.data.to;
+      allow update: if false;
+      allow delete: if request.auth != null
+        && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
     }
 
     // ── invites/{code} ───────────────────────────────────────────
