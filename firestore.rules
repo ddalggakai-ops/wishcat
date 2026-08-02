@@ -45,10 +45,17 @@ service cloud.firestore {
           && request.resource.data.participants.size() <= resource.data.participants.size() + 1
         )
 
-        // "함께하기 취소(leave)" — participants에서 본인을 제거, savesCount 감소
+        // "함께하기 취소(leave)" — 본인만 participants에서 제거, savesCount는 0 또는 −1만
+        // (예전엔 '부분집합'만 검사해서, 남의 참여자를 통째로 빼거나 savesCount를 임의 값으로
+        //  바꿀 수 있었습니다. 본인 1명만 빠지고 카운트는 최대 1만 줄도록 좁힙니다.)
         || (
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participants', 'savesCount'])
           && resource.data.participants.hasAll(request.resource.data.participants)
+          && resource.data.participants.hasAny([request.auth.uid])
+          && !request.resource.data.participants.hasAny([request.auth.uid])
+          && request.resource.data.participants.size() == resource.data.participants.size() - 1
+          && request.resource.data.savesCount >= resource.data.savesCount - 1
+          && request.resource.data.savesCount <= resource.data.savesCount
         )
 
         // "도와서 이뤄줌(help)" — done 처리 + helpedBy/participants에 본인 추가
@@ -87,9 +94,21 @@ service cloud.firestore {
         resource == null
         || resource.data.owner == request.auth.uid || resource.data.friend == request.auth.uid
       );
+      // 친구 관계는 '상대의 초대 코드'를 통한 상호 동의로만 생깁니다.
+      // 예전엔 owner/friend 중 하나가 본인이기만 하면 문서를 만들 수 있어서, 상대 uid만 알면
+      // friendships/{나}_{상대} 를 스스로 만들어 상대의 비공개 목록·사진을 열람할 수 있었습니다(치명).
+      // 이제 문서에 via(초대 코드)를 담게 하고, 그 초대의 발신자가 '상대(=내가 아닌 쪽)'인지 확인합니다.
+      // 초대 코드는 상대만 만들 수 있고(초대 create 규칙: fromUserId == 본인), 상대가 링크를 공유해야만
+      // 얻을 수 있으므로, 코드 소지 = 상대의 공유 동의로 봅니다(앱의 초대 링크 모델 그대로).
       allow create: if request.auth != null
+        && friendshipId == request.resource.data.owner + '_' + request.resource.data.friend
         && (request.resource.data.owner == request.auth.uid || request.resource.data.friend == request.auth.uid)
-        && friendshipId == request.resource.data.owner + '_' + request.resource.data.friend;
+        && request.resource.data.via is string
+        && exists(/databases/$(database)/documents/invites/$(request.resource.data.via))
+        && get(/databases/$(database)/documents/invites/$(request.resource.data.via)).data.fromUserId ==
+             (request.resource.data.owner == request.auth.uid
+               ? request.resource.data.friend
+               : request.resource.data.owner);
       allow update: if false;
       // 계정 삭제/친구 끊기 시 양방향 문서를 정리할 수 있어야 합니다.
       allow delete: if request.auth != null && (

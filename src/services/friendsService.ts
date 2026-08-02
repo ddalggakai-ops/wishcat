@@ -11,6 +11,11 @@ function friendshipId(owner: string, friend: string) { return `${owner}_${friend
 let friendsCache: { uid: string; at: number; list: FriendEntry[] } | null = null;
 const FRIENDS_CACHE_TTL_MS = 15_000;
 
+/** 친구 관계가 바뀌었을 때(수락·차단으로 끊기) 목록 캐시를 즉시 비웁니다. */
+export function clearFriendsCache() {
+  friendsCache = null;
+}
+
 // 예전에는 친구마다 items 문서를 전부 읽어(제목·메모·사진 URL까지) 개수만 세느라 느렸어요.
 // 지금은 문서 내용을 안 받고 개수만 세는 집계 쿼리(getCount)로 바꿔서 같은 걸 훨씬 가볍게 구합니다.
 // (withMeCount는 "내가 함께하는 중"인 아이템 수인데, 이건 어차피 내가 이미 가진 목록(origin==='joined')에서
@@ -82,10 +87,13 @@ export async function acceptInvite(code: string, uid: string) {
   const preview = await getInvitePreview(code);
   if (preview.fromUserId === uid) throw new Error('내가 만든 초대는 수락할 수 없어요');
 
+  // via(초대 코드)를 함께 기록합니다. 보안 규칙이 "이 초대의 발신자가 상대인지"를 확인해
+  // 상대 동의 없는 친구 자칭(비공개 우회)을 막습니다. code는 상대(fromUserId)가 만든 초대예요.
   const batch = writeBatch(db);
-  batch.set(doc(db, 'friendships', friendshipId(uid, preview.fromUserId)), { owner: uid, friend: preview.fromUserId, createdAt: serverTimestamp() });
-  batch.set(doc(db, 'friendships', friendshipId(preview.fromUserId, uid)), { owner: preview.fromUserId, friend: uid, createdAt: serverTimestamp() });
+  batch.set(doc(db, 'friendships', friendshipId(uid, preview.fromUserId)), { owner: uid, friend: preview.fromUserId, via: code, createdAt: serverTimestamp() });
+  batch.set(doc(db, 'friendships', friendshipId(preview.fromUserId, uid)), { owner: preview.fromUserId, friend: uid, via: code, createdAt: serverTimestamp() });
   await batch.commit();
+  friendsCache = null; // 새 친구가 생겼으니 친구 목록 캐시를 비웁니다.
 
   if (preview.itemId) {
     await joinItem(preview.itemId, uid).catch(() => {}); // 이미 함께하는 중이면 무시

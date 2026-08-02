@@ -1,5 +1,6 @@
 import { addDoc, collection, deleteDoc, doc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore/lite';
 import { db } from '../firebase/config';
+import { clearFriendsCache } from './friendsService';
 
 // 사용자 제작 콘텐츠(UGC)를 다루는 앱은 스토어 심사에서 신고/차단 수단을 요구합니다.
 // 서버(Cloud Functions)가 없으므로 신고는 reports 컬렉션에 적재만 하고
@@ -52,6 +53,14 @@ export async function getBlockedIds(uid: string, force = false): Promise<Set<str
 export async function blockUser(uid: string, targetUid: string): Promise<void> {
   if (uid === targetUid) throw new Error('자기 자신은 차단할 수 없어요');
   await setDoc(blockDoc(uid, targetUid), { createdAt: serverTimestamp() });
+  // 차단하면 친구 관계도 끊습니다. 안 그러면 친구 기반 읽기 권한이 남아, 차단한 상대가
+  // 내 비공개 목록·추억 사진을 API로 계속 볼 수 있어요(차단이 화면 가리기에 그치지 않도록).
+  // 친구가 아니었으면 문서가 없어 삭제가 거부될 수 있으니 조용히 무시합니다.
+  await Promise.all([
+    deleteDoc(doc(db, 'friendships', `${uid}_${targetUid}`)).catch(() => {}),
+    deleteDoc(doc(db, 'friendships', `${targetUid}_${uid}`)).catch(() => {}),
+  ]);
+  clearFriendsCache();
   (await getBlockedIds(uid)).add(targetUid);
 }
 
