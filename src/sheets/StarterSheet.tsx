@@ -3,7 +3,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Sheet from '../components/Sheet';
 import BubbleButton from '../components/Button';
 import Icon from '../components/Icon';
-import { STARTER_PACKS, STARTER_GROUPS } from '../data/starterTemplates';
+import { STARTER_PACKS, STARTER_GROUPS, type StarterPack } from '../data/starterTemplates';
+import { getStarterPacks } from '../services/templatesService';
 import { colors, radius } from '../theme';
 import { alertDialog } from '../utils/dialog';
 import { useApp } from '../context/AppContext';
@@ -20,26 +21,42 @@ export default function StarterSheet({
   onAdded: (count: number) => void;
 }) {
   const { bulkAddItems } = useApp();
-  const [packKey, setPackKey] = useState(STARTER_PACKS[0].key);
+  // 서버(Firestore)에서 관리하는 추천 팩을 불러오되, 즉시 보이도록 내장 팩으로 먼저 채우고
+  // 서버 값이 오면 자연스럽게 교체합니다(못 불러오면 내장 팩 그대로 = 폴백).
+  const [packs, setPacks] = useState<StarterPack[]>(STARTER_PACKS);
+  const [groups, setGroups] = useState<string[]>(STARTER_GROUPS);
+  const [packKey, setPackKey] = useState<string>(STARTER_PACKS[0].key);
   const [picked, setPicked] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
 
   const pack = useMemo(
-    () => STARTER_PACKS.find((p) => p.key === packKey) || STARTER_PACKS[0],
-    [packKey],
+    () => packs.find((p) => p.key === packKey) || packs[0],
+    [packs, packKey],
   );
+
+  useEffect(() => {
+    if (!visible) return;
+    let alive = true;
+    getStarterPacks().then((r) => {
+      if (!alive || !r.packs.length) return;
+      setPacks(r.packs);
+      setGroups(r.groups);
+      setPackKey((k) => (r.packs.some((p) => p.key === k) ? k : r.packs[0].key));
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [visible]);
 
   // 열 때마다, 그리고 묶음을 바꿀 때마다 전부 선택된 상태로 시작합니다.
   useEffect(() => {
-    if (!visible) return;
+    if (!visible || !pack) return;
     const next: Record<string, boolean> = {};
     pack.items.forEach((it) => { next[it.title] = true; });
     setPicked(next);
   }, [visible, pack]);
 
-  useEffect(() => { if (visible) setPackKey(STARTER_PACKS[0].key); }, [visible]);
+  useEffect(() => { if (visible) setPackKey(packs[0].key); }, [visible]);
 
-  const chosen = pack.items.filter((it) => picked[it.title]);
+  const chosen = (pack?.items || []).filter((it) => picked[it.title]);
 
   const submit = async () => {
     if (!chosen.length) return;
@@ -62,11 +79,11 @@ export default function StarterSheet({
       title="이런 꿈은 어때요?"
       subtitle="연인·친구·가족과 함께 담기 좋은 묶음이에요. 골라서 한 번에 담고, 담은 뒤에 얼마든지 고칠 수 있어요."
     >
-      {STARTER_GROUPS.map((g) => (
+      {groups.map((g) => (
         <View key={g} style={styles.groupBlock}>
           <Text style={styles.groupLabel}>{g}</Text>
           <View style={styles.packRow}>
-            {STARTER_PACKS.filter((p) => p.group === g).map((p) => (
+            {packs.filter((p) => p.group === g).map((p) => (
               <Pressable
                 key={p.key}
                 onPress={() => setPackKey(p.key)}

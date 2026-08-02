@@ -1,0 +1,37 @@
+name: Seed Starter Packs (추천 버킷 모음)
+
+# Actions 탭에서 "Run workflow" 버튼으로 수동 실행합니다.
+#
+# src/data/starterPacks.json 을 Firestore의 starterPacks 컬렉션에 덮어씁니다.
+# 앱은 이 컬렉션을 읽어 시작 템플릿을 보여주므로, 내용을 바꾸고 이 워크플로우를 다시 돌리면
+# 앱 재빌드 없이 반영됩니다(최대 5분 캐시).
+#
+# 사전 준비(한 번만):
+#   1) firebase deploy --only firestore:rules 로 새 규칙 배포(starterPacks/admins 규칙 포함)
+#   2) Firebase 콘솔 > Firestore 에서 admins/{관리자uid} 문서 생성(내용 아무거나)
+#   3) 저장소 Secrets 에 ADMIN_EMAIL / ADMIN_PASSWORD 추가(그 관리자 앱 계정)
+#
+# EXPO_PUBLIC_FIREBASE_* 는 공개해도 안전한 웹 설정값입니다(진짜 보안은 규칙이 담당).
+on:
+  workflow_dispatch: {}
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    env:
+      EXPO_PUBLIC_FIREBASE_API_KEY: AIzaSyC8sFy5JJFRR2rYV9NGYYO_9yA3Qpz-nAA
+      EXPO_PUBLIC_FIREBASE_PROJECT_ID: wishcat-945d4
+      EXPO_PUBLIC_FIREBASE_DATABASE_ID: wishcat
+      ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Seed starter packs
+        run: node scripts/seed-starter-packs.js

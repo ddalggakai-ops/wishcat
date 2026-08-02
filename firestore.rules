@@ -169,5 +169,21 @@ service cloud.firestore {
       allow read, create, delete: if request.auth != null && request.auth.uid == blockerUid;
       allow update: if false;
     }
+
+    // ── admins/{uid} ─────────────────────────────────────────────
+    // 관리자 표식. 콘솔에서만 만들고(앱/클라이언트는 쓰기 불가), 존재 여부로 운영 권한을 판정합니다.
+    // 관리자로 지정하려면 Firebase 콘솔에서 admins/{내 uid} 문서를 하나 만들어 두세요.
+    match /admins/{uid} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // ── starterPacks/{key} ───────────────────────────────────────
+    // 관리자가 앱 재빌드 없이 운영하는 '추천 버킷 모음'. 누구나(로그인) 읽고, 관리자만 씁니다.
+    match /starterPacks/{key} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
   }
 }
