@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Sheet from '../components/Sheet';
 import BubbleButton from '../components/Button';
 import Icon from '../components/Icon';
-import { STARTER_PACKS } from '../data/starterTemplates';
+import { STARTER_PACKS, STARTER_GROUPS } from '../data/starterTemplates';
 import { colors, radius } from '../theme';
 import { alertDialog } from '../utils/dialog';
 import { useApp } from '../context/AppContext';
@@ -60,21 +60,26 @@ export default function StarterSheet({
       visible={visible}
       onClose={onClose}
       title="이런 꿈은 어때요?"
-      subtitle="마음에 드는 걸 골라 한 번에 담아보세요. 담은 뒤에 얼마든지 고칠 수 있어요."
+      subtitle="연인·친구·가족과 함께 담기 좋은 묶음이에요. 골라서 한 번에 담고, 담은 뒤에 얼마든지 고칠 수 있어요."
     >
-      <View style={styles.packRow}>
-        {STARTER_PACKS.map((p) => (
-          <Pressable
-            key={p.key}
-            onPress={() => setPackKey(p.key)}
-            style={[styles.pack, p.key === pack.key && styles.packOn]}
-          >
-            <Text style={styles.packEmoji}>{p.emoji}</Text>
-            <Text style={[styles.packTitle, p.key === pack.key && styles.packTitleOn]}>{p.title}</Text>
-            <Text style={styles.packDesc}>{p.desc}</Text>
-          </Pressable>
-        ))}
-      </View>
+      {STARTER_GROUPS.map((g) => (
+        <View key={g} style={styles.groupBlock}>
+          <Text style={styles.groupLabel}>{g}</Text>
+          <View style={styles.packRow}>
+            {STARTER_PACKS.filter((p) => p.group === g).map((p) => (
+              <Pressable
+                key={p.key}
+                onPress={() => setPackKey(p.key)}
+                style={[styles.pack, p.key === pack.key && styles.packOn]}
+              >
+                <Text style={styles.packEmoji}>{p.emoji}</Text>
+                <Text style={[styles.packTitle, p.key === pack.key && styles.packTitleOn]}>{p.title}</Text>
+                <Text style={styles.packDesc}>{p.desc}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ))}
 
       <View style={styles.selectBar}>
         <Pressable
@@ -122,6 +127,8 @@ export default function StarterSheet({
 }
 
 const styles = StyleSheet.create({
+  groupBlock: { marginBottom: 6 },
+  groupLabel: { fontSize: 12.5, fontWeight: '700', color: colors.ink2, marginTop: 12, marginBottom: 10 },
   packRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
   pack: {
     width: '47.5%', borderWidth: 1, borderColor: colors.line2, backgroundColor: colors.surface,
