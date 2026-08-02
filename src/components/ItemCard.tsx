@@ -6,6 +6,7 @@ import Avatar from './Avatar';
 import Icon from './Icon';
 import { CategoryChips, LocationChip, PriorityBadge, Tag } from './Chips';
 import BubbleButton from './Button';
+import DragHandle from './DragHandle';
 import MemoryPhotoCarousel from './MemoryPhotos';
 import { resolveImageUrl } from '../api/client';
 
@@ -37,7 +38,7 @@ export function elapsedDaysLabel(startedAt: string | null | undefined, today = n
 function ItemCard({
   item, ctx, compact, viewerId, onToggleDone, onMemory, onShare, onJoin, onLeave, onHelp, onMenu, onReport,
   onCardPress, selectable, selected, onToggleSelect, onLongPress, canMoveUp, canMoveDown, onMoveUp, onMoveDown,
-  onStartProgress, onStopProgress, dragHandle,
+  onStartProgress, onStopProgress, dragEnabled, onDragStart, onDragMove, onDragEnd,
 }: {
   item: Item;
   ctx: ItemCtx;
@@ -67,8 +68,12 @@ function ItemCard({
   canMoveDown?: boolean;
   onMoveUp?: (item: Item) => void;
   onMoveDown?: (item: Item) => void;
-  /** 드래그 순서 변경 핸들 — 있으면 위/아래 버튼 대신 이걸 씁니다 */
-  dragHandle?: React.ReactNode;
+  /** 드래그 순서 변경 — 켜지면 위/아래 버튼 대신 드래그 핸들을 씁니다. 콜백은 안정적으로(useCallback) 넘겨야
+   *  React.memo가 유지돼 목록 전체 재렌더를 막아요(그래서 핸들 엘리먼트를 밖에서 만들지 않고 여기서 만듭니다). */
+  dragEnabled?: boolean;
+  onDragStart?: (id: string) => void;
+  onDragMove?: (dy: number) => void;
+  onDragEnd?: (dy: number) => void;
 }) {
   // 예전에는 '함께하기' 버튼이 좋아요(likedByMe) 상태를 보고 색만 바뀌었습니다.
   // 이미 함께하고 있어도 버튼이 그대로 남아 있어서 몇 번이고 다시 누르게 됐어요.
@@ -102,7 +107,7 @@ function ItemCard({
       onPress={() => onToggleDone?.(item)}
       style={[styles.check, item.done && styles.checkDone]}
       hitSlop={10}
-      accessibilityRole="button"
+      accessibilityRole="checkbox"
       accessibilityState={{ checked: item.done }}
       accessibilityLabel={item.done ? `${item.title} 다시 담기` : `${item.title} 완료하기`}
     >
@@ -113,14 +118,16 @@ function ItemCard({
   ));
 
   const reorderCol = ctx === 'mine' && selectable ? (
-    dragHandle ? (
-      <View style={styles.reorderCol}>{dragHandle}</View>
+    dragEnabled ? (
+      <View style={styles.reorderCol}>
+        <DragHandle onStart={() => onDragStart?.(item.id)} onMove={(dy) => onDragMove?.(dy)} onEnd={(dy) => onDragEnd?.(dy)} />
+      </View>
     ) : (
       <View style={styles.reorderCol}>
-        <Pressable onPress={() => onMoveUp?.(item)} disabled={!canMoveUp} hitSlop={4} style={[styles.reorderBtn, !canMoveUp && styles.reorderBtnOff]} accessibilityRole="button" accessibilityLabel="위로 이동">
+        <Pressable onPress={() => onMoveUp?.(item)} disabled={!canMoveUp} hitSlop={10} style={[styles.reorderBtn, !canMoveUp && styles.reorderBtnOff]} accessibilityRole="button" accessibilityLabel="위로 이동">
           <Icon name="chevron-up" size={14} color={canMoveUp ? colors.ink2 : colors.ink3} />
         </Pressable>
-        <Pressable onPress={() => onMoveDown?.(item)} disabled={!canMoveDown} hitSlop={4} style={[styles.reorderBtn, !canMoveDown && styles.reorderBtnOff]} accessibilityRole="button" accessibilityLabel="아래로 이동">
+        <Pressable onPress={() => onMoveDown?.(item)} disabled={!canMoveDown} hitSlop={10} style={[styles.reorderBtn, !canMoveDown && styles.reorderBtnOff]} accessibilityRole="button" accessibilityLabel="아래로 이동">
           <Icon name="chevron-down" size={14} color={canMoveDown ? colors.ink2 : colors.ink3} />
         </Pressable>
       </View>
@@ -169,7 +176,7 @@ function ItemCard({
       style={[styles.card, selected && styles.cardSelected]}
     >
       {ctx === 'mine' && onMenu && !selectable ? (
-        <Pressable style={styles.more} onPress={() => onMenu(item)}>
+        <Pressable style={styles.more} onPress={() => onMenu(item)} hitSlop={12} accessibilityRole="button" accessibilityLabel="더보기 메뉴">
           <Icon name="ellipsis-horizontal" size={18} color={colors.ink3} />
         </Pressable>
       ) : null}

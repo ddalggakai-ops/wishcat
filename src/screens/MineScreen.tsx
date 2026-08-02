@@ -8,7 +8,6 @@ import GradientCard from '../components/GradientCard';
 import ProgressRing from '../components/ProgressRing';
 import { EmptyState, SectionHeader } from '../components/Basics';
 import ItemCard from '../components/ItemCard';
-import DragHandle from '../components/DragHandle';
 import Icon from '../components/Icon';
 import { CATEGORIES, catColor, colors, radius, shadow } from '../theme';
 import { alertDialog, confirmDialog } from '../utils/dialog';
@@ -52,6 +51,8 @@ export default function MineScreen({
   const dragTranslate = useRef(new Animated.Value(0)).current;
   const rowLayout = useRef<Record<string, { y: number; h: number }>>({});
   const dragOrderRef = useRef<string[]>([]);
+  // 지금 화면에 보이는 '도전 중' 순서(id). 드래그 시작/종료 때 최신 값을 참조합니다.
+  const todoIdsRef = useRef<string[]>([]);
 
   const scrollRef = useRef<ScrollView>(null);
   const [atTop, setAtTop] = useState(true);
@@ -184,6 +185,17 @@ export default function MineScreen({
 
   const todo = useMemo(() => sortSection(filteredItems.filter((i) => !i.done)), [filteredItems, sortSection]);
   const done = useMemo(() => sortSection(filteredItems.filter((i) => i.done)), [filteredItems, sortSection]);
+  todoIdsRef.current = todo.map((i) => i.id);
+
+  // 드래그 중에 목록이 바뀌거나(새로고침 등) 선택 모드/필터가 풀리면, 드래그 핸들이 사라지면서
+  // onPanResponderTerminate가 안 올 수 있어요. 그러면 draggingId가 남아 ScrollView가 계속 잠깁니다.
+  // 선택 모드가 아니거나 필터가 걸리면 드래그 상태를 강제로 정리합니다.
+  useEffect(() => {
+    if ((!selectMode || isFiltering) && draggingIdRef.current) {
+      setDraggingId(null);
+      dragTranslate.setValue(0);
+    }
+  }, [selectMode, isFiltering, dragTranslate]);
 
   const toggleCategoryFilter = useCallback((c: string) => {
     setCategoryFilters((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]));
@@ -251,9 +263,9 @@ export default function MineScreen({
     }
   }, [completableSelectedIds, completeItems, exitSelectMode]);
 
-  const startDrag = useCallback((id: string, orderIds: string[]) => {
+  const startDrag = useCallback((id: string) => {
     dragTranslate.setValue(0);
-    dragOrderRef.current = orderIds;
+    dragOrderRef.current = todoIdsRef.current.slice(); // 시작 시점의 순서 스냅샷
     setDraggingId(id);
   }, [dragTranslate]);
 
@@ -267,6 +279,9 @@ export default function MineScreen({
     setDraggingId(null);
     dragTranslate.setValue(0);
     if (!id) return;
+    // 드래그 도중 목록이 바뀌었으면(새로고침·완료·삭제 등) 스냅샷이 낡은 것이라 재정렬하지 않습니다.
+    const nowSet = new Set(todoIdsRef.current);
+    if (ids.length !== nowSet.size || ids.some((x) => !nowSet.has(x))) return;
     const layout = rowLayout.current;
     const me = layout[id];
     if (!me) return;
@@ -345,7 +360,7 @@ export default function MineScreen({
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{ paddingBottom: selectMode ? 96 : 20 }}
         scrollEnabled={!draggingId}
         refreshControl={<RefreshControl refreshing={loadingMine} onRefresh={onRefresh} tintColor={colors.accent} />}
         onScroll={onScroll}
@@ -502,13 +517,10 @@ export default function MineScreen({
                               selected={selectedIds.has(i.id)}
                               onToggleSelect={toggleSelect}
                               onLongPress={enterSelectMode}
-                              dragHandle={selectMode && !isFiltering ? (
-                                <DragHandle
-                                  onStart={() => startDrag(i.id, todo.map((t) => t.id))}
-                                  onMove={moveDrag}
-                                  onEnd={endDrag}
-                                />
-                              ) : undefined}
+                              dragEnabled={selectMode && !isFiltering}
+                              onDragStart={startDrag}
+                              onDragMove={moveDrag}
+                              onDragEnd={endDrag}
                             />
                           </Animated.View>
                         );

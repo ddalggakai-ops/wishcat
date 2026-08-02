@@ -62,10 +62,17 @@ export async function getInvitePreview(code: string) {
   const fromUser = await getUserPublicCached(data.fromUserId);
   let item: { title: string; emoji: string } | null = null;
   if (data.itemId) {
-    const itemSnap = await getDoc(doc(db, 'items', data.itemId));
-    if (itemSnap.exists()) {
-      const idata = itemSnap.data() as any;
-      item = { title: idata.title, emoji: idata.emoji };
+    try {
+      // 비공개 사용자가 특정 꿈으로 초대하면, 아직 친구가 아닌 초대받은 사람은 이 아이템을
+      // 읽을 권한이 없어 getDoc이 permission-denied로 throw했어요. 그러면 미리보기는 물론
+      // 수락(acceptInvite)까지 통째로 실패했습니다. 실패해도 제목만 못 보여줄 뿐, 수락은 진행됩니다.
+      const itemSnap = await getDoc(doc(db, 'items', data.itemId));
+      if (itemSnap.exists()) {
+        const idata = itemSnap.data() as any;
+        item = { title: idata.title, emoji: idata.emoji };
+      }
+    } catch {
+      /* 비공개/삭제된 아이템 — 제목 없이 진행 */
     }
   }
   return { fromUser, item, fromUserId: data.fromUserId as string, itemId: (data.itemId as string) || null };

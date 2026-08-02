@@ -111,7 +111,7 @@ export function colorFor(seed: string) {
 export const PRIORITY_META: Record<'high' | 'mid' | 'low', { label: string; dot: string; bg: string; ink: string }> = {
   high: { label: '상', dot: roleColors.accent.ink, bg: roleColors.accent.wash, ink: roleColors.accent.ink },
   mid: { label: '중', dot: roleColors.highlight.ink, bg: roleColors.highlight.wash, ink: roleColors.highlight.ink },
-  low: { label: '하', dot: '#C7C3DC', bg: '#EAE6F5', ink: '#8B87A0' },
+  low: { label: '하', dot: '#9B96B5', bg: '#EAE6F5', ink: '#5C567A' },
 };
 
 export const EMOJIS = ['🌴', '🪂', '🏃', '🌌', '🎨', '🍜', '🏔️', '✈️', '🎸', '📚', '🐬', '🍰', '🚗', '💃', '🏄', '🎤', '⛺', '🎢', '🥾', '🌅', '🎬', '🎹'];

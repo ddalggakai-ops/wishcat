@@ -23,22 +23,26 @@ export default function ExploreScreen({
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  const [joining, setJoining] = useState<Set<string>>(new Set());
   const [toggleW, setToggleW] = useState(0);
   const toggleAnim = useRef(new Animated.Value(0)).current;
+  const loadSeq = useRef(0);
 
   const load = useCallback(async (opts?: { force?: boolean }) => {
     if (!user) return;
+    const seq = ++loadSeq.current; // 필터를 빠르게 바꿀 때 뒤늦게 도착한 응답이 최신 결과를 덮어쓰지 않도록
     setLoading(true);
     setFailed(false);
     try {
       const res = await getExploreItems(user.id, filter, opts);
+      if (seq !== loadSeq.current) return; // 더 새로운 요청이 이미 나갔으면 이 응답은 버립니다.
       setItems(res);
       mergeItems(res);
     } catch {
       // 예전엔 불러오기가 실패해도 그냥 "버킷이 없어요"라고만 떠서 다시 시도할 방법이 없었어요.
-      setFailed(true);
+      if (seq === loadSeq.current) setFailed(true);
     } finally {
-      setLoading(false);
+      if (seq === loadSeq.current) setLoading(false);
     }
   }, [filter, mergeItems, user]);
 
@@ -106,10 +110,14 @@ export default function ExploreScreen({
                 onPress={() => {
                   if (joined) { onToast('이미 담은 꿈이에요'); return; }
                   if (!canSave) { onOpenItem(i); return; }
+                  if (joining.has(i.id)) return; // 빠른 더블탭으로 중복 담기 방지
+                  setJoining((prev) => new Set(prev).add(i.id));
                   joinItem(i.id)
                     .then(() => onToast('내 목록에 담았어요 ✦'))
-                    .catch(() => onToast('담지 못했어요. 잠시 뒤 다시 시도해주세요'));
+                    .catch(() => onToast('담지 못했어요. 잠시 뒤 다시 시도해주세요'))
+                    .finally(() => setJoining((prev) => { const n = new Set(prev); n.delete(i.id); return n; }));
                 }}
+                disabled={joining.has(i.id)}
                 hitSlop={6}
                 style={styles.likeBtn}
                 accessibilityRole="button"

@@ -31,6 +31,7 @@ export default function AuthScreen({ pendingInvite }: { pendingInvite?: boolean 
   };
 
   const submit = async () => {
+    if (loading) return; // 이미 처리 중이면(키보드 '완료'로) 중복 제출 방지
     clearError();
     setNotice(null);
     try {
@@ -107,7 +108,7 @@ export default function AuthScreen({ pendingInvite }: { pendingInvite?: boolean 
                   autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                   textContentType={mode === 'login' ? 'password' : 'newPassword'}
                   returnKeyType="go"
-                  onSubmitEditing={() => { if (canSubmit) submit(); }}
+                  onSubmitEditing={() => { if (canSubmit && !loading) submit(); }}
                 />
               </>
             )}

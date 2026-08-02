@@ -4,7 +4,7 @@ import {
   reauthenticateWithCredential, sendPasswordResetEmail, signInWithEmailAndPassword, signOut,
 } from 'firebase/auth';
 import { auth, firebaseReady, firebaseInitError } from '../firebase/config';
-import { createUserProfile, fetchMe, updateMyProfile } from '../services/usersService';
+import { clearUserCache, createUserProfile, fetchMe, updateMyProfile } from '../services/usersService';
 import { backfillOwnerPublic, clearViewerLikes, migrateLegacyItems, primeViewerLikes } from '../services/itemsService';
 import { purgeMyData } from '../services/accountService';
 import { clearBlockCache, getBlockedIds } from '../services/moderationService';
@@ -174,6 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearViewerLikes();
     clearBlockCache();
     clearExploreCache();
+    clearUserCache();
     setMyVisibility(true); // 다음 로그인 전까지 기본값(공개)으로 되돌립니다.
   }, []);
 

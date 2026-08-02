@@ -130,8 +130,11 @@ export async function hydrateItem(id: string, raw: RawItem, viewerId?: string): 
     Promise.all((raw.helpedBy || []).map(getUserBrief)),
     viewerId && !primedLikes ? getDoc(likeDoc(id, viewerId)) : Promise.resolve(null),
   ]);
-  const source = raw.sourceItemId
-    ? { ownerId: raw.sourceOwnerId!, ownerName: (await getUserBrief(raw.sourceOwnerId!)).name, itemId: raw.sourceItemId, title: raw.sourceTitle || '', emoji: raw.sourceEmoji || '' }
+  // sourceOwnerId가 없으면(예전에 잘못 저장된 도움 기록 등) source를 만들지 않습니다.
+  // getUserBrief(undefined)가 doc(db,'users',undefined)에서 그대로 throw해 목록 hydrate 전체가
+  // 실패(=목록이 안 뜸)하던 크래시를 막습니다.
+  const source = raw.sourceItemId && raw.sourceOwnerId
+    ? { ownerId: raw.sourceOwnerId, ownerName: (await getUserBrief(raw.sourceOwnerId)).name, itemId: raw.sourceItemId, title: raw.sourceTitle || '', emoji: raw.sourceEmoji || '' }
     : null;
   const helpedFor = raw.helpedForId ? await getUserBrief(raw.helpedForId) : null;
   const likesCount = raw.likesCount || 0;
@@ -338,8 +341,12 @@ export async function leaveItem(targetId: string, uid: string): Promise<void> {
 
   const mine = await getDocs(query(itemsCol(), where('ownerId', '==', uid), where('origin', '==', 'joined'), where('sourceItemId', '==', targetId), where('done', '==', false)));
 
+  // savesCount는 '내가 참여자였는지'로 판단해 정확히 1만 내립니다. 예전엔 아직 안 이룬 사본이
+  // 있을 때만 내려서, 사본을 이미 완료한 뒤 나가면 참여자에서는 빠지는데 카운트는 안 줄어드는
+  // 불일치가 있었어요(담기는 참여자 기준으로 올라갑니다).
+  const wasParticipant = (target.participants || []).includes(uid);
   const batch = writeBatch(db);
-  batch.update(itemDoc(targetId), { participants: arrayRemove(uid), savesCount: increment(mine.empty ? 0 : -1) });
+  batch.update(itemDoc(targetId), { participants: arrayRemove(uid), savesCount: increment(wasParticipant ? -1 : 0) });
   mine.docs.forEach((d) => batch.delete(d.ref));
   await batch.commit();
 }
@@ -359,7 +366,7 @@ export async function helpItem(targetId: string, uid: string, payload: { title: 
     ownerId: uid, title: payload.title, emoji: payload.emoji, note: payload.note || '', categories: [], location: null,
     targetDate: null, priority: null, order: 0, ownerPublic: getMyVisibility(),
     done: true, memory: { photo: null, photos: [], text: payload.text || '', date }, participants: [target.ownerId],
-    origin: 'helped', helpedForId: target.ownerId, sourceTitle: target.title, sourceEmoji: target.emoji, sourceItemId: targetId,
+    origin: 'helped', helpedForId: target.ownerId, sourceOwnerId: target.ownerId, sourceTitle: target.title, sourceEmoji: target.emoji, sourceItemId: targetId,
     helpedBy: [], likesCount: 0, savesCount: 0,
   };
   batch.set(newRef, { ...rec, createdAt: serverTimestamp() });

@@ -54,7 +54,7 @@ export function LocationChip({ location }: { location: Location }) {
   const onPress = () => openMap(location);
   const hasPin = location.lat != null && location.lng != null;
   return (
-    <Pressable onPress={onPress} style={styles.locChip}>
+    <Pressable onPress={onPress} style={styles.locChip} accessibilityRole="button" accessibilityLabel={`${location.name} 지도에서 열기`}>
       {hasPin ? (
         <LocationPreview lat={location.lat as number} lng={location.lng as number} size={20} />
       ) : (

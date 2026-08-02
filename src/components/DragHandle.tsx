@@ -47,7 +47,7 @@ export default function DragHandle({
 
 const styles = StyleSheet.create({
   handle: {
-    width: 40, height: 44, borderRadius: 10, backgroundColor: colors.surface2,
+    width: 44, height: 44, borderRadius: 10, backgroundColor: colors.surface2,
     alignItems: 'center', justifyContent: 'center',
   },
 });

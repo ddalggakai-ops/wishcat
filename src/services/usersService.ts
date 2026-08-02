@@ -8,6 +8,11 @@ export const DEFAULT_BIO = '✦ 오늘도 꿈을 하나씩 채우는 중';
 
 const cache = new Map<string, PublicUser>();
 
+/** 로그아웃/계정 전환 시 호출 — 이전 계정 세션의 프로필(이름·공개여부 등)이 다음 계정에 남지 않게 비웁니다. */
+export function clearUserCache() {
+  cache.clear();
+}
+
 export function primeUserCache(uid: string, data: { name: string; bio?: string; listPublic?: boolean; photoUrl?: string | null }) {
   const u: PublicUser = {
     id: uid, name: data.name, avatarColor: colorFor(data.name),
