@@ -1,6 +1,7 @@
 import { collection, getDocs } from 'firebase/firestore/lite';
 import { db } from '../firebase/config';
 import { STARTER_PACKS, STARTER_GROUPS, deriveStarterGroups, type StarterPack } from '../data/starterTemplates';
+import { RECOMMEND_POSTS, type RecommendPost } from '../data/recommendPosts';
 
 // 시작 템플릿(추천 버킷 모음)을 서버(Firestore `starterPacks`)에서 불러옵니다.
 // 관리자가 앱 재빌드 없이 콘솔/시드로 내용을 갈아끼울 수 있게 하기 위한 구조예요.
@@ -35,4 +36,27 @@ export async function getStarterPacks(opts?: { force?: boolean }): Promise<{ pac
 /** 관리자가 시드/수정 후 즉시 반영하고 싶을 때 캐시를 비웁니다. */
 export function clearStarterPacksCache() {
   cache = null;
+}
+
+// ── 추천 여행 포스팅 (지역별 가이드 + 담기) ─────────────────────────────────
+let postsCache: { at: number; posts: RecommendPost[] } | null = null;
+
+export async function getRecommendPosts(opts?: { force?: boolean }): Promise<RecommendPost[]> {
+  if (!opts?.force && postsCache && Date.now() - postsCache.at < TTL_MS) return postsCache.posts;
+  try {
+    const snap = await getDocs(collection(db, 'recommendPosts'));
+    const posts = snap.docs
+      .map((d) => ({ id: d.id, ...(d.data() as any) }) as RecommendPost)
+      .filter((p) => p.title && p.region && Array.isArray(p.items) && p.items.length > 0)
+      .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+    if (!posts.length) return RECOMMEND_POSTS;
+    postsCache = { at: Date.now(), posts };
+    return posts;
+  } catch {
+    return RECOMMEND_POSTS;
+  }
+}
+
+export function clearRecommendPostsCache() {
+  postsCache = null;
 }

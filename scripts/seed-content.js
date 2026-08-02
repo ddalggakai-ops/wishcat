@@ -1,16 +1,17 @@
-// 서버에서 관리하는 '추천 버킷 모음'(starterPacks)을 Firestore에 심는 스크립트.
+// 서버에서 운영하는 콘텐츠(추천 버킷 모음 + 지역 여행 가이드)를 Firestore에 심는 스크립트.
 //
-// src/data/starterPacks.json 을 그대로 읽어 starterPacks/{key} 문서로 씁니다(있으면 덮어씀).
-// 앱은 이 컬렉션을 읽어 시작 템플릿을 보여주고, 없으면 내장 JSON으로 폴백합니다.
-// 따라서 이 스크립트로 언제든 내용을 갈아끼우면 앱 재빌드 없이 반영됩니다.
+//   src/data/starterPacks.json   → starterPacks/{key}
+//   src/data/recommendPosts.json → recommendPosts/{id}
 //
-// 쓰기 권한: firestore.rules 에서 starterPacks 쓰기는 '관리자(admins/{uid} 문서 보유)'만 허용됩니다.
+// 앱은 이 컬렉션들을 읽어 시작 템플릿/추천 탭을 채우고, 없으면 내장 JSON으로 폴백합니다.
+// 따라서 JSON을 고치고 이 스크립트만 다시 돌리면 앱 재빌드 없이 반영돼요(최대 5분 캐시).
+//
+// 쓰기 권한: firestore.rules 에서 쓰기는 '관리자(admins/{uid} 문서 보유)'만 허용됩니다.
 //   1) Firebase 콘솔 > Firestore 에서 admins/{내uid} 문서를 하나 만들어 두세요(내용 아무거나).
 //      내 uid 는 Firebase 콘솔 > Authentication 에서 확인할 수 있어요.
 //   2) 그 계정의 이메일/비밀번호를 ADMIN_EMAIL / ADMIN_PASSWORD 로 넘겨주세요.
 //
-// 실행(로컬): ADMIN_EMAIL=you@example.com ADMIN_PASSWORD=... node scripts/seed-starter-packs.js
-// GitHub Actions: "Seed Starter Packs" 워크플로우에서 시크릿으로 주입합니다.
+// 실행(로컬): ADMIN_EMAIL=you@example.com ADMIN_PASSWORD=... node scripts/seed-content.js
 
 const fs = require('fs');
 const path = require('path');
@@ -86,22 +87,34 @@ async function putDoc(collectionPath, docId, data, idToken) {
   });
 }
 
+function readJson(file) {
+  return JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'src', 'data', file), 'utf8'));
+}
+
+async function seedCollection(collectionPath, docs, idKey, idToken) {
+  let ok = 0;
+  for (const d of docs) {
+    const id = d[idKey];
+    if (!id) { console.warn(`  ${idKey} 없는 문서 건너뜀`); continue; }
+    const { [idKey]: _omit, ...rest } = d;
+    await putDoc(collectionPath, id, rest, idToken);
+    console.log(`  ✓ ${collectionPath}/${id}`);
+    ok += 1;
+  }
+  return ok;
+}
+
 async function main() {
-  const packs = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'src', 'data', 'starterPacks.json'), 'utf8'));
-  console.log(`추천 팩 ${packs.length}개를 심습니다 (db: ${DATABASE_ID}).`);
+  const packs = readJson('starterPacks.json');
+  const posts = readJson('recommendPosts.json');
+  console.log(`추천 팩 ${packs.length}개 · 여행 가이드 ${posts.length}개를 심습니다 (db: ${DATABASE_ID}).`);
 
   const { uid, idToken } = await signIn(ADMIN_EMAIL, ADMIN_PASSWORD);
   console.log(`관리자 로그인 완료: ${uid}`);
 
-  let ok = 0;
-  for (const p of packs) {
-    const { key, ...rest } = p;
-    if (!key) { console.warn('key 없는 팩 건너뜀'); continue; }
-    await putDoc('starterPacks', key, rest, idToken);
-    console.log(`  ✓ ${key} (${rest.title})`);
-    ok += 1;
-  }
-  console.log(`\n완료: ${ok}/${packs.length} 개 반영. 앱은 최대 5분 캐시 후(또는 시트를 다시 열면) 새 값을 보여줍니다.`);
+  const a = await seedCollection('starterPacks', packs, 'key', idToken);
+  const b = await seedCollection('recommendPosts', posts, 'id', idToken);
+  console.log(`\n완료: starterPacks ${a}/${packs.length}, recommendPosts ${b}/${posts.length}. 앱은 최대 5분 캐시 후 새 값을 보여줍니다.`);
 }
 
 main().catch((e) => {

@@ -5,10 +5,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Icon from './Icon';
 import { colors, gradients, shadowColors, radius } from '../theme';
 
-export type TabKey = 'mine' | 'friends' | 'explore' | 'memories';
+export type TabKey = 'mine' | 'recommend' | 'friends' | 'explore' | 'memories';
 
 const TABS: { key: TabKey; label: string; icon: React.ComponentProps<typeof Icon>['name']; iconOn: React.ComponentProps<typeof Icon>['name'] }[] = [
   { key: 'mine', label: '나', icon: 'person-outline', iconOn: 'person' },
+  { key: 'recommend', label: '추천', icon: 'map-outline', iconOn: 'map' },
   { key: 'friends', label: '친구', icon: 'people-outline', iconOn: 'people' },
   { key: 'explore', label: '둘러보기', icon: 'compass-outline', iconOn: 'compass' },
   { key: 'memories', label: '추억', icon: 'sparkles-outline', iconOn: 'sparkles' },

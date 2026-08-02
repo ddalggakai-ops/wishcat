@@ -8,6 +8,7 @@ import MineScreen from './screens/MineScreen';
 import FriendsScreen from './screens/FriendsScreen';
 import ExploreScreen from './screens/ExploreScreen';
 import MemoriesScreen from './screens/MemoriesScreen';
+import RecommendScreen from './screens/RecommendScreen';
 import PersonScreen from './screens/PersonScreen';
 import OnboardingScreen from './screens/OnboardingScreen';
 import AddEditSheet, { AddEditPayload } from './sheets/AddEditSheet';
@@ -21,9 +22,11 @@ import BulkImportSheet from './sheets/BulkImportSheet';
 import StarterSheet from './sheets/StarterSheet';
 import ItemDetailSheet from './sheets/ItemDetailSheet';
 import ReportSheet from './sheets/ReportSheet';
+import RecommendPostModal from './sheets/RecommendPostModal';
 import { useApp } from './context/AppContext';
 import { confirmDialog } from './utils/dialog';
 import type { Item } from './api/types';
+import type { RecommendPost } from './data/recommendPosts';
 
 type PersonView = { id: string; name: string; isFriendTab: boolean } | null;
 
@@ -48,6 +51,7 @@ export default function HomeShell() {
   const [starterOpen, setStarterOpen] = useState(false);
   const [detailItem, setDetailItem] = useState<Item | null>(null);
   const [reportItem, setReportItem] = useState<Item | null>(null);
+  const [recommendPost, setRecommendPost] = useState<RecommendPost | null>(null);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -59,6 +63,7 @@ export default function HomeShell() {
   // 예전엔 아무것도 안 잡아서 어디서 눌러도 앱이 바로 꺼졌습니다.
   useEffect(() => {
     const onBack = () => {
+      if (recommendPost) { setRecommendPost(null); return true; }
       if (reportItem) { setReportItem(null); return true; }
       if (detailItem) { setDetailItem(null); return true; }
       if (viewerItem) { setViewerItem(null); return true; }
@@ -77,7 +82,7 @@ export default function HomeShell() {
     };
     const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
     return () => sub.remove();
-  }, [reportItem, detailItem, viewerItem, inviteItem, bulkImportOpen, starterOpen, menuItem, profileOpen, helpItemTarget, memoryItem, addEditOpen, showOnboardReplay, person, tab]);
+  }, [recommendPost, reportItem, detailItem, viewerItem, inviteItem, bulkImportOpen, starterOpen, menuItem, profileOpen, helpItemTarget, memoryItem, addEditOpen, showOnboardReplay, person, tab]);
 
   const openPerson = useCallback((id: string, name: string, isFriendTab: boolean) => {
     setPerson({ id, name, isFriendTab });
@@ -148,6 +153,8 @@ export default function HomeShell() {
         onDetail={setDetailItem}
       />
     );
+  } else if (tab === 'recommend') {
+    content = <RecommendScreen onOpenPost={setRecommendPost} />;
   } else if (tab === 'friends') {
     content = <FriendsScreen onOpenPerson={(id, name) => openPerson(id, name, true)} onInvite={() => setInviteItem('general')} />;
   } else if (tab === 'explore') {
@@ -208,6 +215,11 @@ export default function HomeShell() {
         onClose={() => setReportItem(null)}
         item={reportItem}
         onDone={showToast}
+      />
+      <RecommendPostModal
+        post={recommendPost}
+        onClose={() => setRecommendPost(null)}
+        onToast={showToast}
       />
       <InviteModal
         visible={!!inviteItem}

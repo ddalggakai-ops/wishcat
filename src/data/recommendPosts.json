@@ -1,0 +1,118 @@
+[
+  {
+    "id": "jeju",
+    "region": "제주",
+    "title": "제주에서만 담을 수 있는 것들",
+    "emoji": "🍊",
+    "role": "highlight",
+    "teaser": "오름, 돌담길, 흑돼지 그리고 바다. 제주에서만 이룰 수 있는 버킷 8개.",
+    "readMinutes": 3,
+    "order": 0,
+    "sections": [
+      { "heading": "제주는 '느리게'가 정답", "body": "제주는 유명 관광지를 도장깨기 하듯 도는 곳이 아니에요. 오름 하나를 천천히 오르고, 해안 도로를 목적 없이 달리는 하루가 제일 제주다워요. 렌터카 한 대와 넉넉한 시간만 있으면 충분해요." },
+      { "heading": "동쪽과 서쪽, 하루씩", "body": "성산·우도가 있는 동쪽은 일출과 바다, 애월·한림이 있는 서쪽은 노을과 카페가 좋아요. 이틀이라면 동쪽 하루, 서쪽 하루로 나누면 이동이 줄어 여유로워요." }
+    ],
+    "items": [
+      { "title": "성산일출봉에서 해돋이 보기", "emoji": "🌅", "categories": ["자연", "여행"], "location": { "name": "성산일출봉", "region": "domestic" } },
+      { "title": "우도 자전거로 한 바퀴 돌기", "emoji": "🏄", "categories": ["액티비티", "여행"], "location": { "name": "우도", "region": "domestic" } },
+      { "title": "오름 하나 정상까지 올라 보기", "emoji": "🏔️", "categories": ["자연"], "location": { "name": "제주 오름", "region": "domestic" } },
+      { "title": "애월 해안도로에서 노을 보기", "emoji": "🌅", "categories": ["자연", "관계"], "location": { "name": "애월", "region": "domestic" } },
+      { "title": "제주 흑돼지 제대로 먹어보기", "emoji": "🍜", "categories": ["음식"] },
+      { "title": "한라산 윗세오름까지 등반", "emoji": "🥾", "categories": ["도전", "자연"], "location": { "name": "한라산", "region": "domestic" } },
+      { "title": "돌담길 마을 골목 산책하기", "emoji": "🌴", "categories": ["여행", "관계"] },
+      { "title": "해녀의 물질 구경하고 해산물 맛보기", "emoji": "🐬", "categories": ["음식", "여행"] }
+    ]
+  },
+  {
+    "id": "busan",
+    "region": "부산",
+    "title": "바다도 도시도 다 있는 부산",
+    "emoji": "🌊",
+    "role": "primary",
+    "teaser": "해운대부터 감천문화마을까지, 부산에서 하고 싶은 버킷 8개.",
+    "readMinutes": 3,
+    "order": 1,
+    "sections": [
+      { "heading": "부산은 걷는 도시", "body": "부산은 바다와 언덕, 시장이 촘촘히 붙어 있어 걷기 좋아요. 해운대에서 광안리로 이어지는 밤 산책, 감천문화마을의 골목 오르내림이 부산의 진짜 얼굴이에요." },
+      { "heading": "회 한 접시는 국룰", "body": "자갈치·민락 회센터에서 회 한 접시에 소주 한 잔은 부산 여행의 통과의례. 저녁엔 광안대교 야경이 보이는 자리를 노려보세요." }
+    ],
+    "items": [
+      { "title": "광안리에서 광안대교 야경 보기", "emoji": "🌌", "categories": ["자연", "관계"], "location": { "name": "광안리", "region": "domestic" } },
+      { "title": "감천문화마을 골목 사진 찍기", "emoji": "🎨", "categories": ["여행", "취미"], "location": { "name": "감천문화마을", "region": "domestic" } },
+      { "title": "해운대에서 아침 바다 산책", "emoji": "🏄", "categories": ["자연"], "location": { "name": "해운대", "region": "domestic" } },
+      { "title": "자갈치시장에서 회 한 접시", "emoji": "🍜", "categories": ["음식"], "location": { "name": "자갈치시장", "region": "domestic" } },
+      { "title": "흰여울문화마을 해안 산책로 걷기", "emoji": "🥾", "categories": ["여행", "자연"], "location": { "name": "흰여울문화마을", "region": "domestic" } },
+      { "title": "부산 밤바다 보며 포장마차 가기", "emoji": "🎤", "categories": ["음식", "관계"] },
+      { "title": "송정에서 서핑 배워보기", "emoji": "🏄", "categories": ["도전", "액티비티"], "location": { "name": "송정해수욕장", "region": "domestic" } }
+    ]
+  },
+  {
+    "id": "gangneung",
+    "region": "강릉·속초",
+    "title": "바다와 커피의 동해안",
+    "emoji": "☕",
+    "role": "secondary",
+    "teaser": "새벽 바다, 커피 거리, 설악까지. 동해안에서 담기 좋은 버킷 7개.",
+    "readMinutes": 2,
+    "order": 2,
+    "sections": [
+      { "heading": "동해는 아침이 예뻐요", "body": "강릉·속초는 해가 바다에서 떠서, 새벽에 눈뜨는 게 안 아까운 곳이에요. 안목해변 커피 한 잔 들고 보는 일출이 이 여행의 하이라이트." },
+      { "heading": "여름 말고도 좋아요", "body": "겨울 바다도, 가을 설악의 단풍도 좋아요. 사람 적은 계절에 조용한 바다를 독차지하는 것도 이 지역만의 매력이에요." }
+    ],
+    "items": [
+      { "title": "안목해변 커피 들고 일출 보기", "emoji": "☕", "categories": ["자연", "관계"], "location": { "name": "안목해변", "region": "domestic" } },
+      { "title": "정동진에서 바다 열차 타기", "emoji": "🚗", "categories": ["여행"], "location": { "name": "정동진", "region": "domestic" } },
+      { "title": "설악산 케이블카 타고 단풍 보기", "emoji": "🏔️", "categories": ["자연"], "location": { "name": "설악산", "region": "domestic" } },
+      { "title": "속초 중앙시장에서 먹거리 투어", "emoji": "🍜", "categories": ["음식"], "location": { "name": "속초중앙시장", "region": "domestic" } },
+      { "title": "경포호 자전거로 한 바퀴", "emoji": "🏃", "categories": ["액티비티"], "location": { "name": "경포호", "region": "domestic" } },
+      { "title": "겨울 바다 보며 조용히 걷기", "emoji": "🌊", "categories": ["자연", "성장"] },
+      { "title": "서핑 성지에서 파도 타보기", "emoji": "🏄", "categories": ["도전", "액티비티"] }
+    ]
+  },
+  {
+    "id": "gyeongju",
+    "region": "경주",
+    "title": "천 년을 걷는 경주",
+    "emoji": "🏯",
+    "role": "accent",
+    "teaser": "능과 고분, 밤의 동궁과 월지. 시간여행 버킷 7개.",
+    "readMinutes": 2,
+    "order": 3,
+    "sections": [
+      { "heading": "도시 전체가 박물관", "body": "경주는 걷거나 자전거로 다니는 게 제맛이에요. 대릉원 능 사이를 지나 첨성대까지, 천 년 전 신라를 산책하듯 지나가요." },
+      { "heading": "밤이 진짜예요", "body": "동궁과 월지, 월정교는 해가 지고 조명이 켜지면 완전히 다른 곳이 돼요. 낮에 본 곳도 밤에 한 번 더 가보세요." }
+    ],
+    "items": [
+      { "title": "동궁과 월지 야경 보기", "emoji": "🌌", "categories": ["여행", "관계"], "location": { "name": "동궁과 월지", "region": "domestic" } },
+      { "title": "대릉원 능 사이 자전거 타기", "emoji": "🏃", "categories": ["액티비티", "여행"], "location": { "name": "대릉원", "region": "domestic" } },
+      { "title": "첨성대 앞에서 사진 남기기", "emoji": "📷", "categories": ["여행"], "location": { "name": "첨성대", "region": "domestic" } },
+      { "title": "불국사·석굴암 천천히 둘러보기", "emoji": "🏯", "categories": ["여행", "성장"], "location": { "name": "불국사", "region": "domestic" } },
+      { "title": "황리단길에서 한복 입고 걷기", "emoji": "💃", "categories": ["여행", "취미"], "location": { "name": "황리단길", "region": "domestic" } },
+      { "title": "경주빵 사서 능 앞에서 먹기", "emoji": "🍰", "categories": ["음식"] },
+      { "title": "월정교 야경 배경으로 사진 찍기", "emoji": "📷", "categories": ["관계"], "location": { "name": "월정교", "region": "domestic" } }
+    ]
+  },
+  {
+    "id": "jeonju",
+    "region": "전주",
+    "title": "먹으러 가는 도시, 전주",
+    "emoji": "🍲",
+    "role": "highlight",
+    "teaser": "한옥마을과 비빔밥, 막걸리 골목. 맛과 멋의 버킷 7개.",
+    "readMinutes": 2,
+    "order": 4,
+    "sections": [
+      { "heading": "전주는 배고플 때 가세요", "body": "전주의 절반은 음식이에요. 비빔밥, 콩나물국밥, 그리고 안주가 끝없이 나오는 막걸리 골목까지. 하루 세 끼로는 모자란 도시." },
+      { "heading": "한옥 사이를 걷는 맛", "body": "한옥마을은 밤에 사람이 빠지면 더 예뻐요. 한복 입고 골목을 걷다 전동성당 앞에서 사진 한 장이면 하루가 완성돼요." }
+    ],
+    "items": [
+      { "title": "전주 비빔밥 제대로 한 그릇", "emoji": "🍜", "categories": ["음식"] },
+      { "title": "한옥마을에서 한복 입고 걷기", "emoji": "💃", "categories": ["여행", "취미"], "location": { "name": "전주한옥마을", "region": "domestic" } },
+      { "title": "막걸리 골목에서 한 상 받기", "emoji": "🍶", "categories": ["음식", "관계"] },
+      { "title": "전동성당 앞에서 사진 찍기", "emoji": "📷", "categories": ["여행"], "location": { "name": "전동성당", "region": "domestic" } },
+      { "title": "오목대에서 마을 전경 내려다보기", "emoji": "🏔️", "categories": ["자연", "여행"], "location": { "name": "오목대", "region": "domestic" } },
+      { "title": "콩나물국밥으로 아침 해장하기", "emoji": "🍲", "categories": ["음식"] },
+      { "title": "남부시장 야시장에서 먹거리 투어", "emoji": "🎤", "categories": ["음식", "관계"], "location": { "name": "전주 남부시장", "region": "domestic" } }
+    ]
+  }
+]
