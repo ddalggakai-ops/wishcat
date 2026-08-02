@@ -2,6 +2,7 @@
   {
     "id": "jeju",
     "region": "제주",
+    "group": "국내 여행지",
     "title": "제주에서만 담을 수 있는 것들",
     "emoji": "🍊",
     "role": "highlight",
@@ -26,6 +27,7 @@
   {
     "id": "busan",
     "region": "부산",
+    "group": "국내 여행지",
     "title": "바다도 도시도 다 있는 부산",
     "emoji": "🌊",
     "role": "primary",
@@ -49,6 +51,7 @@
   {
     "id": "gangneung",
     "region": "강릉·속초",
+    "group": "국내 여행지",
     "title": "바다와 커피의 동해안",
     "emoji": "☕",
     "role": "secondary",
@@ -72,6 +75,7 @@
   {
     "id": "gyeongju",
     "region": "경주",
+    "group": "국내 여행지",
     "title": "천 년을 걷는 경주",
     "emoji": "🏯",
     "role": "accent",
@@ -95,6 +99,7 @@
   {
     "id": "jeonju",
     "region": "전주",
+    "group": "국내 여행지",
     "title": "먹으러 가는 도시, 전주",
     "emoji": "🍲",
     "role": "highlight",
@@ -113,6 +118,242 @@
       { "title": "오목대에서 마을 전경 내려다보기", "emoji": "🏔️", "categories": ["자연", "여행"], "location": { "name": "오목대", "region": "domestic" } },
       { "title": "콩나물국밥으로 아침 해장하기", "emoji": "🍲", "categories": ["음식"] },
       { "title": "남부시장 야시장에서 먹거리 투어", "emoji": "🎤", "categories": ["음식", "관계"], "location": { "name": "전주 남부시장", "region": "domestic" } }
+    ]
+  },
+  {
+    "id": "seoul",
+    "region": "서울",
+    "group": "국내 여행지",
+    "title": "낮과 밤이 다른 도시, 서울",
+    "emoji": "🗼",
+    "role": "primary",
+    "teaser": "고궁, 한강 야경, 골목 카페까지. 서울에서 담기 좋은 버킷 7개.",
+    "readMinutes": 2,
+    "order": 5,
+    "sections": [
+      { "heading": "낮과 밤을 나눠 쓰세요", "body": "서울은 낮엔 고궁과 골목, 밤엔 한강과 야경이 주인공이에요. 하루를 낮·밤으로 나누면 같은 도시를 두 배로 즐길 수 있어요." },
+      { "heading": "걷다가 만나는 동네들", "body": "익선동, 서촌, 성수동… 지하철 한 정거장마다 색이 달라요. 목적 없이 골목을 걷는 게 요즘 서울 여행법이에요." }
+    ],
+    "items": [
+      { "title": "경복궁 한복 입고 둘러보기", "emoji": "💃", "categories": ["여행", "취미"], "location": { "name": "경복궁", "region": "domestic" } },
+      { "title": "남산타워에서 서울 야경 보기", "emoji": "🌌", "categories": ["자연", "관계"], "location": { "name": "남산서울타워", "region": "domestic" } },
+      { "title": "한강에서 치맥하며 노을 보기", "emoji": "🍜", "categories": ["음식", "관계"], "location": { "name": "한강공원", "region": "domestic" } },
+      { "title": "익선동 골목 카페 투어", "emoji": "☕", "categories": ["취미", "음식"], "location": { "name": "익선동", "region": "domestic" } },
+      { "title": "광장시장에서 먹거리 도장깨기", "emoji": "🍲", "categories": ["음식"], "location": { "name": "광장시장", "region": "domestic" } },
+      { "title": "북촌 한옥마을 사진 산책", "emoji": "📷", "categories": ["여행"], "location": { "name": "북촌한옥마을", "region": "domestic" } },
+      { "title": "성수동 편집숍·전시 둘러보기", "emoji": "🎨", "categories": ["취미"], "location": { "name": "성수동", "region": "domestic" } }
+    ]
+  },
+  {
+    "id": "yeosu",
+    "region": "여수",
+    "group": "국내 여행지",
+    "title": "밤바다의 도시, 여수",
+    "emoji": "🌃",
+    "role": "accent",
+    "teaser": "낭만포차, 케이블카, 섬 여행. 여수 밤바다 버킷 7개.",
+    "readMinutes": 2,
+    "order": 6,
+    "sections": [
+      { "heading": "여수는 밤이 주인공", "body": "낭만포차거리와 돌산대교 야경, 노래 가사 그대로예요. 해가 지면 여수는 완전히 다른 도시가 돼요." },
+      { "heading": "바다로 나가 보세요", "body": "오동도, 금오도처럼 배 타고 나가는 섬 여행이 여수의 진짜 매력. 해상케이블카에서 내려다보는 밤바다도 놓치지 마세요." }
+    ],
+    "items": [
+      { "title": "여수 밤바다 낭만포차 즐기기", "emoji": "🎤", "categories": ["음식", "관계"], "location": { "name": "여수 낭만포차거리", "region": "domestic" } },
+      { "title": "해상케이블카 타고 야경 보기", "emoji": "🌌", "categories": ["여행", "자연"], "location": { "name": "여수해상케이블카", "region": "domestic" } },
+      { "title": "돌산공원에서 돌산대교 야경 보기", "emoji": "📷", "categories": ["자연", "관계"], "location": { "name": "돌산공원", "region": "domestic" } },
+      { "title": "오동도 동백길 산책하기", "emoji": "🥾", "categories": ["자연"], "location": { "name": "오동도", "region": "domestic" } },
+      { "title": "여수 게장·갓김치 백반 먹기", "emoji": "🍜", "categories": ["음식"] },
+      { "title": "이순신광장 밤 산책하기", "emoji": "🌊", "categories": ["여행", "관계"], "location": { "name": "이순신광장", "region": "domestic" } },
+      { "title": "금오도 비렁길 트래킹", "emoji": "🏔️", "categories": ["도전", "자연"], "location": { "name": "금오도", "region": "domestic" } }
+    ]
+  },
+  {
+    "id": "spain",
+    "region": "스페인",
+    "group": "해외 여행지",
+    "title": "가우디와 태양의 나라, 스페인",
+    "emoji": "🇪🇸",
+    "role": "secondary",
+    "teaser": "바르셀로나·마드리드, 정열의 스페인 버킷 7개.",
+    "readMinutes": 3,
+    "order": 7,
+    "sections": [
+      { "heading": "서두르지 않는 나라", "body": "스페인은 시에스타의 나라답게 느긋해요. 낮잠처럼 오후를 쉬고, 늦은 저녁까지 거리가 살아 있어요. 저녁 9시에 저녁을 먹어도 이상하지 않아요." },
+      { "heading": "타파스와 플라멩코", "body": "바르(bar)를 순례하며 타파스 한 접시씩 맛보는 게 스페인식 저녁이에요. 밤엔 플라멩코 공연 한 번은 꼭 봐야 이 여행이 완성돼요." }
+    ],
+    "items": [
+      { "title": "사그라다 파밀리아 성당 올라가 보기", "emoji": "✈️", "categories": ["여행"], "location": { "name": "사그라다 파밀리아", "region": "overseas" } },
+      { "title": "구엘 공원에서 가우디 만나기", "emoji": "🎨", "categories": ["여행", "취미"], "location": { "name": "구엘 공원", "region": "overseas" } },
+      { "title": "바닷가에서 정통 파에야 먹기", "emoji": "🍜", "categories": ["음식"], "location": { "name": "바르셀로네타 해변", "region": "overseas" } },
+      { "title": "플라멩코 공연 직접 보기", "emoji": "💃", "categories": ["취미", "관계"] },
+      { "title": "마드리드 프라도 미술관 관람", "emoji": "📚", "categories": ["성장", "취미"], "location": { "name": "프라도 미술관", "region": "overseas" } },
+      { "title": "타파스 바 순례하기", "emoji": "🍶", "categories": ["음식", "도전"] },
+      { "title": "세비야 대성당과 알카사르 둘러보기", "emoji": "🏯", "categories": ["여행"], "location": { "name": "세비야 대성당", "region": "overseas" } }
+    ]
+  },
+  {
+    "id": "portugal",
+    "region": "포르투갈",
+    "group": "해외 여행지",
+    "title": "노을이 예쁜 나라, 포르투갈",
+    "emoji": "🇵🇹",
+    "role": "highlight",
+    "teaser": "리스본·포르투, 에그타르트와 파두의 나라 버킷 7개.",
+    "readMinutes": 3,
+    "order": 8,
+    "sections": [
+      { "heading": "언덕과 트램의 도시", "body": "리스본은 온통 언덕이에요. 노란 28번 트램을 타고 골목을 오르내리는 게 여행의 절반. 전망대(미라도루)마다 붉은 지붕 물결이 펼쳐져요." },
+      { "heading": "강과 노을, 그리고 파두", "body": "포르투의 도루강 노을과 애틋한 파두 선율은 포르투갈의 밤을 특별하게 만들어요. 포트와인 한 잔이면 완벽해요." }
+    ],
+    "items": [
+      { "title": "리스본 28번 트램 타보기", "emoji": "🚗", "categories": ["여행"], "location": { "name": "리스본 트램 28", "region": "overseas" } },
+      { "title": "벨렘탑과 제로니무스 수도원 보기", "emoji": "🏯", "categories": ["여행"], "location": { "name": "벨렘탑", "region": "overseas" } },
+      { "title": "원조 에그타르트 맛보기", "emoji": "🍰", "categories": ["음식"], "location": { "name": "파스테이스 드 벨렘", "region": "overseas" } },
+      { "title": "동 루이스 다리에서 노을 보기", "emoji": "🌅", "categories": ["자연", "관계"], "location": { "name": "동 루이스 1세 다리", "region": "overseas" } },
+      { "title": "포트와인 셀러 투어 하기", "emoji": "🍶", "categories": ["음식", "취미"] },
+      { "title": "파두 공연 들으며 저녁 보내기", "emoji": "🎤", "categories": ["취미", "관계"] },
+      { "title": "신트라 페나 궁전 다녀오기", "emoji": "✈️", "categories": ["여행"], "location": { "name": "신트라 페나 궁전", "region": "overseas" } }
+    ]
+  },
+  {
+    "id": "tokyo",
+    "region": "일본 · 도쿄",
+    "group": "해외 여행지",
+    "title": "가까운 딴 세상, 도쿄",
+    "emoji": "🗾",
+    "role": "primary",
+    "teaser": "시부야부터 골목 이자카야까지, 도쿄 버킷 7개.",
+    "readMinutes": 2,
+    "order": 9,
+    "sections": [
+      { "heading": "동네마다 얼굴이 달라요", "body": "도쿄는 지하철 한 정거장마다 분위기가 확 바뀌어요. 하루에 동네 두세 곳만 골라 천천히 도는 게 지치지 않는 방법이에요." },
+      { "heading": "먹으러 가는 도시", "body": "라멘, 스시, 골목 이자카야. 줄 서는 집엔 다 이유가 있어요. 늦은 밤 골목 이자카야에서 한잔이 도쿄의 진짜 맛." }
+    ],
+    "items": [
+      { "title": "시부야 스크램블 교차로 건너보기", "emoji": "✈️", "categories": ["여행"], "location": { "name": "시부야 스크램블 교차로", "region": "overseas" } },
+      { "title": "센소지 절과 나카미세 거리 걷기", "emoji": "🏯", "categories": ["여행"], "location": { "name": "센소지", "region": "overseas" } },
+      { "title": "골목 이자카야에서 한잔하기", "emoji": "🍶", "categories": ["음식", "관계"] },
+      { "title": "츠키지 시장에서 스시 먹기", "emoji": "🍜", "categories": ["음식"], "location": { "name": "츠키지 장외시장", "region": "overseas" } },
+      { "title": "시부야 스카이에서 야경 보기", "emoji": "🌌", "categories": ["자연"], "location": { "name": "시부야 스카이", "region": "overseas" } },
+      { "title": "테마파크에서 하루 신나게 놀기", "emoji": "🎢", "categories": ["취미", "관계"] },
+      { "title": "시모키타자와 골목 산책하기", "emoji": "🎨", "categories": ["여행", "취미"], "location": { "name": "시모키타자와", "region": "overseas" } }
+    ]
+  },
+  {
+    "id": "italy",
+    "region": "이탈리아",
+    "group": "해외 여행지",
+    "title": "천 년의 도시, 이탈리아",
+    "emoji": "🇮🇹",
+    "role": "accent",
+    "teaser": "로마·피렌체, 유적과 젤라또의 나라 버킷 7개.",
+    "readMinutes": 3,
+    "order": 10,
+    "sections": [
+      { "heading": "도시가 곧 박물관", "body": "로마는 길 하나 건너 유적이에요. 지도 없이 걸어도 명소가 튀어나와요. 콜로세움에서 판테온까지, 도시 전체가 야외 박물관이에요." },
+      { "heading": "먹는 게 예술", "body": "파스타, 피자, 젤라또. 이탈리아에선 삼시세끼가 여행이에요. 젤라또는 매일 다른 맛으로 도전해 보세요." }
+    ],
+    "items": [
+      { "title": "콜로세움 안까지 들어가 보기", "emoji": "🏯", "categories": ["여행"], "location": { "name": "콜로세움", "region": "overseas" } },
+      { "title": "트레비 분수에 동전 던지기", "emoji": "🎉", "categories": ["여행", "관계"], "location": { "name": "트레비 분수", "region": "overseas" } },
+      { "title": "바티칸과 시스티나 성당 관람", "emoji": "📚", "categories": ["성장", "취미"], "location": { "name": "바티칸 박물관", "region": "overseas" } },
+      { "title": "피렌체 두오모 쿠폴라 오르기", "emoji": "🥾", "categories": ["도전", "여행"], "location": { "name": "피렌체 두오모", "region": "overseas" } },
+      { "title": "젤라또 매일 다른 맛으로 먹기", "emoji": "🍰", "categories": ["음식"] },
+      { "title": "정통 나폴리 피자 맛보기", "emoji": "🍜", "categories": ["음식"] },
+      { "title": "베네치아에서 곤돌라 타보기", "emoji": "🚗", "categories": ["여행", "관계"], "location": { "name": "베네치아", "region": "overseas" } }
+    ]
+  },
+  {
+    "id": "jinhae-festival",
+    "region": "진해 · 봄 축제",
+    "group": "축제",
+    "title": "벚꽃 절정, 진해 군항제",
+    "emoji": "🌸",
+    "role": "accent",
+    "teaser": "4월 초, 온 도시가 벚꽃. 진해 벚꽃 버킷 6개.",
+    "readMinutes": 2,
+    "order": 11,
+    "sections": [
+      { "heading": "언제 가나요", "body": "매년 4월 초(보통 첫째 주)에 열려요. 벚꽃 절정과 겹치면 도시 전체가 분홍빛이 돼요. 개화 시기가 해마다 조금씩 달라 예보를 확인하고 가면 실패가 없어요." },
+      { "heading": "인파는 각오하되", "body": "사람이 정말 많아요. 이른 아침이나 평일을 노리면 여좌천·경화역 벚꽃 터널을 여유롭게 담을 수 있어요." }
+    ],
+    "items": [
+      { "title": "경화역 벚꽃 터널에서 사진 찍기", "emoji": "📷", "categories": ["여행", "자연"], "location": { "name": "경화역", "region": "domestic" } },
+      { "title": "여좌천 로망스다리 야경 보기", "emoji": "🌌", "categories": ["관계", "자연"], "location": { "name": "여좌천", "region": "domestic" } },
+      { "title": "진해탑에서 벚꽃 도시 내려다보기", "emoji": "🏔️", "categories": ["자연"], "location": { "name": "진해탑", "region": "domestic" } },
+      { "title": "군항제 야시장 먹거리 즐기기", "emoji": "🍜", "categories": ["음식"] },
+      { "title": "소중한 사람과 벚꽃 아래 산책하기", "emoji": "🌸", "categories": ["관계"] },
+      { "title": "해군 함정 공개 관람 가보기", "emoji": "✈️", "categories": ["여행"] }
+    ]
+  },
+  {
+    "id": "boryeong-mud",
+    "region": "대천 · 여름 축제",
+    "group": "축제",
+    "title": "여름의 진흙탕, 보령 머드축제",
+    "emoji": "🏖️",
+    "role": "primary",
+    "teaser": "7월 대천해수욕장, 온몸으로 노는 여름 버킷 6개.",
+    "readMinutes": 2,
+    "order": 12,
+    "sections": [
+      { "heading": "언제 가나요", "body": "매년 7월 중순~말, 충남 보령 대천해수욕장에서 열려요. 외국인 관광객도 많이 찾는 한여름 대표 축제예요." },
+      { "heading": "각오하고 뛰어들기", "body": "옷 버릴 각오는 필수예요. 머드탕·슬라이드에서 동심으로 돌아가는 게 이 축제의 포인트. 여벌 옷과 방수팩을 챙기세요." }
+    ],
+    "items": [
+      { "title": "머드탕에서 온몸으로 뒹굴기", "emoji": "🏄", "categories": ["도전", "액티비티"], "location": { "name": "대천해수욕장", "region": "domestic" } },
+      { "title": "대형 머드 슬라이드 타기", "emoji": "🎢", "categories": ["액티비티"], "location": { "name": "대천해수욕장", "region": "domestic" } },
+      { "title": "대천 바다에서 해수욕 즐기기", "emoji": "🌊", "categories": ["자연"] },
+      { "title": "축제 밤 불꽃과 공연 즐기기", "emoji": "🎆", "categories": ["관계"] },
+      { "title": "바닷가에서 조개구이 먹기", "emoji": "🍜", "categories": ["음식"] },
+      { "title": "친구들과 머드 사진 남기기", "emoji": "📷", "categories": ["관계"] }
+    ]
+  },
+  {
+    "id": "hwacheon-ice",
+    "region": "화천 · 겨울 축제",
+    "group": "축제",
+    "title": "겨울 얼음낚시, 화천 산천어축제",
+    "emoji": "❄️",
+    "role": "primary",
+    "teaser": "1월 한겨울, 얼음판 위에서 즐기는 축제 버킷 6개.",
+    "readMinutes": 2,
+    "order": 13,
+    "sections": [
+      { "heading": "언제 가나요", "body": "매년 1월, 강원 화천에서 열려요. 꽁꽁 언 강 위에서 열리는 세계적인 겨울 축제로, 주말은 특히 붐벼요." },
+      { "heading": "따뜻하게 입고 가세요", "body": "얼음판 위라 방한은 필수예요. 아이젠·장갑·핫팩을 챙기고, 잡은 산천어를 바로 구워 먹는 별미를 놓치지 마세요." }
+    ],
+    "items": [
+      { "title": "얼음낚시로 산천어 잡기", "emoji": "🎣", "categories": ["도전", "액티비티"], "location": { "name": "화천천", "region": "domestic" } },
+      { "title": "잡은 산천어 바로 구워 먹기", "emoji": "🍜", "categories": ["음식"] },
+      { "title": "맨손잡기 이벤트 도전하기", "emoji": "🏃", "categories": ["도전"] },
+      { "title": "눈썰매·얼음썰매 타기", "emoji": "🎢", "categories": ["액티비티", "관계"] },
+      { "title": "얼음 위에서 겨울 사진 남기기", "emoji": "📷", "categories": ["자연", "관계"] },
+      { "title": "산천어 회 맛보기", "emoji": "🍶", "categories": ["음식"] }
+    ]
+  },
+  {
+    "id": "busan-fireworks",
+    "region": "광안리 · 가을 축제",
+    "group": "축제",
+    "title": "가을 밤 빛의 향연, 부산불꽃축제",
+    "emoji": "🎆",
+    "role": "accent",
+    "teaser": "10~11월 광안리, 밤하늘 가득 불꽃 버킷 6개.",
+    "readMinutes": 2,
+    "order": 14,
+    "sections": [
+      { "heading": "언제 가나요", "body": "매년 늦가을(10~11월) 광안리해수욕장에서 열려요. 광안대교를 배경으로 터지는 불꽃이 압권이에요." },
+      { "heading": "자리싸움이 관건", "body": "명당은 낮부터 붐벼요. 유료 좌석을 예약하거나 일찍 자리를 잡는 게 팁. 돗자리와 따뜻한 겉옷을 챙기세요." }
+    ],
+    "items": [
+      { "title": "광안리에서 불꽃축제 직관하기", "emoji": "🎆", "categories": ["관계", "자연"], "location": { "name": "광안리해수욕장", "region": "domestic" } },
+      { "title": "광안대교 배경 불꽃 사진 남기기", "emoji": "📷", "categories": ["관계"], "location": { "name": "광안리해수욕장", "region": "domestic" } },
+      { "title": "소중한 사람과 불꽃 보며 소원 빌기", "emoji": "🌌", "categories": ["관계"] },
+      { "title": "해변 포장마차에서 야식 먹기", "emoji": "🍜", "categories": ["음식"] },
+      { "title": "불꽃 명당 일찍 자리 잡기", "emoji": "🏃", "categories": ["도전"] },
+      { "title": "축제 후 광안리 밤바다 산책", "emoji": "🌊", "categories": ["자연"] }
     ]
   }
 ]

@@ -4,7 +4,7 @@ import GradientCard from '../components/GradientCard';
 import { ScreenHeader } from '../components/Basics';
 import { colors, radius } from '../theme';
 import { getRecommendPosts } from '../services/templatesService';
-import { RECOMMEND_POSTS, type RecommendPost } from '../data/recommendPosts';
+import { RECOMMEND_POSTS, deriveRecommendGroups, type RecommendPost } from '../data/recommendPosts';
 
 // 지역별 여행 가이드 포스팅 피드. 카드를 누르면 가이드를 읽고, 그 지역의 버킷을 골라 담을 수 있어요.
 export default function RecommendScreen({ onOpenPost }: { onOpenPost: (post: RecommendPost) => void }) {
@@ -30,25 +30,31 @@ export default function RecommendScreen({ onOpenPost }: { onOpenPost: (post: Rec
       refreshControl={<RefreshControl refreshing={loading} onRefresh={() => load(true)} tintColor="#fff" />}
     >
       <ScreenHeader title="추천" subtitle="지역별 여행 가이드예요. 마음에 드는 버킷을 골라 내 목록에 담아보세요." />
-      {posts.map((p) => (
-        <Pressable key={p.id} onPress={() => onOpenPost(p)} style={styles.cardWrap} accessibilityRole="button" accessibilityLabel={`${p.region} 여행 가이드 열기`}>
-          <GradientCard role={p.role} borderRadius={radius.lg} style={{ flex: 1 }} contentStyle={styles.card}>
-            <View style={styles.top}>
-              <View style={styles.regionChip}><Text style={styles.regionText}>📍 {p.region}</Text></View>
-              {p.readMinutes ? <Text style={styles.read}>가이드 · {p.readMinutes}분</Text> : null}
-            </View>
-            <Text style={styles.emoji}>{p.emoji}</Text>
-            <Text style={styles.title}>{p.title}</Text>
-            <Text style={styles.teaser} numberOfLines={2}>{p.teaser}</Text>
-            <Text style={styles.cta}>읽고 담기 ›</Text>
-          </GradientCard>
-        </Pressable>
+      {deriveRecommendGroups(posts).map((g) => (
+        <View key={g}>
+          <Text style={styles.groupLabel}>{g}</Text>
+          {posts.filter((p) => (p.group || '여행지') === g).map((p) => (
+            <Pressable key={p.id} onPress={() => onOpenPost(p)} style={styles.cardWrap} accessibilityRole="button" accessibilityLabel={`${p.region} 여행 가이드 열기`}>
+              <GradientCard role={p.role} borderRadius={radius.lg} style={{ flex: 1 }} contentStyle={styles.card}>
+                <View style={styles.top}>
+                  <View style={styles.regionChip}><Text style={styles.regionText}>📍 {p.region}</Text></View>
+                  {p.readMinutes ? <Text style={styles.read}>가이드 · {p.readMinutes}분</Text> : null}
+                </View>
+                <Text style={styles.emoji}>{p.emoji}</Text>
+                <Text style={styles.title}>{p.title}</Text>
+                <Text style={styles.teaser} numberOfLines={2}>{p.teaser}</Text>
+                <Text style={styles.cta}>읽고 담기 ›</Text>
+              </GradientCard>
+            </Pressable>
+          ))}
+        </View>
       ))}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  groupLabel: { fontSize: 13, fontWeight: '800', color: colors.ink2, marginTop: 14, marginBottom: 10 },
   cardWrap: { minHeight: 196, marginBottom: 12 },
   card: { flex: 1, padding: 18, justifyContent: 'space-between' },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

@@ -11,6 +11,8 @@ export interface RecommendPost {
   id: string;
   /** 지역 이름 (예: 제주, 부산) */
   region: string;
+  /** 피드에서 묶어 보여줄 분류 (예: 국내 여행지 · 해외 여행지 · 축제) */
+  group?: string;
   title: string;
   emoji: string;
   /** 커버 그라디언트 색 역할 */
@@ -22,6 +24,15 @@ export interface RecommendPost {
   sections: RecommendSection[];
   /** 글 마지막에서 '내 목록에 담기'로 이어지는 버킷 추천 항목 */
   items: NewItemPayload[];
+}
+
+/** 포스트 목록에서 그룹 순서를 뽑아냅니다 (등장 순서 유지). */
+export function deriveRecommendGroups(posts: RecommendPost[]): string[] {
+  return posts.reduce<string[]>((acc, p) => {
+    const g = p.group || '여행지';
+    if (!acc.includes(g)) acc.push(g);
+    return acc;
+  }, []);
 }
 
 /**
