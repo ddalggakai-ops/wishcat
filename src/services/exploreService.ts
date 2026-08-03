@@ -1,16 +1,9 @@
-import { collection, documentId, getDocs, limit, orderBy, query, where } from 'firebase/firestore/lite';
+import { collection, getDocs, limit, orderBy, query, where } from 'firebase/firestore/lite';
 import { db } from '../firebase/config';
-import { hydrateItem, primeViewerLikes } from './itemsService';
-import { primeUserCache } from './usersService';
+import { hydrateItem, primeViewerLikes, relatedUserIds } from './itemsService';
+import { primeUsersBatch } from './usersService';
 import { getBlockedIds } from './moderationService';
 import type { Item } from '../api/types';
-
-// Firestore 'in' 쿼리는 최대 30개 값까지만 지원
-function chunk<T>(arr: T[], size: number): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-  return out;
-}
 
 /** 한 번에 가져올 최대 아이템 수. 정렬/필터는 이 안에서 이뤄집니다. */
 export const EXPLORE_LIMIT = 150;
@@ -61,18 +54,9 @@ export async function getExploreItems(viewerUid: string, filter: 'all' | 'done' 
   if (filter === 'done') docs = docs.filter((d) => !!d.data.done);
   if (docs.length === 0) return [];
 
-  // 소유자 프로필을 한 번에 받아 둡니다(아이템별로 따로 읽던 걸 없애기 위한 사전 적재).
-  // 좋아요는 위에서 이미 병렬로 미리 읽어 뒀어요.
-  const ownerIds = Array.from(new Set(docs.map((d) => d.data.ownerId as string)));
-  await Promise.all(
-    chunk(ownerIds, 30).map(async (ids) => {
-      const snap = await getDocs(query(collection(db, 'users'), where(documentId(), 'in', ids)));
-      snap.forEach((d) => {
-        const u = d.data() as any;
-        primeUserCache(d.id, { name: u?.name || '알 수 없음', bio: u?.bio, listPublic: u?.listPublic, photoUrl: u?.photoUrl });
-      });
-    })
-  );
+  // 소유자·참가자·도움 준 사람 프로필을 한 번에 받아 둡니다(아이템별로 따로 읽던 걸 없애기
+  // 위한 사전 적재). 좋아요는 위에서 이미 병렬로 미리 읽어 뒀어요.
+  await primeUsersBatch(docs.flatMap((d) => relatedUserIds(d.data)));
 
   const hydrated = await Promise.all(docs.map((d) => hydrateItem(d.id, d.data, viewerUid)));
 

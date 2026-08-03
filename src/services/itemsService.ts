@@ -3,7 +3,7 @@ import {
   query, serverTimestamp, setDoc, updateDoc, where, arrayUnion, arrayRemove, writeBatch,
 } from 'firebase/firestore/lite';
 import { db } from '../firebase/config';
-import { getUserBrief } from './usersService';
+import { getUserBrief, primeUsersBatch } from './usersService';
 import { getMyVisibility } from './visibility';
 import { MAX_MEMORY_PHOTOS } from '../api/types';
 import type { Item, Location, Priority } from '../api/types';
@@ -122,6 +122,17 @@ export function clearViewerLikes(viewerId?: string) {
   else { likedCache.clear(); likedPrimedAt.clear(); }
 }
 
+/**
+ * 아이템 하나를 hydrate하는 데 필요한 '다른 사람들'의 uid를 전부 모읍니다(소유자·참가자·도움 준
+ * 사람·원본 소유자·도움받은 사람). 목록을 hydrate하기 전에 이걸로 모아 primeUsersBatch에 넘기면,
+ * hydrateItem 안의 getUserBrief 호출들이 이미 채워진 캐시만 보고 네트워크를 타지 않습니다.
+ */
+export function relatedUserIds(raw: Pick<RawItem, 'ownerId' | 'participants' | 'helpedBy' | 'sourceOwnerId' | 'helpedForId'>): string[] {
+  return [raw.ownerId, ...(raw.participants || []), ...(raw.helpedBy || []), raw.sourceOwnerId, raw.helpedForId].filter(
+    (x): x is string => !!x
+  );
+}
+
 export async function hydrateItem(id: string, raw: RawItem, viewerId?: string): Promise<Item> {
   const primedLikes = viewerId ? likedCache.get(viewerId) : undefined;
   const [owner, participants, helpedBy, likedSnap] = await Promise.all([
@@ -159,7 +170,11 @@ export async function getMyItems(uid: string): Promise<Item[]> {
   // 아이템이 30개면 목록 조회 하나에 좋아요 조회 30개가 딸려왔어요. 목록 조회와 동시에(병렬로)
   // 좋아요를 한 번에 미리 읽어 두면 그 30개가 통째로 사라집니다.
   const [snap] = await Promise.all([getDocs(q), primeViewerLikes(uid)]);
-  return Promise.all(snap.docs.map((d) => hydrateItem(d.id, d.data() as RawItem, uid)));
+  const raws = snap.docs.map((d) => ({ id: d.id, data: d.data() as RawItem }));
+  // 참가자·도움 준 사람 등도 마찬가지 이유로 배치 프라이밍합니다 — 안 하면 아이템마다 딸린
+  // 사람 수만큼 hydrateItem이 개별 조회를 냅니다("내 목록 조회가 느리다"의 실제 원인).
+  await primeUsersBatch(raws.flatMap((r) => relatedUserIds(r.data)));
+  return Promise.all(raws.map((r) => hydrateItem(r.id, r.data, uid)));
 }
 
 export async function getItemById(id: string, viewerId?: string): Promise<Item | null> {

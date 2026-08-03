@@ -1,9 +1,9 @@
 import { collection, getDocs, orderBy, query, where } from 'firebase/firestore/lite';
 import { db } from '../firebase/config';
-import { getUserPublicCached } from './usersService';
+import { getUserPublicCached, primeUsersBatch } from './usersService';
 import { getFriendState, type FriendState } from './friendsService';
 import type { Item, PublicUser } from '../api/types';
-import { hydrateItem } from './itemsService';
+import { hydrateItem, relatedUserIds } from './itemsService';
 
 export interface PersonResult {
   user: PublicUser;
@@ -15,9 +15,12 @@ export interface PersonResult {
 }
 
 export async function getPerson(targetUid: string, viewerUid: string): Promise<PersonResult> {
-  const user = await getUserPublicCached(targetUid);
   const isSelf = targetUid === viewerUid;
-  const friendState = await getFriendState(viewerUid, targetUid);
+  // 프로필 조회와 친구 상태 확인은 서로 의존하지 않아 동시에 보냅니다(왕복 하나 절약).
+  const [user, friendState] = await Promise.all([
+    getUserPublicCached(targetUid),
+    getFriendState(viewerUid, targetUid),
+  ]);
   const isFriend = friendState === 'friends';
   const visible = isSelf || isFriend || user.listPublic;
 
@@ -26,7 +29,9 @@ export async function getPerson(targetUid: string, viewerUid: string): Promise<P
   if (visible) {
     const q = query(collection(db, 'items'), where('ownerId', '==', targetUid), orderBy('createdAt', 'desc'));
     const snap = await getDocs(q);
-    items = await Promise.all(snap.docs.map((d) => hydrateItem(d.id, d.data() as any, viewerUid)));
+    const raws = snap.docs.map((d) => ({ id: d.id, data: d.data() as any }));
+    await primeUsersBatch(raws.flatMap((r) => relatedUserIds(r.data)));
+    items = await Promise.all(raws.map((r) => hydrateItem(r.id, r.data, viewerUid)));
     withMeCount = items.filter((i) => i.participants.some((p) => p.id === viewerUid)).length;
   }
 
