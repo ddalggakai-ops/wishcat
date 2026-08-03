@@ -86,11 +86,13 @@ export async function openMap(location: Location) {
 }
 
 export function Tag({ label, tone }: { label: string; tone: 'shared' | 'joined' | 'helped' | 'hot' }) {
+  // 글자색은 파스텔 원색이 아니라 같은 계열의 딥톤을 씁니다(대비 1.79~3.28:1 → 4.6:1 이상).
+  // 'hot' 배지도 흰 글씨가 #FF7BA6 위에서 2.43:1 뿐이라 배경을 딥톤으로 내렸어요(5.39:1).
   const map: Record<string, { bg: string; ink: string }> = {
     shared: { bg: colors.surface2, ink: colors.ink2 },
-    joined: { bg: colors.infoWash, ink: colors.info },
-    helped: { bg: colors.giftWash, ink: colors.gift },
-    hot: { bg: colors.candyPink, ink: '#fff' },
+    joined: { bg: colors.infoWash, ink: colors.infoInk },
+    helped: { bg: colors.giftWash, ink: colors.giftInk },
+    hot: { bg: colors.done, ink: '#fff' },
   };
   const c = map[tone];
   return (
@@ -111,8 +113,10 @@ const styles = StyleSheet.create({
   },
   locChipIcon: { fontSize: 11 },
   locChipText: { fontSize: 11.5, fontWeight: '600', color: colors.accentInk },
-  mapKind: { backgroundColor: colors.accent, borderRadius: radius.pill, paddingHorizontal: 6, paddingVertical: 1, marginLeft: 2 },
-  mapKindText: { fontSize: 9.5, fontWeight: '700', color: '#fff' },
+  // 배경이 colors.accent(#7178E5)일 때 흰 글씨가 3.80:1 뿐이었고 글자도 9.5px로 작았어요.
+  // 배경을 딥톤(accentInk)으로 내리고(5.40:1) 글자도 11px로 키웠습니다.
+  mapKind: { backgroundColor: colors.accentInk, borderRadius: radius.pill, paddingHorizontal: 6, paddingVertical: 1, marginLeft: 2 },
+  mapKindText: { fontSize: 11, fontWeight: '700', color: '#fff' },
   tag: { borderRadius: 7, paddingVertical: 2.5, paddingHorizontal: 8 },
   tagText: { fontSize: 11, fontWeight: '700' },
   prioChip: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: radius.pill, paddingVertical: 3, paddingHorizontal: 10 },

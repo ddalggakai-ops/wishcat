@@ -1,14 +1,20 @@
 import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, gradients, shadowColors, radius, type Role } from '../theme';
+import { buttonGradients, colors, shadowColors, radius, type Role } from '../theme';
 
 export type Variant = 'primary' | 'ghost' | 'line' | 'gift';
 
 // primary/gift는 새 디자인 시스템의 그라디언트 필로 채우고, ghost/line은 플랫하게 유지합니다.
+// 채움색은 카드용 파스텔이 아니라 버튼 전용(buttonGradients)을 씁니다 — 흰 글씨 대비 때문에요.
+// 그림자는 원래의 파스텔 계열을 그대로 둬서 주변 톤은 유지됩니다.
 const GRADIENT_ROLE: Partial<Record<Variant, Role>> = {
   primary: 'primary',
   gift: 'accent',
+};
+const FILL: Record<'primary' | 'gift', [string, string]> = {
+  primary: buttonGradients.primary,
+  gift: buttonGradients.gift,
 };
 
 export default function BubbleButton({
@@ -72,7 +78,7 @@ export default function BubbleButton({
         ]}
       >
         <LinearGradient
-          colors={gradients[role!]}
+          colors={FILL[variant as 'primary' | 'gift']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[styles.gradientFill, sizeStyle]}

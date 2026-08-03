@@ -11,7 +11,10 @@ import { useAuth } from '../context/AuthContext';
 export default function AuthScreen({ pendingInvite }: { pendingInvite?: boolean }) {
   const insets = useSafeAreaInsets();
   const { login, register, resetPassword, loading, error, clearError } = useAuth();
-  const [mode, setMode] = useState<'login' | 'register' | 'reset'>('login');
+  // 초대 링크를 타고 들어온 사람은 정의상 계정이 없습니다. 그런데 예전엔 무조건 로그인 화면으로
+  // 시작해서, 이메일·비밀번호 칸을 보고 "내 계정이 있었나?" 하고 멈춘 뒤 '계정이 없어요 · 회원가입'을
+  // 찾아 눌러야 했어요. 초대로 들어왔으면 처음부터 가입 화면을 보여줍니다.
+  const [mode, setMode] = useState<'login' | 'register' | 'reset'>(pendingInvite ? 'register' : 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');

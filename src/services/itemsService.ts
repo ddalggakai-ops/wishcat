@@ -280,23 +280,57 @@ export async function completeItem(id: string, uid: string, payload: { photos?: 
   const text = (payload.text || '').trim();
   const hasNewRecord = photos.length > 0 || text.length > 0;
 
+  // '이룬 날짜'는 처음 이룬 그 날이어야 합니다. 예전엔 사진/글을 새로 넣을 때마다 오늘 날짜로
+  // 덮어써서, 3월에 이룬 꿈에 12월에 사진 한 장을 더하면 달성일이 12월로 바뀌고 되돌릴 수
+  // 없었어요(연말에 사진을 정리하면 1년치 연대기가 통째로 12월로 몰렸습니다).
+  // 아래 else 분기엔 이미 "기록을 지우지 않는다"는 보호가 있었는데 날짜만 빠져 있었습니다.
+  const cur = await getDoc(itemDoc(id));
+  const curMemory = cur.exists() ? (cur.data() as RawItem).memory : null;
+  const hadRecord = !!(curMemory && (curMemory.text || curMemory.photos?.length || curMemory.photo));
+
   const patch: Record<string, any> = { done: true };
   if (hasNewRecord) {
-    // 사진/글이 있으면 그대로 기록을 씁니다.
-    patch.memory = { photo: photos[0] || null, photos, text, date: localDateStamp() };
+    // 사진/글이 있으면 새로 쓰되, 이미 이뤄서 날짜가 찍혀 있으면 그 날짜를 유지합니다.
+    patch.memory = { photo: photos[0] || null, photos, text, date: curMemory?.date || localDateStamp() };
   } else {
     // 사진도 글도 없이 '완료만' 하는 경우: 이미 적어둔 기록이 있으면 절대 건드리지 않습니다.
-    // (예전엔 빈 값으로 덮어써서 사진·글·날짜가 통째로 사라졌고 되돌릴 방법이 없었어요.)
-    const cur = await getDoc(itemDoc(id));
-    const curMemory = cur.exists() ? (cur.data() as RawItem).memory : null;
-    patch.memory = curMemory && (curMemory.text || (curMemory.photos?.length || curMemory.photo))
-      ? curMemory
-      : { photo: null, photos: [], text: '', date: localDateStamp() };
+    patch.memory = hadRecord ? curMemory : { photo: null, photos: [], text: '', date: curMemory?.date || localDateStamp() };
   }
 
   await updateDoc(itemDoc(id), patch);
   const snap = await getDoc(itemDoc(id));
   return hydrateItem(id, snap.data() as RawItem, uid);
+}
+
+/**
+ * 함께하는 꿈을 이뤘을 때, 상대(원본 주인)의 목록에서도 같이 지워 줍니다.
+ *
+ * 지금 구조에서 '함께하기'는 공유가 아니라 복제예요 — 내 목록에 별개 문서(사본)가 생기고,
+ * 내가 그 사본을 완료해도 상대의 원본은 계속 '도전 중'으로 남습니다. 그래서 둘이 같이 다녀오고
+ * 각자 체크했는데도 서로의 목록엔 여전히 미완료로 보이는 일이 생겼어요.
+ *
+ * 원본 문서를 통째로 바꾸는 건 보안 규칙상(그리고 남의 기록이라) 안 되지만, 이미 열려 있는
+ * '도와주기' 경로(done / helpedBy / participants 만 수정 가능)를 그대로 쓰면 규칙을 건드리지 않고
+ * 원본도 이룬 것으로 표시할 수 있습니다. 사진·글 같은 기록은 각자 자기 것에만 남습니다.
+ *
+ * 실패해도(이미 완료됐거나 권한이 없거나) 내 완료 처리는 그대로 유지되도록 조용히 넘어갑니다.
+ */
+export async function markSourceDone(sourceItemId: string, uid: string): Promise<boolean> {
+  try {
+    const snap = await getDoc(itemDoc(sourceItemId));
+    if (!snap.exists()) return false;
+    const target = snap.data() as RawItem;
+    if (target.ownerId === uid) return false; // 내 꿈이면 할 일 없음
+    if (target.done) return false;            // 이미 이룬 상태면 건드리지 않음
+    await updateDoc(itemDoc(sourceItemId), {
+      done: true,
+      helpedBy: arrayUnion(uid),
+      participants: arrayUnion(uid),
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function reopenItem(id: string, uid: string): Promise<Item> {
@@ -319,8 +353,9 @@ export async function stopItem(id: string, uid: string): Promise<Item> {
   return hydrateItem(id, snap.data() as RawItem, uid);
 }
 
-// 친구 꿈 함께하기: 대상 아이템의 participants에 나를 추가 + saves 카운트 증가 + 내 목록에 사본 생성
-export async function joinItem(targetId: string, uid: string): Promise<void> {
+// 친구 꿈 함께하기: 대상 아이템의 participants에 나를 추가 + saves 카운트 증가 + 내 목록에 사본 생성.
+// 만들어진(또는 이미 있던) 내 사본의 id를 돌려줍니다 — 목표일 알림을 걸 때 씁니다.
+export async function joinItem(targetId: string, uid: string): Promise<string> {
   const targetSnap = await getDoc(itemDoc(targetId));
   if (!targetSnap.exists()) throw new Error('꿈을 찾을 수 없어요');
   const target = targetSnap.data() as RawItem;
@@ -341,12 +376,16 @@ export async function joinItem(targetId: string, uid: string): Promise<void> {
   if (existing.empty) {
     batch.set(copyRef, {
       ownerId: uid, title: target.title, emoji: target.emoji, note: target.note, categories: rawCategories(target), location: target.location,
-      targetDate: null, priority: null, order: 0, ownerPublic: getMyVisibility(),
+      // 목표일·우선순위를 원본에서 그대로 물려받습니다. 예전엔 null로 버려서, 기념일에 맞춰
+      // 날짜를 넣어둔 꿈을 상대가 함께해도 그 사람 카드엔 D-day가 안 떴어요(알림도 당연히 없었고요).
+      targetDate: target.targetDate || null, priority: target.priority || null,
+      order: 0, ownerPublic: getMyVisibility(),
       done: false, memory: null, participants: [target.ownerId], origin: 'joined',
       sourceOwnerId: target.ownerId, sourceItemId: targetId, helpedBy: [], likesCount: 0, savesCount: 0, createdAt: serverTimestamp(),
     });
   }
   await batch.commit();
+  return copyRef.id;
 }
 
 export async function leaveItem(targetId: string, uid: string): Promise<void> {

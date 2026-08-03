@@ -109,7 +109,7 @@ function ItemCard({
       hitSlop={10}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: item.done }}
-      accessibilityLabel={item.done ? `${item.title} 다시 담기` : `${item.title} 완료하기`}
+      accessibilityLabel={item.done ? `${item.title} 아직 안 한 것으로 되돌리기` : `${item.title} 완료하기`}
     >
       {item.done ? <Icon name="checkmark" size={14} color="#fff" /> : null}
     </Pressable>
@@ -247,7 +247,8 @@ function ItemCard({
               {ctx === 'mine' && !item.done && (
                 <>
                   {inProgress ? (
-                    <BubbleButton small variant="line" title={`🏃 진행중 D+${progressDays}일째`} onPress={() => onStopProgress?.(item)} />
+                    // 'D+3일째'는 이 앱을 처음 쓰는 사람에겐 아무 뜻이 아니라서 풀어서 씁니다.
+                    <BubbleButton small variant="line" title={`🏃 시작한 지 ${(progressDays ?? 0) + 1}일째`} onPress={() => onStopProgress?.(item)} />
                   ) : (
                     <BubbleButton small variant="ghost" title="▶ 진행 시작" onPress={() => onStartProgress?.(item)} />
                   )}

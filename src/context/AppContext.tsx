@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useMemo, useRef, useStat
 import * as itemsService from '../services/itemsService';
 import type { NewItemPayload } from '../services/itemsService';
 import * as friendsService from '../services/friendsService';
-import { cancelReminder, syncReminder } from '../services/reminderService';
+import { cancelReminder, scheduleWeeklyNudge, syncReminder } from '../services/reminderService';
 import type { FriendEntry, Item, Location, Priority } from '../api/types';
 import { useAuth } from './AuthContext';
 
@@ -12,6 +12,8 @@ interface AppState {
   friends: FriendEntry[];
   loadingMine: boolean;
   loadingFriends: boolean;
+  /** 내 목록을 불러오다 실패했는지. '아직 꿈이 없어요'와 구분해서 보여주려고 씁니다. */
+  mineError: boolean;
   getItem: (id: string) => Item | undefined;
   mergeItems: (items: Item[]) => void;
   refreshMine: (opts?: { force?: boolean }) => Promise<void>;
@@ -23,7 +25,7 @@ interface AppState {
   deleteItems: (ids: string[]) => Promise<void>;
   completeItems: (ids: string[]) => Promise<void>;
   reorderItems: (updates: { id: string; order: number }[]) => Promise<void>;
-  completeItem: (id: string, payload: { photos?: string[]; text?: string }) => Promise<Item>;
+  completeItem: (id: string, payload: { photos?: string[]; text?: string; alsoMarkSource?: boolean }) => Promise<Item>;
   reopenItem: (id: string) => Promise<Item>;
   startItem: (id: string) => Promise<Item>;
   stopItem: (id: string) => Promise<Item>;
@@ -43,14 +45,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [friends, setFriends] = useState<FriendEntry[]>([]);
   const [loadingMine, setLoadingMine] = useState(false);
   const [loadingFriends, setLoadingFriends] = useState(false);
+  const [mineError, setMineError] = useState(false);
   const cacheRef = useRef(itemsById);
   cacheRef.current = itemsById;
+  const mineIdsRef = useRef(mineIds);
+  mineIdsRef.current = mineIds;
   const uidRef = useRef<string | null>(null);
   uidRef.current = user?.id || null;
   // 탭을 왔다갔다 할 때마다 화면이 통째로 다시 마운트되면서 useEffect가 다시 돌아요.
   // 방금 막 받아온 목록을 또 통째로 다시 읽지 않도록 마지막으로 받아온 시각을 기억해 둡니다.
   const mineFetchedAt = useRef(0);
   const friendsFetchedAt = useRef(0);
+  const nudgeCountRef = useRef(-1);
   const MINE_TTL_MS = 15_000;
   const FRIENDS_TTL_MS = 15_000;
 
@@ -82,6 +88,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       mergeItems(items);
       setMineIds(items.map((i) => i.id));
       mineFetchedAt.current = Date.now();
+      setMineError(false);
+      // 주간 넛지는 '도전 중' 개수를 문구에 넣기 때문에, 개수가 달라졌을 때만 다시 예약합니다.
+      const todo = items.filter((i) => !i.done && i.origin !== 'helped').length;
+      if (todo !== nudgeCountRef.current) {
+        nudgeCountRef.current = todo;
+        scheduleWeeklyNudge(todo);
+      }
+    } catch {
+      // 예전엔 여기서 그대로 throw돼서(호출부에도 catch가 없었어요) 화면은 아이템 0개 상태가 됐고,
+      // '나' 탭이 "아직 꿈이 없어요 · 템플릿에서 골라 담아보세요"를 띄웠습니다. 오프라인에서 앱을 켠
+      // 사람에겐 그동안 쌓은 목록이 통째로 사라진 것처럼 보였어요. 실패는 실패라고 말해야 합니다.
+      setMineError(true);
     } finally {
       setLoadingMine(false);
     }
@@ -119,11 +137,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [mergeItems]);
 
   const bulkAddItems: AppState['bulkAddItems'] = useCallback(async (payloads) => {
-    const count = await itemsService.bulkAddItems(requireUid(), payloads);
+    const uid = requireUid();
+    const count = await itemsService.bulkAddItems(uid, payloads);
     // 여러 개를 한 번에 만들었으니 통째로 다시 불러옵니다. 반드시 force —
     // 방금(15초 캐시 안에) 목록을 불러온 상태면 캐시에 걸려 새로 담은 게 안 보였고,
     // 사용자가 실패한 줄 알고 한 번 더 담아 중복이 생겼어요.
     await refreshMine({ force: true });
+    // 목표일이 있는 항목엔 알림을 걸어 줍니다. 예전엔 addItem/editItem에서만 syncReminder를 불러서,
+    // 템플릿·엑셀·추천글로 들어온 항목은 목표일이 있어도 영영 알림 대상이 아니었어요.
+    const mine = mineIdsRef.current.map((id) => cacheRef.current[id]).filter(Boolean);
+    mine.forEach((it) => { if (it.targetDate && !it.done) syncReminder(it.id, it.title, it.targetDate); });
     return count;
   }, [refreshMine]);
 
@@ -173,9 +196,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const completeItem: AppState['completeItem'] = useCallback(async (id, payload) => {
-    const item = await itemsService.completeItem(id, requireUid(), payload);
+    const uid = requireUid();
+    const before = cacheRef.current[id];
+    const item = await itemsService.completeItem(id, uid, payload);
     mergeItems([item]);
     cancelReminder(id); // 이룬 꿈은 더 이상 재촉하지 않아요
+    // 함께하는 꿈이면 상대 목록의 원본도 같이 지워 줍니다(호출부에서 한 번 물어본 뒤에만).
+    if (payload.alsoMarkSource && before?.source?.itemId) {
+      const ok = await itemsService.markSourceDone(before.source.itemId, uid);
+      if (ok) {
+        const src = await itemsService.getItemById(before.source.itemId, uid).catch(() => null);
+        if (src) mergeItems([src]);
+      }
+    }
     return item;
   }, [mergeItems]);
 
@@ -199,11 +232,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [mergeItems]);
 
   const joinItem = useCallback(async (id: string) => {
-    await itemsService.joinItem(id, requireUid());
+    const copyId = await itemsService.joinItem(id, requireUid());
     const item = await itemsService.getItemById(id, uidRef.current || undefined);
     if (item) mergeItems([item]);
     // force: 방금 담은 사본이 15초 캐시에 걸려 내 목록에 안 나타나던 문제를 막습니다.
     await refreshMine({ force: true });
+    // 원본의 목표일을 물려받은 사본에도 알림을 걸어 줍니다(예전엔 담기 경로에 알림이 없었어요).
+    const copy = cacheRef.current[copyId];
+    if (copy?.targetDate && !copy.done) syncReminder(copy.id, copy.title, copy.targetDate);
   }, [mergeItems, refreshMine]);
 
   const leaveItem = useCallback(async (id: string) => {
@@ -246,12 +282,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<AppState>(() => ({
-    itemsById, mineIds, friends, loadingMine, loadingFriends,
+    itemsById, mineIds, friends, loadingMine, loadingFriends, mineError,
     getItem, mergeItems, refreshMine, refreshFriends,
     addItem, bulkAddItems, editItem, deleteItem, deleteItems, completeItems, reorderItems, completeItem, reopenItem,
     startItem, stopItem,
     joinItem, leaveItem, helpItem, toggleLike, createInvite,
-  }), [itemsById, mineIds, friends, loadingMine, loadingFriends, getItem, mergeItems, refreshMine, refreshFriends, addItem, bulkAddItems, editItem, deleteItem, deleteItems, completeItems, reorderItems, completeItem, reopenItem, startItem, stopItem, joinItem, leaveItem, helpItem, toggleLike, createInvite]);
+  }), [itemsById, mineIds, friends, loadingMine, loadingFriends, mineError, getItem, mergeItems, refreshMine, refreshFriends, addItem, bulkAddItems, editItem, deleteItem, deleteItems, completeItems, reorderItems, completeItem, reopenItem, startItem, stopItem, joinItem, leaveItem, helpItem, toggleLike, createInvite]);
 
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;
 }

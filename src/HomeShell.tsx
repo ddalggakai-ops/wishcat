@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SkyBackground from './components/SkyBackground';
@@ -23,6 +23,7 @@ import ItemDetailSheet from './sheets/ItemDetailSheet';
 import ReportSheet from './sheets/ReportSheet';
 import RecommendPostModal from './sheets/RecommendPostModal';
 import { useApp } from './context/AppContext';
+import { canAskPermission, ensurePermission } from './services/reminderService';
 import { confirmDialog } from './utils/dialog';
 import type { Item } from './api/types';
 import type { RecommendPost } from './data/recommendPosts';
@@ -55,6 +56,24 @@ export default function HomeShell() {
   const showToast = useCallback((msg: string) => {
     setToast(msg);
     setTimeout(() => setToast((cur) => (cur === msg ? null : cur)), 2200);
+  }, []);
+
+  // 알림 권한을 물어보는 지점이 앱에 딱 하나, 그것도 '목표일을 직접 넣어 저장'해야만 열렸어요.
+  // 템플릿이나 추천글로 시작한 사람은 권한 팝업을 평생 못 봐서, 알림을 아무리 붙여도 도달하지
+  // 않았습니다. 첫 꿈을 담은 직후(가장 마음이 열려 있는 순간) 한 번만 우리 말로 먼저 설명하고,
+  // 승낙했을 때만 OS 팝업을 띄웁니다 — OS 팝업은 한 번 거절당하면 다시 못 물어보거든요.
+  const askedNotifyRef = useRef(false);
+  const maybeAskNotify = useCallback(async () => {
+    if (askedNotifyRef.current) return;
+    askedNotifyRef.current = true;
+    if (!(await canAskPermission())) return;
+    const ok = await confirmDialog({
+      title: '알림을 받아볼까요?',
+      message: '목표일이 다가오면 하루 전에, 그리고 주말에 한 번 잊지 않도록 살짝 알려드려요. 언제든 끌 수 있어요.',
+      confirmLabel: '좋아요',
+      cancelLabel: '나중에',
+    });
+    if (ok) await ensurePermission();
   }, []);
 
   // 안드로이드 하드웨어 뒤로가기: 열려 있는 시트/오버레이를 먼저 닫고, 사람 페이지 → 목록,
@@ -100,14 +119,31 @@ export default function HomeShell() {
     } else {
       await addItem(payload);
       showToast('새로운 꿈을 추가했어요');
+      maybeAskNotify();
     }
   };
 
   const submitMemory = async (payload: { photoUrls: string[]; text: string }) => {
     if (!memoryItem) return;
     const wasDone = memoryItem.done;
-    await completeItem(memoryItem.id, { photos: payload.photoUrls, text: payload.text });
-    showToast(wasDone ? '추억을 저장했어요' : '축하해요 · 꿈을 이뤘어요 ✦');
+    // 친구 꿈을 함께하는 중이면(=담아온 사본이면), 상대 목록의 원본도 같이 지울지 물어봅니다.
+    // 안 물어보면 둘이 같이 다녀와서 각자 체크했는데도 서로의 목록엔 계속 '도전 중'으로 남아요.
+    let alsoMarkSource = false;
+    const src = memoryItem.origin === 'joined' ? memoryItem.source : null;
+    if (!wasDone && src) {
+      alsoMarkSource = await confirmDialog({
+        title: `${src.ownerName}님 목록에서도 지울까요?`,
+        message: `"${src.title}" — 함께 이룬 것으로 표시돼요. 사진과 글은 내 기록에만 남습니다.`,
+        confirmLabel: '함께 지우기',
+        cancelLabel: '내 것만',
+      });
+    }
+    await completeItem(memoryItem.id, { photos: payload.photoUrls, text: payload.text, alsoMarkSource });
+    showToast(
+      wasDone ? '추억을 저장했어요'
+        : alsoMarkSource ? `${src?.ownerName}님과 함께 이뤘어요 ✦`
+        : '축하해요 · 꿈을 이뤘어요 ✦'
+    );
   };
 
   const submitHelp = async (payload: { title: string; emoji: string; text: string }) => {
@@ -197,7 +233,7 @@ export default function HomeShell() {
       <StarterSheet
         visible={starterOpen}
         onClose={() => setStarterOpen(false)}
-        onAdded={(count) => showToast(`꿈 ${count}개를 담았어요 ✦`)}
+        onAdded={(count) => { showToast(`꿈 ${count}개를 담았어요 ✦`); maybeAskNotify(); }}
       />
       <ItemDetailSheet
         visible={!!detailItem}
@@ -216,7 +252,7 @@ export default function HomeShell() {
       <RecommendPostModal
         post={recommendPost}
         onClose={() => setRecommendPost(null)}
-        onToast={showToast}
+        onToast={(msg) => { showToast(msg); maybeAskNotify(); }}
       />
       <InviteModal
         visible={!!inviteItem}

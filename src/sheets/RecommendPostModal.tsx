@@ -4,10 +4,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BubbleButton from '../components/Button';
 import Icon from '../components/Icon';
-import { colors, gradients, radius } from '../theme';
-import { useApp } from '../context/AppContext';
+import { colors, gradients, onGradient, radius } from '../theme';
+import { useApp, useMyItems } from '../context/AppContext';
 import { alertDialog } from '../utils/dialog';
 import type { RecommendPost } from '../data/recommendPosts';
+
+/** 제목 비교용 정규화 — 앞뒤 공백·대소문자 차이로 같은 항목을 다르게 보지 않도록 */
+function norm(s: string) { return s.trim().toLowerCase(); }
 
 // 지역 여행 가이드 리더 + 마지막에 '내 목록에 담기'. 원하는 버킷만 골라 한 번에 담아요.
 export default function RecommendPostModal({
@@ -19,18 +22,33 @@ export default function RecommendPostModal({
 }) {
   const insets = useSafeAreaInsets();
   const { bulkAddItems } = useApp();
+  const myItems = useMyItems();
   const [picked, setPicked] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
 
-  // 열 때마다 전부 선택된 상태로 시작합니다.
+  // 이미 내 목록에 있는 제목 — 여행 준비하면서 같은 글을 여러 번 열어보는 일이 흔한데,
+  // 예전엔 열 때마다 전부 다시 체크돼 있어서 습관적으로 담기를 누르면 같은 항목이 그대로 또
+  // 생겼어요(bulkAddItems에도 중복 검사가 없습니다). 달성률과 '도전 중' 개수까지 오염됐습니다.
+  const mineTitles = useMemo(() => new Set(myItems.map((i) => norm(i.title))), [myItems]);
+
+  // 열 때마다 '아직 안 담은 것'만 선택된 상태로 시작합니다.
   useEffect(() => {
     if (!post) return;
     const next: Record<string, boolean> = {};
-    post.items.forEach((it) => { next[it.title] = true; });
+    post.items.forEach((it) => { next[it.title] = !mineTitles.has(norm(it.title)); });
     setPicked(next);
+    // mineTitles는 담기 직후에도 바뀌는데, 그때 선택 상태를 다시 덮어쓰면 곤란해서 post에만 반응합니다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [post]);
 
-  const chosen = useMemo(() => (post?.items || []).filter((it) => picked[it.title]), [post, picked]);
+  const chosen = useMemo(
+    () => (post?.items || []).filter((it) => picked[it.title] && !mineTitles.has(norm(it.title))),
+    [post, picked, mineTitles]
+  );
+  const alreadyCount = useMemo(
+    () => (post?.items || []).filter((it) => mineTitles.has(norm(it.title))).length,
+    [post, mineTitles]
+  );
 
   if (!post) return null;
 
@@ -54,12 +72,12 @@ export default function RecommendPostModal({
         <ScrollView contentContainerStyle={{ paddingBottom: 130 }} showsVerticalScrollIndicator={false}>
           <LinearGradient colors={gradients[post.role]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.cover, { paddingTop: insets.top + 14 }]}>
             <Pressable onPress={onClose} style={styles.back} hitSlop={12} accessibilityRole="button" accessibilityLabel="닫기">
-              <Icon name="chevron-down" size={22} color="#fff" />
+              <Icon name="chevron-down" size={22} color={onGradient[post.role]} />
             </Pressable>
-            <View style={styles.regionChip}><Text style={styles.regionText}>📍 {post.region}</Text></View>
+            <View style={styles.regionChip}><Text style={[styles.regionText, { color: onGradient[post.role] }]}>📍 {post.region}</Text></View>
             <Text style={styles.coverEmoji}>{post.emoji}</Text>
-            <Text style={styles.coverTitle}>{post.title}</Text>
-            <Text style={styles.coverMeta}>여행 가이드{post.readMinutes ? ` · ${post.readMinutes}분` : ''}</Text>
+            <Text style={[styles.coverTitle, { color: onGradient[post.role] }]}>{post.title}</Text>
+            <Text style={[styles.coverMeta, { color: onGradient[post.role] }]}>여행 가이드{post.readMinutes ? ` · ${post.readMinutes}분` : ''}</Text>
           </LinearGradient>
 
           <View style={styles.body}>
@@ -75,21 +93,30 @@ export default function RecommendPostModal({
             <View style={styles.divider} />
 
             <Text style={styles.pickTitle}>이 여행에서 담을 버킷</Text>
-            <Text style={styles.pickSub}>원하는 것만 골라 내 목록에 담아요. 담은 뒤에 얼마든지 고칠 수 있어요.</Text>
+            <Text style={styles.pickSub}>
+              원하는 것만 골라 내 목록에 담아요. 담은 뒤에 얼마든지 고칠 수 있어요.
+              {alreadyCount ? ` 이미 담은 ${alreadyCount}개는 빼고 골랐어요.` : ''}
+            </Text>
 
             {post.items.map((it) => {
-              const on = !!picked[it.title];
+              const already = mineTitles.has(norm(it.title));
+              const on = !already && !!picked[it.title];
               return (
                 <Pressable
                   key={it.title}
-                  onPress={() => setPicked((p) => ({ ...p, [it.title]: !p[it.title] }))}
-                  style={[styles.row, on && styles.rowOn]}
+                  onPress={() => { if (!already) setPicked((p) => ({ ...p, [it.title]: !p[it.title] })); }}
+                  disabled={already}
+                  style={[styles.row, on && styles.rowOn, already && styles.rowDone]}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: on, disabled: already }}
+                  accessibilityLabel={already ? `${it.title} — 이미 담음` : it.title}
                 >
-                  <View style={[styles.check, on && styles.checkOn]}>
-                    {on ? <Icon name="checkmark" size={13} color="#fff" /> : null}
+                  <View style={[styles.check, on && styles.checkOn, already && styles.checkDone]}>
+                    {on || already ? <Icon name="checkmark" size={13} color="#fff" /> : null}
                   </View>
                   <Text style={{ fontSize: 17 }}>{it.emoji}</Text>
-                  <Text style={[styles.rowTitle, on && styles.rowTitleOn]} numberOfLines={2}>{it.title}</Text>
+                  <Text style={[styles.rowTitle, on && styles.rowTitleOn, already && styles.rowTitleDone]} numberOfLines={2}>{it.title}</Text>
+                  {already ? <Text style={styles.alreadyTag}>이미 담음</Text> : null}
                 </Pressable>
               );
             })}
@@ -98,7 +125,13 @@ export default function RecommendPostModal({
 
         <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
           <BubbleButton
-            title={chosen.length ? `${chosen.length}개 내 목록에 담기` : '담을 항목을 골라주세요'}
+            title={
+              chosen.length
+                ? `${chosen.length}개 내 목록에 담기`
+                : alreadyCount === post.items.length
+                  ? '이 가이드는 이미 다 담았어요'
+                  : '담을 항목을 골라주세요'
+            }
             onPress={add}
             disabled={!chosen.length}
             loading={saving}
@@ -112,12 +145,13 @@ export default function RecommendPostModal({
 
 const styles = StyleSheet.create({
   cover: { paddingHorizontal: 22, paddingBottom: 26 },
-  back: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,.22)', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
-  regionChip: { alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,.26)', borderRadius: radius.pill, paddingVertical: 4, paddingHorizontal: 11 },
-  regionText: { fontSize: 12, fontWeight: '800', color: '#fff' },
+  // 커버 텍스트도 흰색 대신 role별 딥톤(onGradient)을 인라인으로 얹습니다.
+  back: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,.34)', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  regionChip: { alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,.30)', borderRadius: radius.pill, paddingVertical: 4, paddingHorizontal: 11 },
+  regionText: { fontSize: 12, fontWeight: '800' },
   coverEmoji: { fontSize: 48, marginTop: 14 },
-  coverTitle: { fontSize: 25, fontWeight: '800', color: '#fff', marginTop: 8, lineHeight: 32 },
-  coverMeta: { fontSize: 12.5, color: 'rgba(255,255,255,.9)', fontWeight: '600', marginTop: 8 },
+  coverTitle: { fontSize: 25, fontWeight: '800', marginTop: 8, lineHeight: 32 },
+  coverMeta: { fontSize: 12.5, fontWeight: '700', marginTop: 8 },
 
   body: { paddingHorizontal: 22, paddingTop: 20 },
   teaser: { fontSize: 15, color: colors.ink, fontWeight: '600', lineHeight: 23, marginBottom: 6 },
@@ -132,10 +166,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm, marginTop: 8, backgroundColor: colors.surface2,
   },
   rowOn: { backgroundColor: colors.accentWash },
+  rowDone: { backgroundColor: colors.surface2, opacity: 0.7 },
   check: { width: 22, height: 22, borderRadius: 7, backgroundColor: colors.surface3, alignItems: 'center', justifyContent: 'center' },
   checkOn: { backgroundColor: colors.accent },
+  checkDone: { backgroundColor: colors.ink3 },
   rowTitle: { flex: 1, fontSize: 14.5, color: colors.ink2 },
   rowTitleOn: { color: colors.ink, fontWeight: '600' },
+  rowTitleDone: { textDecorationLine: 'line-through' },
+  alreadyTag: { fontSize: 11, fontWeight: '700', color: colors.ink3 },
 
   footer: {
     position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: colors.surface,

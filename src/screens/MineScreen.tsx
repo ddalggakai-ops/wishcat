@@ -9,7 +9,7 @@ import ProgressRing from '../components/ProgressRing';
 import { EmptyState, SectionHeader } from '../components/Basics';
 import ItemCard from '../components/ItemCard';
 import Icon from '../components/Icon';
-import { CATEGORIES, catColor, colors, radius, shadow } from '../theme';
+import { CATEGORIES, catColor, colors, onGradient, radius, shadow } from '../theme';
 import { alertDialog, confirmDialog } from '../utils/dialog';
 import { useAuth } from '../context/AuthContext';
 import { useApp, useMyItems } from '../context/AppContext';
@@ -32,7 +32,7 @@ export default function MineScreen({
   onDetail: (item: Item) => void;
 }) {
   const { user, updateMe } = useAuth();
-  const { refreshMine, loadingMine, reopenItem, deleteItems, completeItems, reorderItems, startItem, stopItem, mineIds } = useApp();
+  const { refreshMine, loadingMine, mineError, reopenItem, deleteItems, completeItems, reorderItems, startItem, stopItem, mineIds } = useApp();
   const items = useMyItems();
   const [compact, setCompact] = useState(false);
   const [search, setSearch] = useState('');
@@ -53,6 +53,10 @@ export default function MineScreen({
   const dragOrderRef = useRef<string[]>([]);
   // 지금 화면에 보이는 '도전 중' 순서(id). 드래그 시작/종료 때 최신 값을 참조합니다.
   const todoIdsRef = useRef<string[]>([]);
+  // '이룬 꿈' 목록도 ref로 들고 있습니다. 예전엔 done 배열을 클로저로 잡은 화살표 함수를 카드마다
+  // 새로 만들어 넘겨서, ItemCard에 걸어둔 React.memo가 매 렌더 무력화됐어요. 검색창은 글자마다
+  // state가 바뀌니까 한 글자 칠 때마다 이룬 꿈 카드가 사진 캐러셀째 전부 다시 그려졌습니다.
+  const doneRef = useRef<Item[]>([]);
 
   const scrollRef = useRef<ScrollView>(null);
   const [atTop, setAtTop] = useState(true);
@@ -186,6 +190,7 @@ export default function MineScreen({
   const todo = useMemo(() => sortSection(filteredItems.filter((i) => !i.done)), [filteredItems, sortSection]);
   const done = useMemo(() => sortSection(filteredItems.filter((i) => i.done)), [filteredItems, sortSection]);
   todoIdsRef.current = todo.map((i) => i.id);
+  doneRef.current = done;
 
   // 드래그 중에 목록이 바뀌거나(새로고침 등) 선택 모드/필터가 풀리면, 드래그 핸들이 사라지면서
   // onPanResponderTerminate가 안 올 수 있어요. 그러면 draggingId가 남아 ScrollView가 계속 잠깁니다.
@@ -312,18 +317,21 @@ export default function MineScreen({
     [next[idx], next[swapIdx]] = [next[swapIdx], next[idx]];
     reorderItems(next.map((it, i) => ({ id: it.id, order: (i + 1) * 10 })));
   }, [reorderItems]);
+  const moveDoneUp = useCallback((item: Item) => moveInSection(doneRef.current, item, -1), [moveInSection]);
+  const moveDoneDown = useCallback((item: Item) => moveInSection(doneRef.current, item, 1), [moveInSection]);
 
   const onToggleDone = useCallback(async (item: Item) => {
     if (item.origin === 'helped') { onMemory(item); return; }
     if (!item.done) { onMemory(item); return; }
-    // 이룬 꿈을 '다시 담기' 하면 사진과 글이 지워집니다. 기록이 남아 있으면 한 번 확인해요.
+    // 이룬 꿈을 되돌리면 사진과 글이 지워집니다. 기록이 남아 있으면 한 번 확인해요.
+    // ('담기'가 추천 탭에서는 '내 목록에 추가'라는 정반대 뜻으로 쓰여서 여기선 안 쓰기로 했어요.)
     // (체크 표시가 작아서 스크롤 중에 잘못 눌러 기록이 통째로 날아가는 일이 있었어요.)
     const hasRecord = !!(item.memory && (item.memory.text || (item.memory.photos?.length || item.memory.photo)));
     if (hasRecord) {
       const ok = await confirmDialog({
-        title: '다시 담을까요?',
+        title: '아직 안 한 것으로 되돌릴까요?',
         message: '적어둔 기록(사진·글)은 지워지고 되돌릴 수 없어요.',
-        confirmLabel: '다시 담기',
+        confirmLabel: '되돌리기',
         destructive: true,
       });
       if (!ok) return;
@@ -418,7 +426,14 @@ export default function MineScreen({
           </GradientCard>
         )}
 
-        {items.length === 0 ? (
+        {items.length === 0 && mineError ? (
+          // 불러오기에 실패한 것과 정말 비어 있는 것을 구분합니다. 예전엔 둘 다 "아직 꿈이 없어요"라
+          // 나와서, 지하철처럼 연결이 끊긴 곳에서 앱을 켠 사람은 목록이 통째로 날아간 줄 알았어요.
+          <>
+            <EmptyState icon="cloud-offline-outline" title="목록을 불러오지 못했어요" subtitle="꿈은 그대로 있어요. 연결을 확인하고 다시 시도해주세요" />
+            <BubbleButton title="다시 시도" onPress={() => refreshMine({ force: true })} loading={loadingMine} full style={{ marginTop: 2 }} />
+          </>
+        ) : items.length === 0 ? (
           <>
             <EmptyState icon="flag-outline" title="아직 꿈이 없어요" subtitle="뭘 적을지 막막하다면 아래에서 골라 담아보세요" />
             <BubbleButton title="✦ 시작 템플릿에서 골라 담기" onPress={onStarter} full style={{ marginTop: 2 }} />
@@ -552,8 +567,8 @@ export default function MineScreen({
                         onLongPress={enterSelectMode}
                         canMoveUp={!isFiltering && idx > 0}
                         canMoveDown={!isFiltering && idx < done.length - 1}
-                        onMoveUp={!isFiltering ? (it) => moveInSection(done, it, -1) : undefined}
-                        onMoveDown={!isFiltering ? (it) => moveInSection(done, it, 1) : undefined}
+                        onMoveUp={moveDoneUp}
+                        onMoveDown={moveDoneDown}
                       />
                     ))}
                   </>
@@ -600,20 +615,18 @@ export default function MineScreen({
 // (이 앱은 터치가 메인이라 '마우스오버'를 손으로 누르고 있는 동작으로 바꿨어요)
 function PressScaleCard({ item, idx, onPress }: { item: Item; idx: number; onPress: () => void }) {
   const scale = useRef(new Animated.Value(1)).current;
+  const role = idx % 2 === 0 ? ('secondary' as const) : ('accent' as const);
   const pressIn = () => Animated.spring(scale, { toValue: 1.08, useNativeDriver: true, speed: 30, bounciness: 6 }).start();
   const pressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30, bounciness: 6 }).start();
   return (
     <Pressable onPress={onPress} onPressIn={pressIn} onPressOut={pressOut}>
       <Animated.View style={{ transform: [{ scale }] }}>
-        <GradientCard
-          role={idx % 2 === 0 ? 'secondary' : 'accent'}
-          borderRadius={radius.lg}
-          style={styles.pickCard}
-          contentStyle={styles.pickCardInner}
-        >
+        <GradientCard role={role} borderRadius={radius.lg} style={styles.pickCard} contentStyle={styles.pickCardInner}>
           <Text style={styles.pickEmoji}>{item.emoji}</Text>
-          <Text style={styles.pickTitle} numberOfLines={2}>{item.title}</Text>
-          {item.categories?.length ? <Text style={styles.pickCatLabel}>🏷 {item.categories.join(' · ')}</Text> : null}
+          <Text style={[styles.pickTitle, { color: onGradient[role] }]} numberOfLines={2}>{item.title}</Text>
+          {item.categories?.length ? (
+            <Text style={[styles.pickCatLabel, { color: onGradient[role] }]}>🏷 {item.categories.join(' · ')}</Text>
+          ) : null}
         </GradientCard>
       </Animated.View>
     </Pressable>
@@ -682,22 +695,24 @@ const styles = StyleSheet.create({
   summaryTop: { flexDirection: 'row', alignItems: 'center', gap: 18 },
   summaryStats: { flex: 1, flexDirection: 'row', justifyContent: 'space-between' },
   summaryStat: { alignItems: 'center', gap: 2 },
-  summaryStatVal: { fontSize: 19, fontWeight: '800', color: '#fff' },
-  summaryStatLabel: { fontSize: 11, color: 'rgba(255,255,255,.85)', marginTop: 1 },
+  // 요약 카드는 항상 role="primary" 그라디언트예요. 흰 글씨는 그 위에서 2.34~3.80:1 밖에 안 나와서
+  // (보조 텍스트는 알파까지 섞여 2.09:1) 같은 계열 딥톤으로 바꿨습니다 — 배경 파스텔은 그대로입니다.
+  summaryStatVal: { fontSize: 19, fontWeight: '800', color: onGradient.primary },
+  summaryStatLabel: { fontSize: 11.5, color: onGradient.primary, fontWeight: '600', marginTop: 1 },
   macroWrap: { marginTop: 20, gap: 9 },
   macroRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  macroLabel: { width: 44, fontSize: 11.5, color: 'rgba(255,255,255,.9)', fontWeight: '600' },
-  macroTrack: { flex: 1, height: 7, borderRadius: 99, backgroundColor: 'rgba(255,255,255,.22)', overflow: 'hidden' },
-  macroFill: { height: '100%', borderRadius: 99, backgroundColor: '#fff' },
-  macroCount: { fontSize: 11, color: 'rgba(255,255,255,.85)', fontWeight: '600', width: 16, textAlign: 'right' },
+  macroLabel: { width: 44, fontSize: 11.5, color: onGradient.primary, fontWeight: '700' },
+  macroTrack: { flex: 1, height: 7, borderRadius: 99, backgroundColor: 'rgba(255,255,255,.38)', overflow: 'hidden' },
+  macroFill: { height: '100%', borderRadius: 99, backgroundColor: onGradient.primary },
+  macroCount: { fontSize: 11.5, color: onGradient.primary, fontWeight: '700', width: 16, textAlign: 'right' },
 
   pickSection: { marginTop: 4 },
   pickRow: { flexDirection: 'row', gap: 14, paddingBottom: 4, paddingRight: 4, paddingTop: 4 },
   pickCard: { width: 156, height: 156 },
   pickCardInner: { flex: 1, padding: 16, justifyContent: 'flex-end' },
   pickEmoji: { fontSize: 30, marginBottom: 7 },
-  pickTitle: { fontSize: 14.5, fontWeight: '700', color: '#fff', lineHeight: 19 },
-  pickCatLabel: { fontSize: 11, color: 'rgba(255,255,255,.85)', fontWeight: '600', marginTop: 5 },
+  pickTitle: { fontSize: 14.5, fontWeight: '800', lineHeight: 19 },
+  pickCatLabel: { fontSize: 11.5, fontWeight: '700', marginTop: 5 },
 
   emptyHint: { fontSize: 12, color: colors.ink2, textAlign: 'center', marginTop: 12, fontWeight: '600' },
   searchBox: {

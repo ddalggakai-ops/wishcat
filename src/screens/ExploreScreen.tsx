@@ -4,7 +4,7 @@ import Avatar from '../components/Avatar';
 import GradientCard from '../components/GradientCard';
 import Icon from '../components/Icon';
 import { EmptyState, ScreenHeader } from '../components/Basics';
-import { colors, radius, shadow } from '../theme';
+import { colors, onGradient, radius, shadow } from '../theme';
 import { resolveImageUrl } from '../api/client';
 import { getExploreItems } from '../services/exploreService';
 import { useApp } from '../context/AppContext';
@@ -91,8 +91,21 @@ export default function ExploreScreen({
               </Pressable>
             ) : null}
           </View>
+        ) : loading ? (
+          // 예전엔 여기에도 "해당하는 버킷이 없어요"가 떴어요. loading은 RefreshControl에만 쓰여서
+          // 당겨서 새로고침을 안 한 최초 진입에서는 눈에 띄지 않았고, 그동안(아이템 150개 조회 +
+          // 차단목록 + 좋아요 + hydrate) 처음 들어온 사람은 '빈 앱'을 보고 나갔습니다.
+          <View style={styles.grid}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <View key={i} style={styles.skeleton} />
+            ))}
+          </View>
         ) : (
-          <EmptyState icon="compass-outline" title="해당하는 버킷이 없어요" subtitle="다른 필터를 눌러보세요" />
+          <EmptyState
+            icon="compass-outline"
+            title={filter === 'done' ? '아직 공개된 이룬 꿈이 없어요' : '아직 공개된 꿈이 없어요'}
+            subtitle={filter === 'done' ? '전체 버킷도 한번 둘러보세요' : '내 꿈을 전체공개로 올리면 여기에 함께 보여요'}
+          />
         )
       ) : (
         <View style={styles.grid}>
@@ -123,8 +136,8 @@ export default function ExploreScreen({
                 accessibilityRole="button"
                 accessibilityLabel={joined ? '이미 담음' : '내 목록에 담기'}
               >
-                <Icon name={joined ? 'bookmark' : 'bookmark-outline'} size={14} color={onWhite ? (joined ? colors.accent : colors.ink3) : '#fff'} />
-                <Text style={[styles.countText, onWhite && joined && { color: colors.accent }, !onWhite && styles.countTextOnDark]}>
+                <Icon name={joined ? 'bookmark' : 'bookmark-outline'} size={14} color={onWhite ? (joined ? colors.accentInk : colors.ink3) : onGradient[role]} />
+                <Text style={[styles.countText, onWhite && joined && { color: colors.accentInk }, !onWhite && { color: onGradient[role], fontWeight: '700' }]}>
                   {joined ? '담음' : i.savesCount}
                 </Text>
               </Pressable>
@@ -132,8 +145,8 @@ export default function ExploreScreen({
 
             const likeBtn = (
               <Pressable onPress={() => toggleLike(i.id)} style={styles.likeBtn}>
-                <Icon name={i.likedByMe ? 'heart' : 'heart-outline'} size={14} color={onWhite ? (i.likedByMe ? colors.like : colors.ink3) : '#fff'} />
-                <Text style={[styles.countText, !onWhite && styles.countTextOnDark]}>{i.likesCount}</Text>
+                <Icon name={i.likedByMe ? 'heart' : 'heart-outline'} size={14} color={onWhite ? (i.likedByMe ? colors.like : colors.ink3) : onGradient[role]} />
+                <Text style={[styles.countText, !onWhite && { color: onGradient[role], fontWeight: '700' }]}>{i.likesCount}</Text>
               </Pressable>
             );
 
@@ -163,19 +176,19 @@ export default function ExploreScreen({
                   <View style={styles.tileGradientTop}>
                     <View style={styles.ownerRowDark}>
                       <Avatar name={i.owner.name} photoUrl={i.owner.photoUrl} size={18} />
-                      <Text style={styles.ownerNameDark}>{i.owner.name}님</Text>
+                      <Text style={[styles.ownerNameDark, { color: onGradient[role] }]}>{i.owner.name}님</Text>
                     </View>
                     {i.hot ? <View style={styles.badgeOnGradient}><Text style={styles.badgeText}>인기</Text></View> : null}
                   </View>
                   <Text style={styles.tileEmoji}>{i.emoji}</Text>
-                  <Text numberOfLines={2} style={styles.tileTitleDark}>{i.title}</Text>
+                  <Text numberOfLines={2} style={[styles.tileTitleDark, { color: onGradient[role] }]}>{i.title}</Text>
                   {i.categories?.length ? (
-                    <View style={styles.tileChip}><Text style={styles.tileChipText}>{i.categories.join(' · ')}</Text></View>
+                    <View style={styles.tileChip}><Text style={[styles.tileChipText, { color: onGradient[role] }]}>{i.categories.join(' · ')}</Text></View>
                   ) : null}
                   <View style={styles.countsDark}>
                     {likeBtn}
                     {saveBtn}
-                    {i.done ? <View style={styles.doneBadgeOnGradient}><Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>✓ 완료</Text></View> : null}
+                    {i.done ? <View style={styles.doneBadgeOnGradient}><Text style={{ color: onGradient[role], fontSize: 11.5, fontWeight: '800' }}>✓ 완료</Text></View> : null}
                   </View>
                 </GradientCard>
               </Pressable>
@@ -201,15 +214,17 @@ const styles = StyleSheet.create({
   tileGradientInner: { flex: 1, padding: 14, justifyContent: 'space-between' },
   tileGradientTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   ownerRowDark: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  ownerNameDark: { fontSize: 11, color: 'rgba(255,255,255,.92)', fontWeight: '600' },
-  badgeOnGradient: { backgroundColor: 'rgba(255,255,255,.28)', borderRadius: 99, paddingVertical: 3, paddingHorizontal: 9 },
+  // 그라디언트 타일 위 글자색은 흰색 대신 role별 딥톤(onGradient)을 인라인으로 얹습니다.
+  ownerNameDark: { fontSize: 11.5, fontWeight: '700' },
+  badgeOnGradient: { backgroundColor: colors.done, borderRadius: 99, paddingVertical: 3, paddingHorizontal: 9 },
   tileEmoji: { fontSize: 30, marginTop: 10 },
-  tileTitleDark: { fontSize: 13.5, fontWeight: '700', color: '#fff', lineHeight: 18, marginTop: 6 },
-  tileChip: { alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,.26)', borderRadius: 99, paddingVertical: 3, paddingHorizontal: 9, marginTop: 8 },
-  tileChipText: { fontSize: 10.5, fontWeight: '700', color: '#fff' },
+  tileTitleDark: { fontSize: 13.5, fontWeight: '800', lineHeight: 18, marginTop: 6 },
+  tileChip: { alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,.32)', borderRadius: 99, paddingVertical: 3, paddingHorizontal: 9, marginTop: 8 },
+  tileChipText: { fontSize: 11, fontWeight: '700' },
   countsDark: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 10 },
-  countTextOnDark: { color: 'rgba(255,255,255,.92)' },
-  doneBadgeOnGradient: { backgroundColor: 'rgba(255,255,255,.24)', borderRadius: 99, paddingVertical: 3, paddingHorizontal: 8, marginLeft: 'auto' },
+  doneBadgeOnGradient: { backgroundColor: 'rgba(255,255,255,.34)', borderRadius: 99, paddingVertical: 3, paddingHorizontal: 8, marginLeft: 'auto' },
+  // 로딩 중 자리를 잡아주는 스켈레톤 타일 (예전엔 이 자리에 "없어요"가 떴어요)
+  skeleton: { width: '47.6%', minHeight: 190, borderRadius: 22, backgroundColor: colors.surface2 },
   thumbWrap: { position: 'relative' },
   thumb: { width: '100%', aspectRatio: 1 },
   thumbPh: { backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
