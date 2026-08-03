@@ -7,7 +7,6 @@ import Toast from './components/Toast';
 import MineScreen from './screens/MineScreen';
 import FriendsScreen from './screens/FriendsScreen';
 import ExploreScreen from './screens/ExploreScreen';
-import MemoriesScreen from './screens/MemoriesScreen';
 import RecommendScreen from './screens/RecommendScreen';
 import PersonScreen from './screens/PersonScreen';
 import OnboardingScreen from './screens/OnboardingScreen';
@@ -157,10 +156,8 @@ export default function HomeShell() {
     content = <RecommendScreen onOpenPost={setRecommendPost} />;
   } else if (tab === 'friends') {
     content = <FriendsScreen onOpenPerson={(id, name) => openPerson(id, name, true)} onInvite={() => setInviteItem('general')} />;
-  } else if (tab === 'explore') {
-    content = <ExploreScreen onOpenItem={setDetailItem} onToast={showToast} />;
   } else {
-    content = <MemoriesScreen onOpenViewer={setViewerItem} />;
+    content = <ExploreScreen onOpenItem={setDetailItem} onToast={showToast} />;
   }
 
   return (
